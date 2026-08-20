@@ -5,7 +5,7 @@ import { Metadata } from "next";
 import Counter from "@/components/Home/Counter";
 import Progresswork from "@/components/Home/WorkProgress";
 export const metadata: Metadata = {
-    title: "About | Malitha Tishamal",
+    title: "About | Venus",
 };
 
 const page = () => {
