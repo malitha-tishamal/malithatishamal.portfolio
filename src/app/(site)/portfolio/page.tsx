@@ -3,7 +3,7 @@ import Portfolio from "@/components/portfolio/PortfolioList";
 import HeroSub from "@/components/SharedComponent/HeroSub";
 import { Metadata } from "next";
 export const metadata: Metadata = {
-    title: "Portfolio | Venus",
+    title: "Portfolio | Malitha Tishamal",
 };
 
 const PortfolioList = () => {
