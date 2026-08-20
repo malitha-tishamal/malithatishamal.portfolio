@@ -8,8 +8,10 @@ import Portfolio from '@/components/SharedComponent/portfollio'
 import Testimonial from '@/components/SharedComponent/Testimonial'
 import Blog from '@/components/SharedComponent/Blog'
 import Contactform from '@/components/Home/Contact';
+
 export const metadata: Metadata = {
-  title: "Venus",
+  title: "Malitha Tishamal – Full Stack Developer & DevOps Engineer | AI & Cybersecurity Specialist",
+  description: "Personal Portfolio & Professional Showcase of Malitha Tishamal",
 };
 
 export default function Home() {
