@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Blog } from "@/types/blog";
 import { format } from "date-fns";
 import Link from "next/link";
+import { getImgPath } from "@/utils/image";
 
 const BlogCard = ({ blog }: { blog: Blog }) => {
     const { title, coverImage, excerpt, date, slug } = blog;
@@ -12,7 +13,7 @@ const BlogCard = ({ blog }: { blog: Blog }) => {
                 <div className="mb-8 overflow-hidden rounded-sm">
                     <Link href={`/blog/#!`} aria-label="blog cover" className="block">
                         <Image
-                            src={`/venus-nextjs/${coverImage!}`}
+                            src={getImgPath(coverImage!)}
                             alt="imageeee"
                             className="w-full transition group-hover:scale-125"
                             width={408}
