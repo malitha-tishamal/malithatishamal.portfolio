@@ -1,109 +1,165 @@
 "use client";
-import { signIn, useSession } from "next-auth/react";
-import Link from "next/link";
+
+import React, { useState, useContext } from "react";
 import { useRouter } from "next/navigation";
-import { useContext, useEffect, useState } from "react";
 import SocialSignIn from "../SocialSignIn";
 import Logo from "@/components/Layout/Header/Logo";
 import Loader from "@/components/Common/Loader";
 import toast, { Toaster } from "react-hot-toast";
 import AuthDialogContext from "@/app/context/AuthDialogContext";
+import { useAuth } from "@/context/AuthContext";
 
-const Signin = ({ signInOpen }: { signInOpen?: any }) => {
-  const { data: session } = useSession();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
-  const [error, setError] = useState("");
+interface SignInProps {
+  signInOpen?: (value: boolean) => void;
+  onOpenSignUp?: () => void;
+  onOpenForgotPassword?: () => void;
+}
+
+const Signin: React.FC<SignInProps> = ({
+  signInOpen,
+  onOpenSignUp,
+  onOpenForgotPassword,
+}) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const router = useRouter();
   const authDialog = useContext(AuthDialogContext);
+  const { signInWithEmail } = useAuth();
 
-  const handleSubmit = async (e: any) => {
-    const notify = () => toast("Here is your toast.");
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await signIn("credentials", {
-      redirect: false,
-      username,
-      password,
-    });
-    if (result?.error) {
-      // Handle successful sign-in
-      setError(result.error);
+    setErrorMsg("");
+
+    if (!email || !password) {
+      toast.error("Please fill in both email and password.");
+      return;
     }
-    if (result?.status === 200) {
-      setTimeout(() => {
-        signInOpen(false);
-      }, 1200);
+
+    setLoading(true);
+    try {
+      const profile = await signInWithEmail(email, password);
+
+      toast.success("Signed in successfully!");
       authDialog?.setIsSuccessDialogOpen(true);
+
       setTimeout(() => {
         authDialog?.setIsSuccessDialogOpen(false);
-      }, 1100);
-    } else {
+        if (signInOpen) signInOpen(false);
+        router.push("/admin");
+      }, 1000);
+    } catch (err: any) {
+      console.error("Sign in error:", err);
+      let message = "Invalid email or password.";
+      if (err.message && err.message.includes("pending administrator approval")) {
+        message = "Your account is pending administrator approval. Please wait until approved.";
+      } else if (err.message && err.message.includes("rejected")) {
+        message = "Your account has been rejected or suspended by the administrator.";
+      } else if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+        message = "Incorrect email or password.";
+      } else if (err.code === "auth/too-many-requests") {
+        message = "Too many failed attempts. Please try again later or reset password.";
+      } else if (err.message) {
+        message = err.message;
+      }
+
+      setErrorMsg(message);
+      toast.error(message);
       authDialog?.setIsFailedDialogOpen(true);
       setTimeout(() => {
         authDialog?.setIsFailedDialogOpen(false);
-      }, 1100);
+      }, 2500);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <>
-      <div className="mb-10 text-center mx-auto inline-block max-w-[160px]">
+      <Toaster position="top-center" />
+      <div className="mb-8 text-center mx-auto inline-block max-w-[160px]">
         <Logo />
       </div>
 
-      <SocialSignIn />
+      <SocialSignIn
+        onSuccess={() => {
+          if (signInOpen) signInOpen(false);
+        }}
+        onError={(msg) => {
+          setErrorMsg(msg);
+        }}
+      />
 
-      <span className="z-1 relative my-8 block text-center">
+      <span className="z-1 relative my-6 block text-center">
         <span className="-z-1 absolute left-0 top-1/2 block h-px w-full bg-border dark:bg-dark_border"></span>
         <span className="text-body-secondary relative z-10 inline-block bg-white px-3 text-base dark:bg-darklight">
           OR
         </span>
-        <Toaster />
       </span>
 
-      <form>
-        <div className="mb-[22px]">
+      {errorMsg && (
+        <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-600 dark:text-red-400 text-left">
+          {errorMsg}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div className="mb-[20px]">
           <input
-            type="text"
-            placeholder="Username"
+            type="email"
+            placeholder="Email Address"
             required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-md border placeholder:text-gray-400  border-border dark:border-dark_border border-solid bg-transparent px-5 py-3 text-base text-dark outline-hidden transition  focus:border-primary focus-visible:shadow-none dark:border-border_color dark:text-white dark:focus:border-primary"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-md border placeholder:text-gray-400 border-border dark:border-dark_border border-solid bg-transparent px-5 py-3 text-base text-dark outline-hidden transition focus:border-primary focus-visible:shadow-none dark:border-border_color dark:text-white dark:focus:border-primary"
           />
         </div>
-        <div className="mb-[22px]">
+        <div className="mb-[20px]">
           <input
             type="password"
             required
             value={password}
             placeholder="Password"
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-border dark:border-dark_border border-solid bg-transparent px-5 py-3 text-base text-dark outline-hidden transition  focus:border-primary focus-visible:shadow-none dark:border-border_color dark:text-white dark:focus:border-primary"
+            className="w-full rounded-md border border-border dark:border-dark_border border-solid bg-transparent px-5 py-3 text-base text-dark outline-hidden transition focus:border-primary focus-visible:shadow-none dark:border-border_color dark:text-white dark:focus:border-primary"
           />
         </div>
-        <div className="mb-9">
+        <div className="mb-6">
           <button
             type="submit"
-            className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary hover:bg-darkprimary dark:hover:bg-darkprimary! px-5 py-3 text-base text-white transition duration-300 ease-in-out "
+            disabled={loading}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-primary bg-primary hover:bg-darkprimary dark:hover:bg-darkprimary! px-5 py-3 text-base text-white transition duration-300 ease-in-out disabled:opacity-60 font-medium"
           >
-            Sign In
-            {/* {loading && <Loader />} */}
+            {loading && <Loader />}
+            {loading ? "Signing In..." : "Sign In"}
           </button>
         </div>
       </form>
 
-      <Link
-        href="/"
-        className="mb-2 inline-block text-base text-dark hover:text-primary dark:text-white dark:hover:text-primary"
-      >
-        Forget Password?
-      </Link>
-      <p className="text-body-secondary text-base">
-        Not a member yet?{" "}
-        <Link href="/" className="text-primary hover:underline">
-          Sign Up
-        </Link>
-      </p>
+      <div className="flex flex-col gap-2 items-center">
+        <button
+          type="button"
+          onClick={() => {
+            if (onOpenForgotPassword) onOpenForgotPassword();
+          }}
+          className="text-sm font-medium text-dark hover:text-primary dark:text-gray-300 dark:hover:text-primary transition"
+        >
+          Forget Password?
+        </button>
+        <p className="text-body-secondary text-sm">
+          Not a member yet?{" "}
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenSignUp) onOpenSignUp();
+            }}
+            className="text-primary font-medium hover:underline cursor-pointer"
+          >
+            Sign Up
+          </button>
+        </p>
+      </div>
     </>
   );
 };

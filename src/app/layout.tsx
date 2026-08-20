@@ -8,8 +8,9 @@ import Aoscompo from "@/utils/aos";
 import NextTopLoader from 'nextjs-toploader';
 import SessionProviderComp from "@/components/nextauth/SessionProvider";
 import { AuthDialogProvider } from "./context/AuthDialogContext";
-const inter = Inter({ subsets: ["latin"] });
+import { AuthProvider } from "@/context/AuthContext";
 
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
@@ -19,23 +20,25 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-      <NextTopLoader />
-      <AuthDialogProvider>
-      <SessionProviderComp>
-        <ThemeProvider
-          attribute="class"
-          enableSystem={true}
-          defaultTheme="system"
-        >
-          <Aoscompo>
-            <Header />
-            {children}
-            <Footer />
-          </Aoscompo>
-          <ScrollToTop />
-        </ThemeProvider>
-        </SessionProviderComp>
-        </AuthDialogProvider>
+        <NextTopLoader />
+        <AuthProvider>
+          <AuthDialogProvider>
+            <SessionProviderComp>
+              <ThemeProvider
+                attribute="class"
+                enableSystem={true}
+                defaultTheme="system"
+              >
+                <Aoscompo>
+                  <Header />
+                  {children}
+                  <Footer />
+                </Aoscompo>
+                <ScrollToTop />
+              </ThemeProvider>
+            </SessionProviderComp>
+          </AuthDialogProvider>
+        </AuthProvider>
       </body>
     </html>
   );
