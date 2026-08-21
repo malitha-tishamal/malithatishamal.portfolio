@@ -1,4 +1,5 @@
 import { Inter } from "next/font/google";
+import { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
@@ -11,6 +12,16 @@ import { AuthDialogProvider } from "./context/AuthDialogContext";
 import { AuthProvider } from "@/context/AuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Malitha Tishamal – Full Stack Developer & DevOps Engineer | AI & Cybersecurity Specialist",
+  description: "Portfolio of Malitha Tishamal - Full Stack Developer, DevOps Engineer, AI & Cybersecurity Specialist",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
+};
 
 export default function RootLayout({
   children,

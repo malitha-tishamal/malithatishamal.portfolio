@@ -3,26 +3,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 const Logo: React.FC = () => {
-
   return (
-    <Link href="/">
+    <Link href="/" className="flex items-center">
       <Image
-        src={getImgPath("/images/logo/logo.svg")}
-        alt="logo"
+        src={getImgPath("/images/logo/malitha-logo.png")}
+        alt="Malitha"
         width={160}
-        height={50}
-        style={{ width: 'auto', height: 'auto' }}
+        height={45}
+        style={{ width: 'auto', height: '40px' }}
         quality={100}
-        className='dark:hidden'
-      />
-      <Image
-        src={getImgPath("/images/logo/logo-white.svg")}
-        alt="logo"
-        width={160}
-        height={50}
-        style={{ width: 'auto', height: 'auto' }}
-        quality={100}
-        className='dark:block hidden'
+        priority
+        unoptimized
       />
     </Link>
   );
