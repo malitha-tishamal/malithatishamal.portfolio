@@ -12,11 +12,11 @@ const Footer: FC = () => {
             <div className='sm:content-normal sm:text-start text-center content-center sm:w-auto w-full'>
               <Link href='/' className='md:block flex justify-center'>
                 <Image
-                  src={getImgPath('/images/logo/malitha-logo.png')}
+                  src={getImgPath('/images/logo/malitha-logo-white.png')}
                   alt='Malitha'
-                  width={160}
-                  height={45}
-                  style={{ width: 'auto', height: '40px' }}
+                  width={240}
+                  height={75}
+                  style={{ width: 'auto', height: '62px' }}
                   quality={100}
                   unoptimized
                 />
