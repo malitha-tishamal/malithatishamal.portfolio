@@ -14,9 +14,9 @@ const Footer: FC = () => {
                 <Image
                   src={getImgPath('/images/logo/malitha-logo-white.png')}
                   alt='Malitha'
-                  width={240}
-                  height={75}
-                  style={{ width: 'auto', height: '62px' }}
+                  width={280}
+                  height={90}
+                  style={{ width: 'auto', height: '78px' }}
                   quality={100}
                   unoptimized
                 />

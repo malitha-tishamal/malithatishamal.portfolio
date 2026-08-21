@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { headerData } from '../Header/Navigation/menuData'
@@ -17,6 +18,7 @@ import { FailedLogin } from '@/components/Auth/AuthDialog/FailedLogin'
 import { UserRegistered } from '@/components/Auth/AuthDialog/UserRegistered'
 import AuthDialogContext from '@/app/context/AuthDialogContext'
 import { useAuth } from '@/context/AuthContext'
+import { getImgPath } from '@/utils/image'
 
 const Header: React.FC = () => {
   const pathUrl = usePathname()
@@ -29,17 +31,19 @@ const Header: React.FC = () => {
   const [isSignInOpen, setIsSignInOpen] = useState(false)
   const [isSignUpOpen, setIsSignUpOpen] = useState(false)
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
   const signInCardRef = useRef<HTMLDivElement>(null)
   const signUpCardRef = useRef<HTMLDivElement>(null)
   const forgotPasswordCardRef = useRef<HTMLDivElement>(null)
+  const profileCardRef = useRef<HTMLDivElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
 
   const handleScroll = () => {
     setSticky(window.scrollY >= 80)
   }
 
-  // Handle outside click on backdrop or anywhere outside modal card
+  // Handle outside click on backdrop
   const handleBackdropClick = (
     e: React.MouseEvent<HTMLDivElement>,
     closeFunc: () => void
@@ -53,6 +57,7 @@ const Header: React.FC = () => {
     setIsSignInOpen(false)
     setIsSignUpOpen(false)
     setIsForgotPasswordOpen(false)
+    setIsProfileModalOpen(false)
   }
 
   useEffect(() => {
@@ -63,19 +68,25 @@ const Header: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    if (isSignInOpen || isSignUpOpen || isForgotPasswordOpen || navbarOpen) {
+    if (isSignInOpen || isSignUpOpen || isForgotPasswordOpen || isProfileModalOpen || navbarOpen) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
     }
-  }, [isSignInOpen, isSignUpOpen, isForgotPasswordOpen, navbarOpen])
+  }, [isSignInOpen, isSignUpOpen, isForgotPasswordOpen, isProfileModalOpen, navbarOpen])
 
   const authDialog = useContext(AuthDialogContext)
 
   const handleSignOut = async () => {
     await logout()
+    closeAllModals()
     router.push('/')
   }
+
+  const userName = userProfile?.name || user?.displayName || user?.email?.split('@')[0] || 'User'
+  const userEmail = userProfile?.email || user?.email || ''
+  const userPhoto = userProfile?.photoURL || user?.photoURL || getImgPath('/images/hero/malitha-hero.png')
+  const userRole = userProfile?.role || (isAdmin ? 'admin' : 'user')
 
   return (
     <header
@@ -119,19 +130,38 @@ const Header: React.FC = () => {
           {/* If authenticated user */}
           {user ? (
             <div className='hidden lg:flex items-center gap-3'>
-              {isAdmin && (
-                <Link
-                  href='/admin'
-                  className='bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition'>
-                  Admin Dashboard
-                </Link>
-              )}
-              <span className='text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full'>
-                {userProfile?.name || user.displayName || user.email?.split('@')[0]}
-              </span>
+              {/* Clickable Profile Badge */}
+              <button
+                onClick={() => {
+                  closeAllModals()
+                  setIsProfileModalOpen(true)
+                }}
+                className='flex items-center gap-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-3.5 py-1.5 rounded-full transition cursor-pointer border border-border/50 dark:border-dark_border/60 shadow-2xs'>
+                <div className='w-6 h-6 rounded-full overflow-hidden bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0'>
+                  {userPhoto ? (
+                    <Image
+                      src={userPhoto}
+                      alt={userName}
+                      width={24}
+                      height={24}
+                      className='w-full h-full object-cover'
+                      unoptimized
+                    />
+                  ) : (
+                    userName.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <span className='text-xs font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[130px]'>
+                  {userName}
+                </span>
+                <span className='text-[10px] bg-primary/15 text-primary dark:text-blue-400 font-bold px-1.5 py-0.5 rounded-xs uppercase'>
+                  {userRole}
+                </span>
+              </button>
+
               <button
                 onClick={handleSignOut}
-                className='text-sm border border-red-500 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-500 hover:text-white transition cursor-pointer'>
+                className='text-xs font-medium border border-red-500/80 text-red-500 px-3.5 py-1.5 rounded-lg hover:bg-red-500 hover:text-white transition cursor-pointer'>
                 Sign Out
               </button>
             </div>
@@ -167,6 +197,91 @@ const Header: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* USER PROFILE MODAL */}
+      {isProfileModalOpen && user && (
+        <div
+          onClick={(e) => handleBackdropClick(e, () => setIsProfileModalOpen(false))}
+          className='fixed inset-0 top-0 left-0 w-full h-full bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4'>
+          <div
+            ref={profileCardRef}
+            className='relative mx-auto w-full max-w-sm rounded-2xl bg-white p-7 text-center shadow-2xl dark:bg-darklight border border-border/40 dark:border-dark_border/40 animate-in fade-in zoom-in duration-150'>
+            {/* Close Button */}
+            <button
+              onClick={() => setIsProfileModalOpen(false)}
+              className='hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded-full absolute top-4 right-4 cursor-pointer text-gray-400 hover:text-dark dark:text-gray-300 dark:hover:text-white transition'
+              aria-label='Close Profile Modal'>
+              <Icon icon='ic:round-close' className='text-2xl' />
+            </button>
+
+            {/* Profile Avatar */}
+            <div className='w-24 h-24 rounded-full mx-auto overflow-hidden border-4 border-primary/20 shadow-lg mb-4 relative bg-gray-100 dark:bg-gray-800 flex items-center justify-center'>
+              {userPhoto ? (
+                <Image
+                  src={userPhoto}
+                  alt={userName}
+                  width={96}
+                  height={96}
+                  quality={100}
+                  className='w-full h-full object-cover'
+                  unoptimized
+                />
+              ) : (
+                <span className='text-3xl font-bold text-primary'>
+                  {userName.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+
+            {/* User Name & Badges */}
+            <h3 className='text-xl font-bold text-dark dark:text-white'>
+              {userName}
+            </h3>
+            <p className='text-sm text-gray-500 dark:text-gray-400 mt-0.5 break-all'>
+              {userEmail}
+            </p>
+
+            <div className='flex items-center justify-center gap-2 mt-3 mb-6'>
+              <span className='px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 uppercase'>
+                {userRole}
+              </span>
+              <span className='px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'>
+                ✓ Approved
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div className='space-y-3'>
+              {/* Goto Admin Panel Button */}
+              <Link
+                href='/admin'
+                onClick={() => setIsProfileModalOpen(false)}
+                className='flex items-center justify-center gap-2 w-full rounded-xl bg-primary hover:bg-blue-700 py-3 text-sm font-semibold text-white transition shadow-md hover:shadow-lg cursor-pointer'>
+                <span>Goto Admin Pannel</span>
+                <svg
+                  className='w-4 h-4'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'>
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth='2'
+                    d='M14 5l7 7m0 0l-7 7m7-7H3'
+                  />
+                </svg>
+              </Link>
+
+              {/* Sign Out Button */}
+              <button
+                onClick={handleSignOut}
+                className='w-full rounded-xl border border-red-500/40 hover:bg-red-500/10 py-2.5 text-sm font-medium text-red-500 transition cursor-pointer'>
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SIGN IN MODAL */}
       {isSignInOpen && (
@@ -291,14 +406,20 @@ const Header: React.FC = () => {
           <div className='mt-4 flex flex-col gap-3 w-full'>
             {user ? (
               <>
-                {isAdmin && (
-                  <Link
-                    href='/admin'
-                    onClick={() => setNavbarOpen(false)}
-                    className='bg-primary text-white px-4 py-2.5 rounded-lg text-center font-medium'>
-                    Admin Dashboard
-                  </Link>
-                )}
+                <button
+                  onClick={() => {
+                    setNavbarOpen(false)
+                    setIsProfileModalOpen(true)
+                  }}
+                  className='bg-primary text-white px-4 py-2.5 rounded-lg text-center font-medium'>
+                  My Profile ({userName})
+                </button>
+                <Link
+                  href='/admin'
+                  onClick={() => setNavbarOpen(false)}
+                  className='bg-blue-600 text-white px-4 py-2.5 rounded-lg text-center font-medium'>
+                  Goto Admin Pannel
+                </Link>
                 <button
                   onClick={() => {
                     handleSignOut()
