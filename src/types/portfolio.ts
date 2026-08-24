@@ -3,7 +3,7 @@ export type PortfolioImageLayout = "single" | "split_horizontal_2" | "grid_4";
 export interface PortfolioItem {
   id: string;
   title: string;
-  subtitle: string; // Designation / Category
+  subtitle: string; // Category (e.g. Events & wins, Office, Training Programs, Travel, Designation)
   description?: string;
   tags?: string[];
   projectUrl?: string;
@@ -16,12 +16,20 @@ export interface PortfolioItem {
   updatedAt?: any;
 }
 
+export const PORTFOLIO_CATEGORIES = [
+  "All Photos",
+  "Events & wins",
+  "Office",
+  "Training Programs",
+  "Travel",
+];
+
 export const defaultPortfolioItems: PortfolioItem[] = [
   {
     id: "cozycasa",
-    title: "Cozycasa",
-    subtitle: "Designation",
-    description: "An integrated smart home IoT management application built with Flutter, Firebase, and MQTT communication protocol.",
+    title: "Cozycasa Smart IoT",
+    subtitle: "Office",
+    description: "An integrated smart IoT management application built with Flutter, Firebase, and real-time MQTT protocol.",
     tags: ["Flutter", "Firebase", "IoT"],
     projectUrl: "https://github.com/malitha-tishamal",
     githubUrl: "https://github.com/malitha-tishamal",
@@ -35,11 +43,11 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     updatedAt: "2026-08-24",
   },
   {
-    id: "mars",
-    title: "Mars",
-    subtitle: "Designation",
-    description: "3D architectural web portal showcasing futuristic structures and interactive spatial components.",
-    tags: ["Next.js", "Three.js", "TailwindCSS"],
+    id: "hackathon-award",
+    title: "National Tech Wins",
+    subtitle: "Events & wins",
+    description: "Awarded 1st place in National Software Innovation Summit for developing high-impact intelligent cloud platforms.",
+    tags: ["Hackathon", "Innovation", "Award"],
     projectUrl: "https://github.com/malitha-tishamal",
     githubUrl: "https://github.com/malitha-tishamal",
     images: [
@@ -52,11 +60,11 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     updatedAt: "2026-08-24",
   },
   {
-    id: "everyday-humans",
-    title: "Everyday Humans",
-    subtitle: "Designation",
-    description: "Social wellness platform connecting health practitioners with community members for tailored fitness programs.",
-    tags: ["React", "Node.js", "MongoDB"],
+    id: "leadership-workshop",
+    title: "DevOps Bootcamps",
+    subtitle: "Training Programs",
+    description: "Conducted technical training workshops for 200+ engineering students on Kubernetes orchestration and CI/CD pipelines.",
+    tags: ["DevOps", "Kubernetes", "Training"],
     projectUrl: "https://github.com/malitha-tishamal",
     githubUrl: "https://github.com/malitha-tishamal",
     images: [
@@ -69,11 +77,11 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     updatedAt: "2026-08-24",
   },
   {
-    id: "rocket-squared",
-    title: "Rocket Squared",
-    subtitle: "Designation",
-    description: "Automated CI/CD deployment orchestrator with Kubernetes cluster management and Prometheus real-time monitoring.",
-    tags: ["DevOps", "Docker", "Kubernetes"],
+    id: "tech-expedition",
+    title: "Global Tech Summit",
+    subtitle: "Travel",
+    description: "Keynote presentation and technical exploration at the Asia-Pacific Tech & Cybersecurity Conference.",
+    tags: ["Travel", "Conference", "Cybersecurity"],
     projectUrl: "https://github.com/malitha-tishamal",
     githubUrl: "https://github.com/malitha-tishamal",
     images: [
@@ -87,9 +95,9 @@ export const defaultPortfolioItems: PortfolioItem[] = [
   },
   {
     id: "panda-logo",
-    title: "Panda Logo",
-    subtitle: "Designation",
-    description: "Minimalist brand identity and visual language system with dual-tone vector geometry.",
+    title: "Panda Brand Architecture",
+    subtitle: "Office",
+    description: "Minimalist brand identity and visual language system with dual-tone vector geometry and design guidelines.",
     tags: ["Branding", "UI/UX", "Illustrator"],
     projectUrl: "https://github.com/malitha-tishamal",
     githubUrl: "https://github.com/malitha-tishamal",
@@ -105,9 +113,9 @@ export const defaultPortfolioItems: PortfolioItem[] = [
   },
   {
     id: "fusion-dynamics",
-    title: "Fusion Dynamics",
-    subtitle: "Designation",
-    description: "High-performance data visualizer and dashboard with 4 synchronized operational perspectives.",
+    title: "Fusion Dynamics Multi-Perspective",
+    subtitle: "Events & wins",
+    description: "High-performance real-time data visualizer with 4 synchronized operational perspectives and analytical graphs.",
     tags: ["Analytics", "React", "TypeScript"],
     projectUrl: "https://github.com/malitha-tishamal",
     githubUrl: "https://github.com/malitha-tishamal",
