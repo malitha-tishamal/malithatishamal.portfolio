@@ -4,14 +4,18 @@ import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { PortfolioItem, defaultPortfolioItems } from '@/types/portfolio'
+import {
+  PortfolioItem,
+  defaultPortfolioItems,
+  PORTFOLIO_CATEGORIES,
+} from '@/types/portfolio'
 import { PortfolioCardItem } from '@/components/portfolio/PortfolioCardItem'
 import { getImgPath } from '@/utils/image'
 
 const PortfolioList: React.FC = () => {
   const [items, setItems] = useState<PortfolioItem[]>(defaultPortfolioItems)
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
-  const [activeCategory, setActiveCategory] = useState<string>('All')
+  const [activeCategory, setActiveCategory] = useState<string>('All Photos')
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -59,39 +63,46 @@ const PortfolioList: React.FC = () => {
     return 'Recently'
   }
 
-  // Extract distinct categories
-  const categories = ['All', ...Array.from(new Set(items.map((i) => i.subtitle).filter(Boolean)))]
+  // Combine standard categories and any custom categories in database
+  const dynamicCategories = Array.from(
+    new Set([
+      ...PORTFOLIO_CATEGORIES,
+      ...items.map((i) => i.subtitle).filter(Boolean),
+    ])
+  )
 
-  // Filter items
+  // Filter items based on active category
   const filteredItems =
-    activeCategory === 'All'
+    activeCategory === 'All Photos' || activeCategory === 'All'
       ? items
-      : items.filter((i) => i.subtitle?.toLowerCase() === activeCategory.toLowerCase())
+      : items.filter((i) => {
+          const cat = i.subtitle?.toLowerCase().trim() || ''
+          const target = activeCategory.toLowerCase().trim()
+          return cat === target || cat.includes(target) || i.tags?.some((t) => t.toLowerCase() === target)
+        })
 
   return (
-    <section id='portfolio' className='md:pb-28 pb-16 pt-8 dark:bg-darkmode bg-white transition-colors'>
+    <section id='portfolio' className='md:pb-20 pb-12 pt-2 dark:bg-darkmode bg-white transition-colors'>
       <div className='container mx-auto max-w-[120rem] px-4 sm:px-6 lg:px-8'>
-        {/* Category Filter Pills */}
-        {categories.length > 2 && (
-          <div className='flex flex-wrap items-center justify-center gap-2 mb-14'>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type='button'
-                onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
-                  activeCategory === cat
-                    ? 'bg-primary text-white shadow-md shadow-primary/20 scale-105'
-                    : 'bg-gray-100 dark:bg-darklight text-midnight_text dark:text-gray-300 border border-border/60 dark:border-dark_border hover:border-primary'
-                }`}>
-                {cat}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Category Filter Pills (All Photos, Events & wins, Office, Training Programs, Travel, etc.) */}
+        <div className='flex flex-wrap items-center justify-center gap-2.5 mb-10'>
+          {dynamicCategories.map((cat) => (
+            <button
+              key={cat}
+              type='button'
+              onClick={() => setActiveCategory(cat)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeCategory === cat
+                  ? 'bg-primary text-white shadow-md shadow-primary/20 scale-105 ring-2 ring-primary/30'
+                  : 'bg-gray-100 dark:bg-darklight text-midnight_text dark:text-gray-300 border border-border/60 dark:border-dark_border hover:border-primary'
+              }`}>
+              {cat}
+            </button>
+          ))}
+        </div>
 
-        {/* Portfolio Cards Grid (Preserves the beautiful staggered layout) */}
-        <div className='flex flex-wrap gap-8 lg:gap-12 justify-center items-start m-auto'>
+        {/* Portfolio Cards Grid */}
+        <div className='flex flex-wrap gap-6 lg:gap-10 justify-center items-start m-auto'>
           {filteredItems.map((item, index) => (
             <PortfolioCardItem
               key={item.id || index}
