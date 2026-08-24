@@ -52,7 +52,7 @@ const Hero = () => {
   }
 
   return (
-    <section className='relative md:pt-44 pt-28 bg-white dark:bg-darklight bg-cover text-white transition-colors'>
+    <section className='relative md:pt-44 pt-28 bg-white dark:bg-darklight bg-cover text-midnight_text dark:text-white transition-colors'>
       <div className='container mx-auto max-w-6xl px-4 grid grid-cols-12 gap-6 relative z-10 items-center'>
         {/* Left Column: Headlines, Buttons, Signature & Contact Note */}
         <div
@@ -151,11 +151,11 @@ const Hero = () => {
             if (e.target === e.currentTarget) setIsCvModalOpen(false)
           }}
           className='fixed inset-0 top-0 left-0 w-full h-full bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 p-4 transition-opacity'>
-          <div className='relative mx-auto w-full max-w-lg rounded-2xl bg-white p-7 text-left shadow-2xl dark:bg-darklight border border-border/50 dark:border-dark_border/50 animate-in fade-in zoom-in duration-150'>
+          <div className='relative mx-auto w-full max-w-lg rounded-2xl bg-white p-7 text-left shadow-2xl dark:bg-darklight border border-border/50 dark:border-dark_border/50 text-midnight_text dark:text-white animate-in fade-in zoom-in duration-150'>
             {/* Close Button */}
             <button
               onClick={() => setIsCvModalOpen(false)}
-              className='hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full absolute top-4 right-4 cursor-pointer text-gray-400 hover:text-dark dark:text-gray-300 dark:hover:text-white transition'
+              className='hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full absolute top-4 right-4 cursor-pointer text-gray-500 hover:text-midnight_text dark:text-gray-300 dark:hover:text-white transition'
               aria-label='Close CV Modal'>
               <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M6 18L18 6M6 6l12 12' />
@@ -167,10 +167,10 @@ const Hero = () => {
               <div className='w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl font-bold mb-3'>
                 📄
               </div>
-              <h3 className='text-xl font-bold text-dark dark:text-white'>
+              <h3 className='text-xl font-bold text-midnight_text dark:text-white'>
                 Download Curriculum Vitae (CV)
               </h3>
-              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+              <p className='text-xs text-grey dark:text-gray-300 mt-1 font-medium'>
                 Select the format that best suits your evaluation or hiring workflow.
               </p>
             </div>
@@ -180,10 +180,10 @@ const Hero = () => {
               {/* Option 1: ATS CV */}
               <div
                 onClick={() => handleDownloadCv(heroData.atsCvUrl, heroData.atsCvFileName || 'Malitha_Tishamal_ATS_CV.pdf')}
-                className='group p-5 rounded-xl border border-border dark:border-dark_border hover:border-blue-500 dark:hover:border-blue-500 bg-gray-50/50 dark:bg-darkmode/50 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition cursor-pointer flex items-start justify-between gap-4'>
+                className='group p-5 rounded-xl border border-border dark:border-dark_border hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50 dark:bg-darkmode/50 hover:bg-blue-50/40 dark:hover:bg-blue-950/30 transition cursor-pointer flex items-start justify-between gap-4'>
                 <div className='space-y-1 flex-1'>
                   <div className='flex items-center gap-2'>
-                    <h4 className='text-base font-bold text-dark dark:text-white group-hover:text-primary transition'>
+                    <h4 className='text-base font-bold text-midnight_text dark:text-white group-hover:text-primary transition'>
                       ATS CV
                     </h4>
                     <span className='px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'>
@@ -193,7 +193,7 @@ const Hero = () => {
                   <p className='text-xs font-semibold text-primary dark:text-blue-400'>
                     → LinkedIn / Job portals / Company applications
                   </p>
-                  <p className='text-xs text-gray-500 dark:text-gray-400 pt-1'>
+                  <p className='text-xs text-grey dark:text-gray-300 pt-1 font-normal leading-relaxed'>
                     Clean, single-column format optimized for applicant tracking systems, ATS scanners, and corporate recruitment.
                   </p>
                 </div>
@@ -207,10 +207,10 @@ const Hero = () => {
               {/* Option 2: Graphical / Creative CV */}
               <div
                 onClick={() => handleDownloadCv(heroData.creativeCvUrl, heroData.creativeCvFileName || 'Malitha_Tishamal_Creative_CV.pdf')}
-                className='group p-5 rounded-xl border border-border dark:border-dark_border hover:border-purple-500 dark:hover:border-purple-500 bg-gray-50/50 dark:bg-darkmode/50 hover:bg-purple-50/30 dark:hover:bg-purple-950/20 transition cursor-pointer flex items-start justify-between gap-4'>
+                className='group p-5 rounded-xl border border-border dark:border-dark_border hover:border-purple-500 dark:hover:border-purple-500 bg-slate-50 dark:bg-darkmode/50 hover:bg-purple-50/40 dark:hover:bg-purple-950/30 transition cursor-pointer flex items-start justify-between gap-4'>
                 <div className='space-y-1 flex-1'>
                   <div className='flex items-center gap-2'>
-                    <h4 className='text-base font-bold text-dark dark:text-white group-hover:text-purple-600 transition'>
+                    <h4 className='text-base font-bold text-midnight_text dark:text-white group-hover:text-purple-600 transition'>
                       CV 02 — Graphical/Creative CV
                     </h4>
                     <span className='px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'>
@@ -220,7 +220,7 @@ const Hero = () => {
                   <p className='text-xs font-semibold text-purple-600 dark:text-purple-400'>
                     → Creative / Portfolio / Direct presentation
                   </p>
-                  <p className='text-xs text-gray-500 dark:text-gray-400 pt-1'>
+                  <p className='text-xs text-grey dark:text-gray-300 pt-1 font-normal leading-relaxed'>
                     Modern visual layout showcasing full stack development, UI design, tech stacks, and project highlights.
                   </p>
                 </div>
