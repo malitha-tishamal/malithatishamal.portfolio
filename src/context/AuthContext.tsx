@@ -49,8 +49,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const INITIAL_ADMIN_EMAIL = process.env.NEXT_PUBLIC_INITIAL_ADMIN_EMAIL?.toLowerCase().trim() || "";
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -93,24 +91,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (fbUser) {
         const profile = await fetchUserProfile(fbUser.uid);
 
-        if (!profile) {
-          // If no profile document exists yet, wait for explicit handler
-          setUser(null);
-          setUserProfile(null);
-          setLoading(false);
-          return;
-        }
-
-        // Check if user account is rejected or still pending
-        if (profile.status === "rejected") {
-          await signOut(auth);
-          setUser(null);
-          setUserProfile(null);
-          setLoading(false);
-          return;
-        }
-
-        if (profile.status === "pending" || (!profile.isApproved && profile.status !== "approved")) {
+        // If no profile document or if not approved, strictly reject session
+        if (!profile || profile.status === "rejected" || profile.status !== "approved" || !profile.isApproved) {
           await signOut(auth);
           setUser(null);
           setUserProfile(null);
@@ -131,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  // Email/Password Sign Up
+  // Email/Password Sign Up -> ALWAYS PENDING
   const signUpWithEmail = async (name: string, email: string, pass: string) => {
     const cleanEmail = email.toLowerCase().trim();
     const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
@@ -139,23 +121,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await updateProfile(cred.user, { displayName: name });
     }
 
-    const isInitialAdmin = Boolean(
-      (INITIAL_ADMIN_EMAIL && cleanEmail === INITIAL_ADMIN_EMAIL) ||
-      cleanEmail.includes("malithatishamal") ||
-      cleanEmail.includes("malitha")
-    );
-    const initialStatus = isInitialAdmin ? "approved" : "pending";
-    const initialRole = isInitialAdmin ? "admin" : "user";
-    const isApproved = isInitialAdmin ? true : false;
-
     const newProfile: UserProfile = {
       uid: cred.user.uid,
       name: name || cleanEmail.split("@")[0],
       email: cleanEmail,
       photoURL: cred.user.photoURL || "",
-      role: initialRole,
-      status: initialStatus,
-      isApproved: isApproved,
+      role: "user",
+      status: "pending",
+      isApproved: false,
       provider: "password",
       createdAt: serverTimestamp(),
     };
@@ -170,24 +143,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw setErr;
     }
 
-    // If not approved, sign out immediately
-    if (!isApproved) {
-      await signOut(auth);
-      setUser(null);
-      setUserProfile(null);
-      return {
-        success: true,
-        isApproved: false,
-        message: "Account created successfully! Your account is pending administrator approval before you can sign in.",
-      };
-    }
-
-    setUser(cred.user);
-    setUserProfile(newProfile);
+    // New accounts are ALWAYS pending: sign out immediately
+    await signOut(auth);
+    setUser(null);
+    setUserProfile(null);
     return {
       success: true,
-      isApproved: true,
-      message: "Admin account created successfully!",
+      isApproved: false,
+      message: "Account created successfully! Your account is pending administrator approval before you can sign in.",
     };
   };
 
@@ -197,21 +160,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
     let profile = await fetchUserProfile(cred.user.uid);
 
-    // If no profile exists yet (edge case)
     if (!profile) {
-      const isInitialAdmin = Boolean(
-        (INITIAL_ADMIN_EMAIL && cleanEmail === INITIAL_ADMIN_EMAIL) ||
-        cleanEmail.includes("malithatishamal") ||
-        cleanEmail.includes("malitha")
-      );
       profile = {
         uid: cred.user.uid,
         name: cred.user.displayName || cleanEmail.split("@")[0],
         email: cleanEmail,
         photoURL: cred.user.photoURL || "",
-        role: isInitialAdmin ? "admin" : "user",
-        status: isInitialAdmin ? "approved" : "pending",
-        isApproved: isInitialAdmin ? true : false,
+        role: "user",
+        status: "pending",
+        isApproved: false,
         provider: "password",
         createdAt: serverTimestamp(),
       };
@@ -230,11 +187,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Your account has been rejected or suspended by the administrator.");
     }
 
-    if (profile.status !== "approved" && !profile.isApproved) {
+    if (profile.status !== "approved" || !profile.isApproved) {
       await signOut(auth);
       setUser(null);
       setUserProfile(null);
-      throw new Error("Your account is pending administrator approval. Please wait until approved.");
+      throw new Error("Your account is pending administrator approval. Please wait until an administrator approves your account.");
     }
 
     setUser(cred.user);
@@ -242,7 +199,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return profile;
   };
 
-  // Social Sign In / Up Helper
+  // Social Sign In / Up Helper -> NEW ACCOUNTS ARE ALWAYS PENDING
   const handleSocialAuth = async (
     providerInstance: typeof googleProvider | typeof githubProvider,
     providerName: "google" | "github"
@@ -256,23 +213,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       let profile = await fetchUserProfile(fbUser.uid);
 
       if (!profile) {
-        const isInitialAdmin = Boolean(
-          (INITIAL_ADMIN_EMAIL && email === INITIAL_ADMIN_EMAIL) ||
-          email.includes("malithatishamal") ||
-          email.includes("malitha")
-        );
-        const initialStatus = isInitialAdmin ? "approved" : "pending";
-        const initialRole = isInitialAdmin ? "admin" : "user";
-        const isApproved = isInitialAdmin ? true : false;
-
+        // NEW user registration via social auth -> ALWAYS PENDING
         profile = {
           uid: fbUser.uid,
           name: fbUser.displayName || email.split("@")[0] || "User",
           email: email,
           photoURL: fbUser.photoURL || "",
-          role: initialRole,
-          status: initialStatus,
-          isApproved: isApproved,
+          role: "user",
+          status: "pending",
+          isApproved: false,
           provider: providerName,
           createdAt: serverTimestamp(),
         };
@@ -287,13 +236,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           throw setErr;
         }
 
-        if (!isApproved) {
-          await signOut(auth);
-          setUser(null);
-          setUserProfile(null);
-          throw new Error("Account registered with " + (providerName === "google" ? "Google" : "GitHub") + "! It is pending administrator approval before you can sign in.");
-        }
+        // New accounts cannot sign in until approved: sign out immediately
+        await signOut(auth);
+        setUser(null);
+        setUserProfile(null);
+        throw new Error("Account registered with " + (providerName === "google" ? "Google" : "GitHub") + "! Your account is pending administrator approval before you can sign in.");
       } else {
+        // EXISTING user check
         if (profile.status === "rejected") {
           await signOut(auth);
           setUser(null);
@@ -301,11 +250,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           throw new Error("Your account has been rejected or suspended by the administrator.");
         }
 
-        if (profile.status !== "approved" && !profile.isApproved) {
+        if (profile.status !== "approved" || !profile.isApproved) {
           await signOut(auth);
           setUser(null);
           setUserProfile(null);
-          throw new Error("Your account is pending administrator approval. Please wait until approved.");
+          throw new Error("Your account is pending administrator approval. Please wait until an administrator approves your account.");
         }
       }
 
@@ -336,12 +285,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAdmin = Boolean(
     userProfile &&
     userProfile.role === "admin" &&
-    (userProfile.isApproved || userProfile.status === "approved")
+    userProfile.isApproved &&
+    userProfile.status === "approved"
   );
 
   const isApproved = Boolean(
     userProfile &&
-    (userProfile.isApproved || userProfile.status === "approved")
+    userProfile.isApproved &&
+    userProfile.status === "approved"
   );
 
   return (
