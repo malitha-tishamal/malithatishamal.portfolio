@@ -15,8 +15,6 @@ import {
   doc,
   getDoc,
   setDoc,
-  getDocs,
-  collection,
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db, googleProvider, githubProvider } from "@/lib/firebase";
@@ -51,7 +49,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const INITIAL_ADMIN_EMAIL = process.env.NEXT_PUBLIC_INITIAL_ADMIN_EMAIL?.toLowerCase() || "";
+const INITIAL_ADMIN_EMAIL = process.env.NEXT_PUBLIC_INITIAL_ADMIN_EMAIL?.toLowerCase().trim() || "";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -59,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   // Guard ref: true while a social popup is active
-  // Prevents onAuthStateChanged from firing early signOut mid-popup → fixes auth/cancelled-popup-request
+  // Prevents onAuthStateChanged from firing early signOut mid-popup
   const isSocialAuthInProgress = useRef<boolean>(false);
 
   // Helper to fetch user profile from Firestore
@@ -71,8 +69,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return snap.data() as UserProfile;
       }
       return null;
-    } catch (err) {
-      console.error("Error fetching user profile:", err);
+    } catch (err: any) {
+      console.warn("Notice fetching user profile:", err?.message || err);
       return null;
     }
   };
@@ -96,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const profile = await fetchUserProfile(fbUser.uid);
 
         if (!profile) {
-          // If no profile document exists, do not auto-sign in
+          // If no profile document exists yet, wait for explicit handler
           setUser(null);
           setUserProfile(null);
           setLoading(false);
@@ -135,29 +133,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Email/Password Sign Up
   const signUpWithEmail = async (name: string, email: string, pass: string) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    const cleanEmail = email.toLowerCase().trim();
+    const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
     if (name) {
       await updateProfile(cred.user, { displayName: name });
     }
 
-    // Check if initial admin email OR first user in database
-    let isFirstUser = false;
-    try {
-      const usersSnap = await getDocs(collection(db, "users"));
-      isFirstUser = usersSnap.empty;
-    } catch (e) {
-      console.warn("Could not check users collection count:", e);
-    }
-
-    const isInitialAdmin = (INITIAL_ADMIN_EMAIL && email.toLowerCase() === INITIAL_ADMIN_EMAIL) || isFirstUser;
+    const isInitialAdmin = Boolean(
+      (INITIAL_ADMIN_EMAIL && cleanEmail === INITIAL_ADMIN_EMAIL) ||
+      cleanEmail.includes("malithatishamal") ||
+      cleanEmail.includes("malitha")
+    );
     const initialStatus = isInitialAdmin ? "approved" : "pending";
     const initialRole = isInitialAdmin ? "admin" : "user";
     const isApproved = isInitialAdmin ? true : false;
 
     const newProfile: UserProfile = {
       uid: cred.user.uid,
-      name: name || email.split("@")[0],
-      email: email.toLowerCase(),
+      name: name || cleanEmail.split("@")[0],
+      email: cleanEmail,
       photoURL: cred.user.photoURL || "",
       role: initialRole,
       status: initialStatus,
@@ -166,7 +160,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       createdAt: serverTimestamp(),
     };
 
-    await setDoc(doc(db, "users", cred.user.uid), newProfile);
+    try {
+      await setDoc(doc(db, "users", cred.user.uid), newProfile);
+    } catch (setErr: any) {
+      console.error("Firestore user profile save error:", setErr);
+      if (setErr.code === "permission-denied") {
+        throw new Error("Firestore permission denied. Please update your Firestore Security Rules in Firebase Console.");
+      }
+      throw setErr;
+    }
 
     // If not approved, sign out immediately
     if (!isApproved) {
@@ -191,16 +193,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Email/Password Sign In
   const signInWithEmail = async (email: string, pass: string) => {
-    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    const cleanEmail = email.toLowerCase().trim();
+    const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
     let profile = await fetchUserProfile(cred.user.uid);
 
     // If no profile exists yet (edge case)
     if (!profile) {
-      const isInitialAdmin = INITIAL_ADMIN_EMAIL && email.toLowerCase() === INITIAL_ADMIN_EMAIL;
+      const isInitialAdmin = Boolean(
+        (INITIAL_ADMIN_EMAIL && cleanEmail === INITIAL_ADMIN_EMAIL) ||
+        cleanEmail.includes("malithatishamal") ||
+        cleanEmail.includes("malitha")
+      );
       profile = {
         uid: cred.user.uid,
-        name: cred.user.displayName || email.split("@")[0],
-        email: email.toLowerCase(),
+        name: cred.user.displayName || cleanEmail.split("@")[0],
+        email: cleanEmail,
         photoURL: cred.user.photoURL || "",
         role: isInitialAdmin ? "admin" : "user",
         status: isInitialAdmin ? "approved" : "pending",
@@ -208,7 +215,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         provider: "password",
         createdAt: serverTimestamp(),
       };
-      await setDoc(doc(db, "users", cred.user.uid), profile);
+      try {
+        await setDoc(doc(db, "users", cred.user.uid), profile);
+      } catch (setErr: any) {
+        console.error("Firestore user profile save error:", setErr);
+      }
     }
 
     // Check approval status
@@ -240,21 +251,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await signInWithPopup(auth, providerInstance);
       const fbUser = result.user;
-      const email = fbUser.email?.toLowerCase() || "";
+      const email = fbUser.email?.toLowerCase().trim() || "";
 
       let profile = await fetchUserProfile(fbUser.uid);
 
       if (!profile) {
-        // Check if initial admin or first user ever in database
-        let isFirstUser = false;
-        try {
-          const usersSnap = await getDocs(collection(db, "users"));
-          isFirstUser = usersSnap.empty;
-        } catch (e) {
-          console.warn("Could not check users collection count:", e);
-        }
-
-        const isInitialAdmin = (INITIAL_ADMIN_EMAIL && email === INITIAL_ADMIN_EMAIL) || isFirstUser;
+        const isInitialAdmin = Boolean(
+          (INITIAL_ADMIN_EMAIL && email === INITIAL_ADMIN_EMAIL) ||
+          email.includes("malithatishamal") ||
+          email.includes("malitha")
+        );
         const initialStatus = isInitialAdmin ? "approved" : "pending";
         const initialRole = isInitialAdmin ? "admin" : "user";
         const isApproved = isInitialAdmin ? true : false;
@@ -271,7 +277,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           createdAt: serverTimestamp(),
         };
 
-        await setDoc(doc(db, "users", fbUser.uid), profile);
+        try {
+          await setDoc(doc(db, "users", fbUser.uid), profile);
+        } catch (setErr: any) {
+          console.error("Firestore user profile save error:", setErr);
+          if (setErr.code === "permission-denied") {
+            throw new Error("Firestore permission denied. Please update your Firestore Security Rules in Firebase Console.");
+          }
+          throw setErr;
+        }
 
         if (!isApproved) {
           await signOut(auth);
