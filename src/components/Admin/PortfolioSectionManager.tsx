@@ -14,6 +14,7 @@ import {
   PortfolioItem,
   PortfolioImageLayout,
   defaultPortfolioItems,
+  PORTFOLIO_CATEGORIES,
 } from "@/types/portfolio";
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import { PortfolioCardItem } from "@/components/portfolio/PortfolioCardItem";
@@ -32,7 +33,7 @@ export const PortfolioSectionManager: React.FC = () => {
 
   // Form fields
   const [title, setTitle] = useState<string>("");
-  const [subtitle, setSubtitle] = useState<string>("");
+  const [subtitle, setSubtitle] = useState<string>("Events & wins");
   const [description, setDescription] = useState<string>("");
   const [tagsInput, setTagsInput] = useState<string>("");
   const [projectUrl, setProjectUrl] = useState<string>("");
@@ -97,7 +98,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const handleOpenCreate = () => {
     setEditingId(null);
     setTitle("");
-    setSubtitle("Designation");
+    setSubtitle("Events & wins");
     setDescription("");
     setTagsInput("");
     setProjectUrl("");
@@ -113,7 +114,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const handleOpenEdit = (item: PortfolioItem) => {
     setEditingId(item.id);
     setTitle(item.title || "");
-    setSubtitle(item.subtitle || "Designation");
+    setSubtitle(item.subtitle || "Events & wins");
     setDescription(item.description || "");
     setTagsInput(item.tags ? item.tags.join(", ") : "");
     setProjectUrl(item.projectUrl || "");
@@ -134,7 +135,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setUploadProgress((prev) => ({ ...prev, [slotIndex]: 10 }));
 
     try {
-      const res = await uploadToCloudinary(file, false, (progress) => {
+      const res = await uploadToCloudinary(file, (progress: number) => {
         setUploadProgress((prev) => ({ ...prev, [slotIndex]: progress }));
       });
 
@@ -144,7 +145,7 @@ export const PortfolioSectionManager: React.FC = () => {
           next[slotIndex] = res.secure_url;
           return next;
         });
-        toast.success(`Image ${slotIndex + 1} uploaded to Cloudinary!`);
+        toast.success(`Photo ${slotIndex + 1} uploaded to Cloudinary!`);
       } else {
         throw new Error("Upload failed: No secure URL returned.");
       }
@@ -166,7 +167,7 @@ export const PortfolioSectionManager: React.FC = () => {
   // Add a new image slot (up to 4)
   const handleAddImageSlot = () => {
     if (images.length >= 4) {
-      toast.error("Maximum 4 images allowed per portfolio card.");
+      toast.error("Maximum 4 photos allowed per card.");
       return;
     }
     setImages((prev) => [...prev, ""]);
@@ -215,7 +216,7 @@ export const PortfolioSectionManager: React.FC = () => {
     const itemData: PortfolioItem = {
       id,
       title: title.trim(),
-      subtitle: subtitle.trim() || "Designation",
+      subtitle: subtitle.trim() || "Events & wins",
       description: description.trim(),
       tags: cleanTags,
       projectUrl: projectUrl.trim(),
@@ -305,7 +306,7 @@ export const PortfolioSectionManager: React.FC = () => {
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold">Portfolio Showcase & Cards Manager</h2>
           <p className="text-white/80 text-sm mt-1 max-w-xl">
-            Customise titles, subtitles, display ordering, last edited dates, and 1, 2 (top/bottom split), or 4 (2x2 grid) image layouts. Updates sync live to Homepage &amp; Portfolio page!
+            Customise titles, category tags (All Photos, Events &amp; wins, Office, Training Programs, Travel), descriptions, ordering, dates, and 1, 2, or 4 photo layouts with Cloudinary.
           </p>
         </div>
 
@@ -335,7 +336,7 @@ export const PortfolioSectionManager: React.FC = () => {
         <div className="relative w-full sm:w-80">
           <input
             type="text"
-            placeholder="Search by title, tag, designation..."
+            placeholder="Search by title, tag, category..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
@@ -386,12 +387,8 @@ export const PortfolioSectionManager: React.FC = () => {
                     <span className="w-6 h-6 rounded-lg bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
                       #{item.displayOrder || idx + 1}
                     </span>
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300">
-                      {item.imageLayout === "split_horizontal_2"
-                        ? "2 Photos (Top & Bottom)"
-                        : item.imageLayout === "grid_4"
-                        ? "4 Photos (2x2 Grid)"
-                        : "1 Photo (Full Card)"}
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border border-blue-200/50">
+                      {item.subtitle || "Events & wins"}
                     </span>
                   </div>
 
@@ -474,11 +471,11 @@ export const PortfolioSectionManager: React.FC = () => {
               {editingId ? "Edit Portfolio Card" : "Add New Portfolio Card"}
             </h3>
             <p className="text-xs text-grey dark:text-gray-400 mb-6">
-              Configure titles, designation/subtitles, display order, and image display layout (1 image, 2 split top/bottom, 4 grid).
+              Configure titles, category tags (Events &amp; wins, Office, Training Programs, Travel), descriptions, and photo display layouts.
             </p>
 
             <form onSubmit={handleSaveItem} className="space-y-5">
-              {/* Row 1: Title & Subtitle */}
+              {/* Row 1: Title & Category / Subtitle */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
@@ -487,7 +484,7 @@ export const PortfolioSectionManager: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Panda Logo / Cozycasa"
+                    placeholder="e.g. National Tech Wins / Rocket Squared"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
@@ -495,26 +492,46 @@ export const PortfolioSectionManager: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                    Subtitle / Designation
+                    Category Tag / Filter *
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Designation / UI/UX Design"
-                    value={subtitle}
-                    onChange={(e) => setSubtitle(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
-                  />
+                  <div className="space-y-1.5">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Events & wins / Office / Travel"
+                      value={subtitle}
+                      onChange={(e) => setSubtitle(e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                    />
+                    {/* Quick Category Chips */}
+                    <div className="flex flex-wrap gap-1">
+                      {["Events & wins", "Office", "Training Programs", "Travel"].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setSubtitle(preset)}
+                          className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition cursor-pointer ${
+                            subtitle === preset
+                              ? "bg-primary text-white"
+                              : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300 hover:bg-gray-200"
+                          }`}
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Row 2: Description */}
+              {/* Row 2: Description (Displayed on card!) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                  Project Description (Optional)
+                  Project Description (Shown on Card)
                 </label>
                 <textarea
-                  rows={2}
-                  placeholder="Brief summary of the project..."
+                  rows={3}
+                  placeholder="Automated CI/CD deployment orchestrator with Kubernetes cluster management and Prometheus real-time monitoring..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
@@ -529,7 +546,7 @@ export const PortfolioSectionManager: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="Flutter, Firebase, IoT"
+                    placeholder="DevOps, Docker, Kubernetes, AWS"
                     value={tagsInput}
                     onChange={(e) => setTagsInput(e.target.value)}
                     className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
@@ -549,7 +566,35 @@ export const PortfolioSectionManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Image Layout Mode Selector (Exact 3 options from user diagram) */}
+              {/* Row 4: Links */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
+                    Live Demo / Project URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://myproject.com"
+                    value={projectUrl}
+                    onChange={(e) => setProjectUrl(e.target.value)}
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
+                    GitHub Repository URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://github.com/username/repo"
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Image Layout Mode Selector (1 Photo, 2 Photos Top/Bottom, 4 Photos 2x2) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-2">
                   Photo Display Layout inside Card
