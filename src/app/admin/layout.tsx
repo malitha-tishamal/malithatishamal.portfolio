@@ -11,23 +11,23 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, userProfile, loading, isAdmin } = useAuth();
+  const { user, userProfile, loading, isAdmin, isApproved } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
-      if (!user) {
+      if (!user || !isAdmin || !isApproved) {
         router.push("/");
       }
     }
-  }, [user, loading, router]);
+  }, [user, userProfile, loading, isAdmin, isApproved, router]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-darkmode">
         <div className="text-center">
           <Loader />
-          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
             Checking admin credentials...
           </p>
         </div>
@@ -35,7 +35,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!user) {
+  if (!user || !isAdmin || !isApproved) {
     return null;
   }
 
