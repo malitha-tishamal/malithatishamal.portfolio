@@ -69,15 +69,15 @@ const Hero = () => {
         </div>
 
         <div className="md:col-span-6 col-span-12 relative flex justify-center items-center before:absolute before:content-[''] before:bg-[url('/images/hero/line-leyar.svg')] before:bg-no-repeat before:left-1/2 before:top-0 before:h-24 before:w-52 before:-z-10 before:translate-x-70% before:-translate-y-40% lg:before:inline-block before:hidden after:absolute after:content-[''] after:bg-[url('/images/hero/round-leyar.svg')] after:bg-no-repeat xl:after:inline-block after:hidden after:left-0 after:bottom-0 after:h-6.25 after:w-6.25 after:-z-10 after:-translate-x-1/2 after:translate-y-1/2">
-          <div className="overflow-hidden rounded-3xl max-w-[400px] w-full shadow-2xl border-4 border-white/10 dark:border-white/5">
+          <div className="overflow-hidden rounded-3xl max-w-[460px] w-full aspect-square shadow-2xl border-4 border-white/10 dark:border-white/5 relative">
             <Image
               src={getImgPath('/images/hero/malitha-hero.png')}
               alt='Malitha Tishamal'
-              width={400}
-              height={400}
+              width={460}
+              height={460}
               quality={100}
               priority
-              className="w-full h-auto object-cover rounded-3xl"
+              className="w-full h-full object-cover object-top rounded-3xl"
             />
           </div>
         </div>
