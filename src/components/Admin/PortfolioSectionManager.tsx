@@ -38,6 +38,9 @@ export const PortfolioSectionManager: React.FC = () => {
   const [tagsInput, setTagsInput] = useState<string>("");
   const [projectUrl, setProjectUrl] = useState<string>("");
   const [githubUrl, setGithubUrl] = useState<string>("");
+  const [linkedinUrl, setLinkedinUrl] = useState<string>("");
+  const [facebookUrl, setFacebookUrl] = useState<string>("");
+  const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [displayOrder, setDisplayOrder] = useState<number>(1);
   const [imageLayout, setImageLayout] = useState<PortfolioImageLayout>("single");
   const [images, setImages] = useState<string[]>([]);
@@ -103,6 +106,9 @@ export const PortfolioSectionManager: React.FC = () => {
     setTagsInput("");
     setProjectUrl("");
     setGithubUrl("");
+    setLinkedinUrl("");
+    setFacebookUrl("");
+    setInstagramUrl("");
     setDisplayOrder(items.length > 0 ? Math.max(...items.map((i) => i.displayOrder || 0)) + 1 : 1);
     setImageLayout("single");
     setImages([""]);
@@ -119,6 +125,9 @@ export const PortfolioSectionManager: React.FC = () => {
     setTagsInput(item.tags ? item.tags.join(", ") : "");
     setProjectUrl(item.projectUrl || "");
     setGithubUrl(item.githubUrl || "");
+    setLinkedinUrl(item.linkedinUrl || "");
+    setFacebookUrl(item.facebookUrl || "");
+    setInstagramUrl(item.instagramUrl || "");
     setDisplayOrder(item.displayOrder || 1);
     setImageLayout(item.imageLayout || "single");
     setImages(item.images && item.images.length > 0 ? item.images : [""]);
@@ -221,6 +230,9 @@ export const PortfolioSectionManager: React.FC = () => {
       tags: cleanTags,
       projectUrl: projectUrl.trim(),
       githubUrl: githubUrl.trim(),
+      linkedinUrl: linkedinUrl.trim(),
+      facebookUrl: facebookUrl.trim(),
+      instagramUrl: instagramUrl.trim(),
       images: validImages.length > 0 ? validImages : ["/images/portfolio/cozycasa.png"],
       imageLayout,
       displayOrder: Number(displayOrder) || 1,
@@ -306,7 +318,7 @@ export const PortfolioSectionManager: React.FC = () => {
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold">Portfolio Showcase & Cards Manager</h2>
           <p className="text-white/80 text-sm mt-1 max-w-xl">
-            Customise titles, category tags (All Photos, Events &amp; wins, Office, Training Programs, Travel), descriptions, ordering, dates, and 1, 2, or 4 photo layouts with Cloudinary.
+            Customise titles, category tags, descriptions, Live Project &amp; Social links (LinkedIn, Facebook, Instagram), ordering, and 1, 2, or 4 photo layouts with Cloudinary.
           </p>
         </div>
 
@@ -471,7 +483,7 @@ export const PortfolioSectionManager: React.FC = () => {
               {editingId ? "Edit Portfolio Card" : "Add New Portfolio Card"}
             </h3>
             <p className="text-xs text-grey dark:text-gray-400 mb-6">
-              Configure titles, category tags (Events &amp; wins, Office, Training Programs, Travel), descriptions, and photo display layouts.
+              Configure titles, category tags, descriptions, Live Project and social media links. Only provided links will appear to users.
             </p>
 
             <form onSubmit={handleSaveItem} className="space-y-5">
@@ -566,11 +578,12 @@ export const PortfolioSectionManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 4: Links */}
+              {/* Row 4: Live Project & GitHub */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                    Live Demo / Project URL (Optional)
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span>Live Project</span>
                   </label>
                   <input
                     type="url"
@@ -581,8 +594,9 @@ export const PortfolioSectionManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                    GitHub Repository URL (Optional)
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-gray-700"></span>
+                    <span>GitHub Repository</span>
                   </label>
                   <input
                     type="url"
@@ -591,6 +605,51 @@ export const PortfolioSectionManager: React.FC = () => {
                     onChange={(e) => setGithubUrl(e.target.value)}
                     className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
                   />
+                </div>
+              </div>
+
+              {/* Row 5: Social Links (LinkedIn, Facebook, Instagram) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-gray-500 dark:text-gray-400">
+                  Social Media Links (Optional — only filled links will display)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-[#0A66C2] flex items-center gap-1">
+                      <span>LinkedIn URL</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://linkedin.com/in/..."
+                      value={linkedinUrl}
+                      onChange={(e) => setLinkedinUrl(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-[#1877F2] flex items-center gap-1">
+                      <span>Facebook URL</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://facebook.com/..."
+                      value={facebookUrl}
+                      onChange={(e) => setFacebookUrl(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-[#E1306C] flex items-center gap-1">
+                      <span>Instagram URL</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://instagram.com/..."
+                      value={instagramUrl}
+                      onChange={(e) => setInstagramUrl(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                    />
+                  </div>
                 </div>
               </div>
 
