@@ -80,11 +80,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setUser(fbUser);
       if (fbUser) {
-        const profile = await fetchUserProfile(fbUser.uid);
-        setUserProfile(profile);
+        let profile = await fetchUserProfile(fbUser.uid);
+        if (!profile) {
+          const email = fbUser.email?.toLowerCase() || "";
+          const isInitialAdmin = INITIAL_ADMIN_EMAIL && email === INITIAL_ADMIN_EMAIL;
+          profile = {
+            uid: fbUser.uid,
+            name: fbUser.displayName || email.split("@")[0] || "User",
+            email: email,
+            photoURL: fbUser.photoURL || "",
+            role: isInitialAdmin ? "admin" : "user",
+            status: isInitialAdmin ? "approved" : "pending",
+            isApproved: isInitialAdmin ? true : false,
+            provider: fbUser.providerData?.[0]?.providerId === "google.com" ? "google" : "password",
+            createdAt: serverTimestamp(),
+          };
+          try {
+            await setDoc(doc(db, "users", fbUser.uid), profile);
+          } catch (e) {
+            console.error("Error creating default profile in auth state change:", e);
+          }
+        }
+
+        // Strict approval check: if pending or rejected, do not maintain session
+        if (profile.status === "rejected" || (!profile.isApproved && profile.status !== "approved")) {
+          await signOut(auth);
+          setUser(null);
+          setUserProfile(null);
+        } else {
+          setUser(fbUser);
+          setUserProfile(profile);
+        }
       } else {
+        setUser(null);
         setUserProfile(null);
       }
       setLoading(false);
