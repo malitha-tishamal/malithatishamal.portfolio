@@ -1,9 +1,19 @@
+'use client'
+
 import React, { FC } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { getImgPath } from '@/utils/image'
 
 const Footer: FC = () => {
+  const pathUrl = usePathname()
+
+  // Hide the public footer on Admin pages
+  if (pathUrl?.startsWith('/admin')) {
+    return null
+  }
+
   return (
     <footer className='bg-darkmode relative z-1 border-t border-dark_border px-6'>
       <div className='container mx-auto max-w-6xl px-4'>

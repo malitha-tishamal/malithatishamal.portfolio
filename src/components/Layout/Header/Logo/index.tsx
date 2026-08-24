@@ -2,9 +2,14 @@ import { getImgPath } from '@/utils/image';
 import Image from 'next/image';
 import Link from 'next/link';
 
-const Logo: React.FC = () => {
+interface LogoProps {
+  href?: string;
+  className?: string;
+}
+
+const Logo: React.FC<LogoProps> = ({ href = "/", className = "" }) => {
   return (
-    <Link href="/" className="flex items-center">
+    <Link href={href} className={`flex items-center ${className}`}>
       {/* Light Mode Logo (Dark text) */}
       <Image
         src={getImgPath("/images/logo/malitha-logo.png")}

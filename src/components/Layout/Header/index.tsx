@@ -33,6 +33,11 @@ const Header: React.FC = () => {
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
+  // Hide the public header on Admin pages to prevent overlapping headers
+  if (pathUrl?.startsWith('/admin')) {
+    return null
+  }
+
   const signInCardRef = useRef<HTMLDivElement>(null)
   const signUpCardRef = useRef<HTMLDivElement>(null)
   const forgotPasswordCardRef = useRef<HTMLDivElement>(null)
