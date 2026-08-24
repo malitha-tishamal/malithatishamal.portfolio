@@ -3,11 +3,14 @@ export type PortfolioImageLayout = "single" | "split_horizontal_2" | "grid_4";
 export interface PortfolioItem {
   id: string;
   title: string;
-  subtitle: string; // Category (e.g. Events & wins, Office, Training Programs, Travel, Designation)
+  subtitle: string; // Category (e.g. Events & wins, Office, Training Programs, Travel)
   description?: string;
   tags?: string[];
-  projectUrl?: string;
-  githubUrl?: string;
+  projectUrl?: string; // Live Project URL
+  githubUrl?: string; // GitHub Repository URL
+  linkedinUrl?: string; // LinkedIn Post/Profile URL
+  facebookUrl?: string; // Facebook Post/Page URL
+  instagramUrl?: string; // Instagram Post/Profile URL
   images: string[]; // List of Cloudinary image URLs (1, 2, or 4 images)
   imageLayout?: PortfolioImageLayout;
   displayOrder: number;
@@ -33,6 +36,7 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     tags: ["Flutter", "Firebase", "IoT"],
     projectUrl: "https://github.com/malitha-tishamal",
     githubUrl: "https://github.com/malitha-tishamal",
+    linkedinUrl: "https://linkedin.com/in/malitha-tishamal",
     images: [
       "/images/portfolio/cozycasa.png",
     ],
@@ -49,7 +53,8 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     description: "Awarded 1st place in National Software Innovation Summit for developing high-impact intelligent cloud platforms.",
     tags: ["Hackathon", "Innovation", "Award"],
     projectUrl: "https://github.com/malitha-tishamal",
-    githubUrl: "https://github.com/malitha-tishamal",
+    linkedinUrl: "https://linkedin.com/in/malitha-tishamal",
+    facebookUrl: "https://facebook.com/malithatishamal",
     images: [
       "/images/portfolio/mars.png",
     ],
@@ -66,7 +71,8 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     description: "Conducted technical training workshops for 200+ engineering students on Kubernetes orchestration and CI/CD pipelines.",
     tags: ["DevOps", "Kubernetes", "Training"],
     projectUrl: "https://github.com/malitha-tishamal",
-    githubUrl: "https://github.com/malitha-tishamal",
+    linkedinUrl: "https://linkedin.com/in/malitha-tishamal",
+    instagramUrl: "https://instagram.com/malitha_tishamal",
     images: [
       "/images/portfolio/humans.png",
     ],
@@ -83,7 +89,9 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     description: "Keynote presentation and technical exploration at the Asia-Pacific Tech & Cybersecurity Conference.",
     tags: ["Travel", "Conference", "Cybersecurity"],
     projectUrl: "https://github.com/malitha-tishamal",
-    githubUrl: "https://github.com/malitha-tishamal",
+    linkedinUrl: "https://linkedin.com/in/malitha-tishamal",
+    facebookUrl: "https://facebook.com/malithatishamal",
+    instagramUrl: "https://instagram.com/malitha_tishamal",
     images: [
       "/images/portfolio/roket-squred.png",
     ],
@@ -100,7 +108,6 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     description: "Minimalist brand identity and visual language system with dual-tone vector geometry and design guidelines.",
     tags: ["Branding", "UI/UX", "Illustrator"],
     projectUrl: "https://github.com/malitha-tishamal",
-    githubUrl: "https://github.com/malitha-tishamal",
     images: [
       "/images/portfolio/panda-logo.png",
       "/images/portfolio/cozycasa.png",
@@ -119,6 +126,7 @@ export const defaultPortfolioItems: PortfolioItem[] = [
     tags: ["Analytics", "React", "TypeScript"],
     projectUrl: "https://github.com/malitha-tishamal",
     githubUrl: "https://github.com/malitha-tishamal",
+    linkedinUrl: "https://linkedin.com/in/malitha-tishamal",
     images: [
       "/images/portfolio/humans.png",
       "/images/portfolio/mars.png",
