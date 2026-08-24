@@ -62,6 +62,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
               {activeTab === "overview" && "Dashboard Overview"}
               {activeTab === "accounts" && "Account Management"}
               {activeTab === "roles" && "Roles & Permissions"}
+              {activeTab === "hero" && "Hero Section Manager"}
             </span>
           </div>
         </div>
@@ -86,7 +87,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
                 : "text-gray-600 dark:text-gray-400 hover:text-dark dark:hover:text-white"
             }`}
           >
-            <span>Account Management</span>
+            <span>Accounts</span>
             {pendingCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">
                 {pendingCount}
@@ -102,6 +103,17 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
             }`}
           >
             Roles
+          </button>
+          <button
+            onClick={() => setActiveTab("hero")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center gap-1 ${
+              activeTab === "hero"
+                ? "bg-white dark:bg-darklight text-primary shadow-xs font-semibold"
+                : "text-gray-600 dark:text-gray-400 hover:text-dark dark:hover:text-white"
+            }`}
+          >
+            <span>Hero</span>
+            <span className="text-[9px] font-bold text-green-600 dark:text-green-400">✦</span>
           </button>
         </div>
 

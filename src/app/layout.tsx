@@ -7,7 +7,6 @@ import { ThemeProvider } from "next-themes";
 import ScrollToTop from '@/components/ScrollToTop';
 import Aoscompo from "@/utils/aos";
 import NextTopLoader from 'nextjs-toploader';
-import SessionProviderComp from "@/components/nextauth/SessionProvider";
 import { AuthDialogProvider } from "./context/AuthDialogContext";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -41,20 +40,18 @@ export default function RootLayout({
         <NextTopLoader />
         <AuthProvider>
           <AuthDialogProvider>
-            <SessionProviderComp>
-              <ThemeProvider
-                attribute="class"
-                enableSystem={true}
-                defaultTheme="system"
-              >
-                <Aoscompo>
-                  <Header />
-                  {children}
-                  <Footer />
-                </Aoscompo>
-                <ScrollToTop />
-              </ThemeProvider>
-            </SessionProviderComp>
+            <ThemeProvider
+              attribute="class"
+              enableSystem={true}
+              defaultTheme="system"
+            >
+              <Aoscompo>
+                <Header />
+                {children}
+                <Footer />
+              </Aoscompo>
+              <ScrollToTop />
+            </ThemeProvider>
           </AuthDialogProvider>
         </AuthProvider>
       </body>

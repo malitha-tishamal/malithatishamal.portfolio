@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import {
   User,
   signInWithEmailAndPassword,
@@ -15,6 +15,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  getDocs,
+  collection,
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db, googleProvider, githubProvider } from "@/lib/firebase";
@@ -56,6 +58,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Guard ref: true while a social popup is active
+  // Prevents onAuthStateChanged from firing early signOut mid-popup → fixes auth/cancelled-popup-request
+  const isSocialAuthInProgress = useRef<boolean>(false);
+
   // Helper to fetch user profile from Firestore
   const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
     try {
@@ -80,38 +86,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      // If a social popup flow is in-flight, skip onAuthStateChanged to prevent race conditions
+      if (isSocialAuthInProgress.current) {
+        setLoading(false);
+        return;
+      }
+
       if (fbUser) {
-        let profile = await fetchUserProfile(fbUser.uid);
+        const profile = await fetchUserProfile(fbUser.uid);
+
         if (!profile) {
-          const email = fbUser.email?.toLowerCase() || "";
-          const isInitialAdmin = INITIAL_ADMIN_EMAIL && email === INITIAL_ADMIN_EMAIL;
-          profile = {
-            uid: fbUser.uid,
-            name: fbUser.displayName || email.split("@")[0] || "User",
-            email: email,
-            photoURL: fbUser.photoURL || "",
-            role: isInitialAdmin ? "admin" : "user",
-            status: isInitialAdmin ? "approved" : "pending",
-            isApproved: isInitialAdmin ? true : false,
-            provider: fbUser.providerData?.[0]?.providerId === "google.com" ? "google" : "password",
-            createdAt: serverTimestamp(),
-          };
-          try {
-            await setDoc(doc(db, "users", fbUser.uid), profile);
-          } catch (e) {
-            console.error("Error creating default profile in auth state change:", e);
-          }
+          // If no profile document exists, do not auto-sign in
+          setUser(null);
+          setUserProfile(null);
+          setLoading(false);
+          return;
         }
 
-        // Strict approval check: if pending or rejected, do not maintain session
-        if (profile.status === "rejected" || (!profile.isApproved && profile.status !== "approved")) {
+        // Check if user account is rejected or still pending
+        if (profile.status === "rejected") {
           await signOut(auth);
           setUser(null);
           setUserProfile(null);
-        } else {
-          setUser(fbUser);
-          setUserProfile(profile);
+          setLoading(false);
+          return;
         }
+
+        if (profile.status === "pending" || (!profile.isApproved && profile.status !== "approved")) {
+          await signOut(auth);
+          setUser(null);
+          setUserProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        // Approved active user
+        setUser(fbUser);
+        setUserProfile(profile);
       } else {
         setUser(null);
         setUserProfile(null);
@@ -129,7 +140,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await updateProfile(cred.user, { displayName: name });
     }
 
-    const isInitialAdmin = INITIAL_ADMIN_EMAIL && email.toLowerCase() === INITIAL_ADMIN_EMAIL;
+    // Check if initial admin email OR first user in database
+    let isFirstUser = false;
+    try {
+      const usersSnap = await getDocs(collection(db, "users"));
+      isFirstUser = usersSnap.empty;
+    } catch (e) {
+      console.warn("Could not check users collection count:", e);
+    }
+
+    const isInitialAdmin = (INITIAL_ADMIN_EMAIL && email.toLowerCase() === INITIAL_ADMIN_EMAIL) || isFirstUser;
     const initialStatus = isInitialAdmin ? "approved" : "pending";
     const initialRole = isInitialAdmin ? "admin" : "user";
     const isApproved = isInitialAdmin ? true : false;
@@ -148,7 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     await setDoc(doc(db, "users", cred.user.uid), newProfile);
 
-    // If not approved initial admin, sign out immediately so they cannot access without approval
+    // If not approved, sign out immediately
     if (!isApproved) {
       await signOut(auth);
       setUser(null);
@@ -160,6 +180,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
     }
 
+    setUser(cred.user);
     setUserProfile(newProfile);
     return {
       success: true,
@@ -173,7 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const cred = await signInWithEmailAndPassword(auth, email, pass);
     let profile = await fetchUserProfile(cred.user.uid);
 
-    // If no profile exists yet (legacy/edge case), create one
+    // If no profile exists yet (edge case)
     if (!profile) {
       const isInitialAdmin = INITIAL_ADMIN_EMAIL && email.toLowerCase() === INITIAL_ADMIN_EMAIL;
       profile = {
@@ -205,62 +226,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Your account is pending administrator approval. Please wait until approved.");
     }
 
+    setUser(cred.user);
     setUserProfile(profile);
     return profile;
   };
 
   // Social Sign In / Up Helper
-  const handleSocialAuth = async (providerInstance: typeof googleProvider | typeof githubProvider, providerName: "google" | "github") => {
-    const result = await signInWithPopup(auth, providerInstance);
-    const fbUser = result.user;
-    const email = fbUser.email?.toLowerCase() || "";
+  const handleSocialAuth = async (
+    providerInstance: typeof googleProvider | typeof githubProvider,
+    providerName: "google" | "github"
+  ) => {
+    isSocialAuthInProgress.current = true;
+    try {
+      const result = await signInWithPopup(auth, providerInstance);
+      const fbUser = result.user;
+      const email = fbUser.email?.toLowerCase() || "";
 
-    let profile = await fetchUserProfile(fbUser.uid);
+      let profile = await fetchUserProfile(fbUser.uid);
 
-    if (!profile) {
-      const isInitialAdmin = INITIAL_ADMIN_EMAIL && email === INITIAL_ADMIN_EMAIL;
-      const initialStatus = isInitialAdmin ? "approved" : "pending";
-      const initialRole = isInitialAdmin ? "admin" : "user";
-      const isApproved = isInitialAdmin ? true : false;
+      if (!profile) {
+        // Check if initial admin or first user ever in database
+        let isFirstUser = false;
+        try {
+          const usersSnap = await getDocs(collection(db, "users"));
+          isFirstUser = usersSnap.empty;
+        } catch (e) {
+          console.warn("Could not check users collection count:", e);
+        }
 
-      profile = {
-        uid: fbUser.uid,
-        name: fbUser.displayName || email.split("@")[0] || "User",
-        email: email,
-        photoURL: fbUser.photoURL || "",
-        role: initialRole,
-        status: initialStatus,
-        isApproved: isApproved,
-        provider: providerName,
-        createdAt: serverTimestamp(),
-      };
+        const isInitialAdmin = (INITIAL_ADMIN_EMAIL && email === INITIAL_ADMIN_EMAIL) || isFirstUser;
+        const initialStatus = isInitialAdmin ? "approved" : "pending";
+        const initialRole = isInitialAdmin ? "admin" : "user";
+        const isApproved = isInitialAdmin ? true : false;
 
-      await setDoc(doc(db, "users", fbUser.uid), profile);
+        profile = {
+          uid: fbUser.uid,
+          name: fbUser.displayName || email.split("@")[0] || "User",
+          email: email,
+          photoURL: fbUser.photoURL || "",
+          role: initialRole,
+          status: initialStatus,
+          isApproved: isApproved,
+          provider: providerName,
+          createdAt: serverTimestamp(),
+        };
 
-      if (!isApproved) {
-        await signOut(auth);
-        setUser(null);
-        setUserProfile(null);
-        throw new Error("Account registered via " + providerName + "! It is pending administrator approval before you can sign in.");
+        await setDoc(doc(db, "users", fbUser.uid), profile);
+
+        if (!isApproved) {
+          await signOut(auth);
+          setUser(null);
+          setUserProfile(null);
+          throw new Error("Account registered with " + (providerName === "google" ? "Google" : "GitHub") + "! It is pending administrator approval before you can sign in.");
+        }
+      } else {
+        if (profile.status === "rejected") {
+          await signOut(auth);
+          setUser(null);
+          setUserProfile(null);
+          throw new Error("Your account has been rejected or suspended by the administrator.");
+        }
+
+        if (profile.status !== "approved" && !profile.isApproved) {
+          await signOut(auth);
+          setUser(null);
+          setUserProfile(null);
+          throw new Error("Your account is pending administrator approval. Please wait until approved.");
+        }
       }
-    } else {
-      if (profile.status === "rejected") {
-        await signOut(auth);
-        setUser(null);
-        setUserProfile(null);
-        throw new Error("Your account has been rejected or suspended by the administrator.");
-      }
 
-      if (profile.status !== "approved" && !profile.isApproved) {
-        await signOut(auth);
-        setUser(null);
-        setUserProfile(null);
-        throw new Error("Your account is pending administrator approval. Please wait until approved.");
-      }
+      setUser(fbUser);
+      setUserProfile(profile);
+      return profile;
+    } finally {
+      isSocialAuthInProgress.current = false;
     }
-
-    setUserProfile(profile);
-    return profile;
   };
 
   const signInWithGoogle = () => handleSocialAuth(googleProvider, "google");

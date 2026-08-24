@@ -5,7 +5,7 @@ import Link from "next/link";
 import Logo from "@/components/Layout/Header/Logo";
 import { UserProfile } from "@/context/AuthContext";
 
-export type AdminTab = "overview" | "accounts" | "roles";
+export type AdminTab = "overview" | "accounts" | "roles" | "hero";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -66,6 +66,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </svg>
       ),
       badge: null,
+    },
+    {
+      id: "hero" as AdminTab,
+      label: "Hero Section Manager",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+      badge: (
+        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/20">
+          NEW
+        </span>
+      ),
     },
   ];
 

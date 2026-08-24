@@ -19,6 +19,7 @@ import { AdminNavbar } from "@/components/Admin/AdminNavbar";
 import { DashboardOverview } from "@/components/Admin/DashboardOverview";
 import { AccountManagementTab } from "@/components/Admin/AccountManagementTab";
 import { RolesPermissionsTab } from "@/components/Admin/RolesPermissionsTab";
+import { HeroSectionManager } from "@/components/Admin/HeroSectionManager";
 
 export default function AdminDashboardPage() {
   const { user, userProfile, logout } = useAuth();
@@ -48,17 +49,24 @@ export default function AdminDashboardPage() {
         (error) => {
           console.error("Firestore users subscription error:", error);
           // Fallback if index not created
-          const fallbackUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-            const fetchedUsers: UserProfile[] = [];
-            snapshot.forEach((docSnap) => {
-              fetchedUsers.push({
-                ...(docSnap.data() as UserProfile),
-                uid: docSnap.id,
+          const fallbackUnsub = onSnapshot(
+            collection(db, "users"),
+            (snapshot) => {
+              const fetchedUsers: UserProfile[] = [];
+              snapshot.forEach((docSnap) => {
+                fetchedUsers.push({
+                  ...(docSnap.data() as UserProfile),
+                  uid: docSnap.id,
+                });
               });
-            });
-            setUsers(fetchedUsers);
-            setLoading(false);
-          });
+              setUsers(fetchedUsers);
+              setLoading(false);
+            },
+            (fallbackErr) => {
+              console.error("Firestore fallback users listener error:", fallbackErr);
+              setLoading(false);
+            }
+          );
           return () => fallbackUnsub();
         }
       );
@@ -219,6 +227,11 @@ export default function AdminDashboardPage() {
               adminCount={adminCount}
               approvedCount={approvedCount}
             />
+          )}
+
+          {/* Tab 4: Hero Section Manager */}
+          {activeTab === "hero" && (
+            <HeroSectionManager />
           )}
         </main>
       </div>

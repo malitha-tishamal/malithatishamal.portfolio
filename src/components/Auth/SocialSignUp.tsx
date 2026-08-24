@@ -19,13 +19,18 @@ const SocialSignUp: React.FC<SocialSignUpProps> = ({ onSuccess, onError }) => {
     setLoadingProvider("google");
     try {
       const profile = await signInWithGoogle();
-      toast.success("Account verified successfully!");
+      toast.success("Account created successfully!");
       if (onSuccess) onSuccess();
-      router.push("/admin");
+      if (profile.role === "admin") {
+        router.push("/admin");
+      }
     } catch (err: any) {
       console.error("Google sign up error:", err);
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        return;
+      }
       const msg = err.message || "Failed to sign up with Google.";
-      toast.error(msg);
+      toast.error(msg, { duration: 5000 });
       if (onError) onError(msg);
     } finally {
       setLoadingProvider(null);
@@ -36,13 +41,18 @@ const SocialSignUp: React.FC<SocialSignUpProps> = ({ onSuccess, onError }) => {
     setLoadingProvider("github");
     try {
       const profile = await signInWithGithub();
-      toast.success("Account verified successfully!");
+      toast.success("Account created successfully!");
       if (onSuccess) onSuccess();
-      router.push("/admin");
+      if (profile.role === "admin") {
+        router.push("/admin");
+      }
     } catch (err: any) {
       console.error("GitHub sign up error:", err);
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        return;
+      }
       const msg = err.message || "Failed to sign up with GitHub.";
-      toast.error(msg);
+      toast.error(msg, { duration: 5000 });
       if (onError) onError(msg);
     } finally {
       setLoadingProvider(null);
@@ -62,7 +72,7 @@ const SocialSignUp: React.FC<SocialSignUpProps> = ({ onSuccess, onError }) => {
             <span className="text-sm font-medium">Connecting...</span>
           ) : (
             <>
-              <span className="font-medium text-sm">Sign Up</span>
+              <span className="font-medium text-sm">Sign Up with Google</span>
               <svg
                 width="22"
                 height="22"
@@ -111,7 +121,7 @@ const SocialSignUp: React.FC<SocialSignUpProps> = ({ onSuccess, onError }) => {
             title="GitHub sign-up coming soon"
             className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-solid border-stroke p-3.5 text-dark duration-200 ease-in dark:border-dark_border dark:text-white opacity-50 cursor-not-allowed"
           >
-            <span className="font-medium text-sm">Sign Up</span>
+            <span className="font-medium text-sm">GitHub</span>
             <svg
               width="22"
               height="22"

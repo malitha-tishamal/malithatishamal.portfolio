@@ -21,11 +21,17 @@ const SocialSignIn: React.FC<SocialSignInProps> = ({ onSuccess, onError }) => {
       const profile = await signInWithGoogle();
       toast.success("Signed in successfully!");
       if (onSuccess) onSuccess();
-      router.push("/admin");
+      if (profile.role === "admin") {
+        router.push("/admin");
+      }
     } catch (err: any) {
       console.error("Google sign in error:", err);
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        // User voluntarily closed popup
+        return;
+      }
       const msg = err.message || "Failed to sign in with Google.";
-      toast.error(msg);
+      toast.error(msg, { duration: 5000 });
       if (onError) onError(msg);
     } finally {
       setLoadingProvider(null);
@@ -38,11 +44,16 @@ const SocialSignIn: React.FC<SocialSignInProps> = ({ onSuccess, onError }) => {
       const profile = await signInWithGithub();
       toast.success("Signed in successfully!");
       if (onSuccess) onSuccess();
-      router.push("/admin");
+      if (profile.role === "admin") {
+        router.push("/admin");
+      }
     } catch (err: any) {
       console.error("GitHub sign in error:", err);
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        return;
+      }
       const msg = err.message || "Failed to sign in with GitHub.";
-      toast.error(msg);
+      toast.error(msg, { duration: 5000 });
       if (onError) onError(msg);
     } finally {
       setLoadingProvider(null);
@@ -62,7 +73,7 @@ const SocialSignIn: React.FC<SocialSignInProps> = ({ onSuccess, onError }) => {
             <span className="text-sm font-medium">Connecting...</span>
           ) : (
             <>
-              <span className="font-medium text-sm">Sign In</span>
+              <span className="font-medium text-sm">Sign In with Google</span>
               <svg
                 width="22"
                 height="22"
@@ -111,7 +122,7 @@ const SocialSignIn: React.FC<SocialSignInProps> = ({ onSuccess, onError }) => {
             title="GitHub sign-in coming soon"
             className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-solid border-stroke p-3.5 text-dark duration-200 ease-in dark:border-dark_border dark:text-white opacity-50 cursor-not-allowed"
           >
-            <span className="font-medium text-sm">Sign In</span>
+            <span className="font-medium text-sm">GitHub</span>
             <svg
               width="22"
               height="22"
