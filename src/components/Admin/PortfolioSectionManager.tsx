@@ -38,7 +38,7 @@ export const PortfolioSectionManager: React.FC = () => {
 
   // Form fields
   const [title, setTitle] = useState<string>("");
-  const [subtitle, setSubtitle] = useState<string>("Events , wins & Achivements");
+  const [subtitle, setSubtitle] = useState<string>("Events");
   const [description, setDescription] = useState<string>("");
   const [tagsInput, setTagsInput] = useState<string>("");
   const [projectUrl, setProjectUrl] = useState<string>("");
@@ -107,7 +107,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const handleOpenCreate = () => {
     setEditingId(null);
     setTitle("");
-    setSubtitle("Events , wins & Achivements");
+    setSubtitle("Events");
     setDescription("");
     setTagsInput("");
     setProjectUrl("");
@@ -127,7 +127,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const handleOpenEdit = (item: PortfolioItem) => {
     setEditingId(item.id);
     setTitle(item.title || "");
-    setSubtitle(item.subtitle || "Events , wins & Achivements");
+    setSubtitle(item.subtitle || "Events");
     setDescription(item.description || "");
     setTagsInput(item.tags ? item.tags.join(", ") : "");
     setProjectUrl(item.projectUrl || "");
@@ -233,7 +233,7 @@ export const PortfolioSectionManager: React.FC = () => {
     const itemData: PortfolioItem = {
       id,
       title: title.trim(),
-      subtitle: subtitle.trim() || "Events , wins & Achivements",
+      subtitle: subtitle.trim() || "Events",
       description: description.trim(),
       tags: cleanTags,
       projectUrl: projectUrl.trim(),
@@ -327,7 +327,7 @@ export const PortfolioSectionManager: React.FC = () => {
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold">Portfolio Showcase & Cards Manager</h2>
           <p className="text-white/80 text-sm mt-1 max-w-xl">
-            Customise titles, category tags (Events , wins &amp; Achivements, Office, Training Programs, Travel), descriptions, photo display fit (Portrait/Landscape without cropping), ordering, and live social links.
+            Customise titles, category tags (Events, Wins &amp; Achivements, Office, Training Programs, Travel), descriptions, photo display fit (Portrait/Landscape without cropping), ordering, and live social links.
           </p>
         </div>
 
@@ -409,7 +409,7 @@ export const PortfolioSectionManager: React.FC = () => {
                       #{item.displayOrder || idx + 1}
                     </span>
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border border-blue-200/50">
-                      {item.subtitle || "Events , wins & Achivements"}
+                      {item.subtitle || "Events"}
                     </span>
                   </div>
 
@@ -537,27 +537,43 @@ export const PortfolioSectionManager: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="Events , wins & Achivements / Office"
+                      placeholder="Events / Wins & Achivements / Office..."
                       value={subtitle}
                       onChange={(e) => setSubtitle(e.target.value)}
                       className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
                     />
                     {/* Quick Category Chips */}
                     <div className="flex flex-wrap gap-1">
-                      {["Events , wins & Achivements", "Office", "Training Programs", "Travel"].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setSubtitle(preset)}
-                          className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition cursor-pointer ${
-                            subtitle === preset
-                              ? "bg-primary text-white"
-                              : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300 hover:bg-gray-200"
-                          }`}
-                        >
-                          {preset}
-                        </button>
-                      ))}
+                      {Array.from(
+                        new Set([
+                          "Events",
+                          "Wins & Achivements",
+                          "Office",
+                          "Training Programs",
+                          "Travel",
+                          ...items.map((i) => i.subtitle).filter(Boolean),
+                        ])
+                      )
+                        .filter(
+                          (preset) =>
+                            preset.toLowerCase() !== "health & lifestyle community" &&
+                            preset.toLowerCase() !== "events & wins" &&
+                            preset.toLowerCase() !== "events , wins & achivements"
+                        )
+                        .map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setSubtitle(preset)}
+                            className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition cursor-pointer ${
+                              subtitle === preset
+                                ? "bg-primary text-white shadow-xs"
+                                : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300 hover:bg-gray-200"
+                            }`}
+                          >
+                            {preset}
+                          </button>
+                        ))}
                     </div>
                   </div>
                 </div>
