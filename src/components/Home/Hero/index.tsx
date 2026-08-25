@@ -132,7 +132,7 @@ const Hero = () => {
   ].filter((s) => s.url && s.url.trim().length > 0 && s.url !== '#')
 
   return (
-    <section className='relative md:pt-44 pt-28 bg-white dark:bg-darklight bg-cover text-midnight_text dark:text-white transition-colors'>
+    <section className='relative md:pt-32 pt-20 bg-white dark:bg-darklight bg-cover text-midnight_text dark:text-white transition-colors'>
       <div className='container mx-auto max-w-6xl px-4 grid grid-cols-12 gap-6 relative z-10 items-center'>
         {/* Left Column: Headlines, Buttons, Signature & Contact Note */}
         <div
