@@ -21,6 +21,7 @@ import { AccountManagementTab } from "@/components/Admin/AccountManagementTab";
 import { RolesPermissionsTab } from "@/components/Admin/RolesPermissionsTab";
 import { HeroSectionManager } from "@/components/Admin/HeroSectionManager";
 import { PortfolioSectionManager } from "@/components/Admin/PortfolioSectionManager";
+import { TestimonialsManager } from "@/components/Admin/TestimonialsManager";
 
 export default function AdminDashboardPage() {
   const { user, userProfile, logout } = useAuth();
@@ -238,6 +239,11 @@ export default function AdminDashboardPage() {
           {/* Tab 5: Portfolio Section Manager */}
           {activeTab === "portfolio" && (
             <PortfolioSectionManager />
+          )}
+
+          {/* Tab 6: Testimonials Manager */}
+          {activeTab === "testimonials" && (
+            <TestimonialsManager />
           )}
         </main>
       </div>
