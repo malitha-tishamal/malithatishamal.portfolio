@@ -13,11 +13,13 @@ import { db } from "@/lib/firebase";
 import {
   PortfolioItem,
   PortfolioImageLayout,
+  PortfolioImageFit,
   defaultPortfolioItems,
   PORTFOLIO_CATEGORIES,
 } from "@/types/portfolio";
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import { PortfolioCardItem } from "@/components/portfolio/PortfolioCardItem";
+import { PortfolioDetailModal } from "@/components/portfolio/PortfolioDetailModal";
 import { getImgPath } from "@/utils/image";
 import toast from "react-hot-toast";
 
@@ -26,14 +28,17 @@ export const PortfolioSectionManager: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Modal / Form state
+  // Preview Modal state
+  const [previewItem, setPreviewItem] = useState<PortfolioItem | null>(null);
+
+  // Edit / Create Modal state
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
 
   // Form fields
   const [title, setTitle] = useState<string>("");
-  const [subtitle, setSubtitle] = useState<string>("Events & wins");
+  const [subtitle, setSubtitle] = useState<string>("Events , wins & Achivements");
   const [description, setDescription] = useState<string>("");
   const [tagsInput, setTagsInput] = useState<string>("");
   const [projectUrl, setProjectUrl] = useState<string>("");
@@ -43,6 +48,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [displayOrder, setDisplayOrder] = useState<number>(1);
   const [imageLayout, setImageLayout] = useState<PortfolioImageLayout>("single");
+  const [imageFit, setImageFit] = useState<PortfolioImageFit>("cover");
   const [images, setImages] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -101,7 +107,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const handleOpenCreate = () => {
     setEditingId(null);
     setTitle("");
-    setSubtitle("Events & wins");
+    setSubtitle("Events , wins & Achivements");
     setDescription("");
     setTagsInput("");
     setProjectUrl("");
@@ -111,6 +117,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setInstagramUrl("");
     setDisplayOrder(items.length > 0 ? Math.max(...items.map((i) => i.displayOrder || 0)) + 1 : 1);
     setImageLayout("single");
+    setImageFit("cover");
     setImages([""]);
     setUploadProgress({});
     setIsModalOpen(true);
@@ -120,7 +127,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const handleOpenEdit = (item: PortfolioItem) => {
     setEditingId(item.id);
     setTitle(item.title || "");
-    setSubtitle(item.subtitle || "Events & wins");
+    setSubtitle(item.subtitle || "Events , wins & Achivements");
     setDescription(item.description || "");
     setTagsInput(item.tags ? item.tags.join(", ") : "");
     setProjectUrl(item.projectUrl || "");
@@ -130,6 +137,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setInstagramUrl(item.instagramUrl || "");
     setDisplayOrder(item.displayOrder || 1);
     setImageLayout(item.imageLayout || "single");
+    setImageFit(item.imageFit || "cover");
     setImages(item.images && item.images.length > 0 ? item.images : [""]);
     setUploadProgress({});
     setIsModalOpen(true);
@@ -225,7 +233,7 @@ export const PortfolioSectionManager: React.FC = () => {
     const itemData: PortfolioItem = {
       id,
       title: title.trim(),
-      subtitle: subtitle.trim() || "Events & wins",
+      subtitle: subtitle.trim() || "Events , wins & Achivements",
       description: description.trim(),
       tags: cleanTags,
       projectUrl: projectUrl.trim(),
@@ -235,6 +243,7 @@ export const PortfolioSectionManager: React.FC = () => {
       instagramUrl: instagramUrl.trim(),
       images: validImages.length > 0 ? validImages : ["/images/portfolio/cozycasa.png"],
       imageLayout,
+      imageFit,
       displayOrder: Number(displayOrder) || 1,
       createdAt: editingId ? (items.find((i) => i.id === editingId)?.createdAt || nowFormatted) : nowFormatted,
       updatedAt: nowFormatted,
@@ -318,7 +327,7 @@ export const PortfolioSectionManager: React.FC = () => {
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold">Portfolio Showcase & Cards Manager</h2>
           <p className="text-white/80 text-sm mt-1 max-w-xl">
-            Customise titles, category tags, descriptions, Live Project &amp; Social links (LinkedIn, Facebook, Instagram), ordering, and 1, 2, or 4 photo layouts with Cloudinary.
+            Customise titles, category tags (Events , wins &amp; Achivements, Office, Training Programs, Travel), descriptions, photo display fit (Portrait/Landscape without cropping), ordering, and live social links.
           </p>
         </div>
 
@@ -400,7 +409,7 @@ export const PortfolioSectionManager: React.FC = () => {
                       #{item.displayOrder || idx + 1}
                     </span>
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border border-blue-200/50">
-                      {item.subtitle || "Events & wins"}
+                      {item.subtitle || "Events , wins & Achivements"}
                     </span>
                   </div>
 
@@ -427,9 +436,14 @@ export const PortfolioSectionManager: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Card Preview */}
+                {/* Card Preview (Clicking opens Detail Modal!) */}
                 <div className="flex justify-center mb-4">
-                  <PortfolioCardItem item={item} index={0} isStaggered={false} />
+                  <PortfolioCardItem
+                    item={item}
+                    index={0}
+                    isStaggered={false}
+                    onClick={() => setPreviewItem(item)}
+                  />
                 </div>
               </div>
 
@@ -443,15 +457,22 @@ export const PortfolioSectionManager: React.FC = () => {
                 <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => handleOpenEdit(item)}
-                    className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-darkmode dark:hover:bg-dark_border text-dark dark:text-white transition cursor-pointer"
+                    onClick={() => setPreviewItem(item)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-primary dark:text-blue-400 transition cursor-pointer"
                   >
-                    Edit Card
+                    View Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(item)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-darkmode dark:hover:bg-dark_border text-dark dark:text-white transition cursor-pointer"
+                  >
+                    Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDeleteItem(item)}
-                    className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/50 dark:text-red-400 transition cursor-pointer"
+                    className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/50 dark:text-red-400 transition cursor-pointer"
                   >
                     Delete
                   </button>
@@ -461,6 +482,12 @@ export const PortfolioSectionManager: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* DETAIL PREVIEW MODAL */}
+      <PortfolioDetailModal
+        item={previewItem}
+        onClose={() => setPreviewItem(null)}
+      />
 
       {/* CREATE / EDIT MODAL */}
       {isModalOpen && (
@@ -483,7 +510,7 @@ export const PortfolioSectionManager: React.FC = () => {
               {editingId ? "Edit Portfolio Card" : "Add New Portfolio Card"}
             </h3>
             <p className="text-xs text-grey dark:text-gray-400 mb-6">
-              Configure titles, category tags, descriptions, Live Project and social media links. Only provided links will appear to users.
+              Configure titles, category tags, descriptions, photo fit/crop settings, and Live Project / Social links.
             </p>
 
             <form onSubmit={handleSaveItem} className="space-y-5">
@@ -496,7 +523,7 @@ export const PortfolioSectionManager: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. National Tech Wins / Rocket Squared"
+                    placeholder="e.g. INNOVISION 2026 / Rocket Squared"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
@@ -510,14 +537,14 @@ export const PortfolioSectionManager: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="Events & wins / Office / Travel"
+                      placeholder="Events , wins & Achivements / Office"
                       value={subtitle}
                       onChange={(e) => setSubtitle(e.target.value)}
                       className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
                     />
                     {/* Quick Category Chips */}
                     <div className="flex flex-wrap gap-1">
-                      {["Events & wins", "Office", "Training Programs", "Travel"].map((preset) => (
+                      {["Events , wins & Achivements", "Office", "Training Programs", "Travel"].map((preset) => (
                         <button
                           key={preset}
                           type="button"
@@ -536,14 +563,14 @@ export const PortfolioSectionManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 2: Description (Displayed on card!) */}
+              {/* Row 2: Description */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                  Project Description (Shown on Card)
+                  Project Description (Shown on Card &amp; Details)
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Automated CI/CD deployment orchestrator with Kubernetes cluster management and Prometheus real-time monitoring..."
+                  placeholder="Describe the project achievements, event context, or work details..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
@@ -558,7 +585,7 @@ export const PortfolioSectionManager: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="DevOps, Docker, Kubernetes, AWS"
+                    placeholder="Innovation, 1st Place, Mobile App"
                     value={tagsInput}
                     onChange={(e) => setTagsInput(e.target.value)}
                     className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
@@ -578,85 +605,50 @@ export const PortfolioSectionManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 4: Live Project & GitHub */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    <span>Live Project</span>
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://myproject.com"
-                    value={projectUrl}
-                    onChange={(e) => setProjectUrl(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-gray-700"></span>
-                    <span>GitHub Repository</span>
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://github.com/username/repo"
-                    value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              {/* Row 5: Social Links (LinkedIn, Facebook, Instagram) */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-gray-500 dark:text-gray-400">
-                  Social Media Links (Optional — only filled links will display)
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold mb-1 text-[#0A66C2] flex items-center gap-1">
-                      <span>LinkedIn URL</span>
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://linkedin.com/in/..."
-                      value={linkedinUrl}
-                      onChange={(e) => setLinkedinUrl(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold mb-1 text-[#1877F2] flex items-center gap-1">
-                      <span>Facebook URL</span>
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://facebook.com/..."
-                      value={facebookUrl}
-                      onChange={(e) => setFacebookUrl(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold mb-1 text-[#E1306C] flex items-center gap-1">
-                      <span>Instagram URL</span>
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://instagram.com/..."
-                      value={instagramUrl}
-                      onChange={(e) => setInstagramUrl(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Image Layout Mode Selector (1 Photo, 2 Photos Top/Bottom, 4 Photos 2x2) */}
+              {/* Row 4: Photo Display Fit / Crop Settings (Fix for Portrait Photos!) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-2">
-                  Photo Display Layout inside Card
+                  Photo Crop &amp; Framing Style (Fix Portrait / Landscape)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {[
+                    {
+                      id: "cover" as PortfolioImageFit,
+                      title: "Cover (Fill Frame)",
+                      desc: "Zooms to fill image box",
+                    },
+                    {
+                      id: "contain" as PortfolioImageFit,
+                      title: "Contain (Full Uncropped)",
+                      desc: "Shows 100% of photo, no crop",
+                    },
+                    {
+                      id: "portrait_tall" as PortfolioImageFit,
+                      title: "Portrait Tall (3:4 Ratio)",
+                      desc: "Taller frame for tall photos",
+                    },
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setImageFit(mode.id)}
+                      className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                        imageFit === mode.id
+                          ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-2 ring-primary/20"
+                          : "border-border dark:border-dark_border hover:border-gray-400 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-midnight_text dark:text-white">{mode.title}</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400">{mode.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 5: Photo Display Layout inside Card */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2">
+                  Card Layout (Photos count in Card Frame)
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
@@ -719,6 +711,81 @@ export const PortfolioSectionManager: React.FC = () => {
                       </div>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Row 6: Live Project & GitHub */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span>Live Project (Optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://myproject.com"
+                    value={projectUrl}
+                    onChange={(e) => setProjectUrl(e.target.value)}
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-gray-700"></span>
+                    <span>GitHub Repository (Optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://github.com/username/repo"
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Row 7: Social Links (LinkedIn, Facebook, Instagram) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-gray-500 dark:text-gray-400">
+                  Social Media Links (Optional — only filled links will display)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-[#0A66C2]">
+                      LinkedIn URL
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://linkedin.com/in/..."
+                      value={linkedinUrl}
+                      onChange={(e) => setLinkedinUrl(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-[#1877F2]">
+                      Facebook URL
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://facebook.com/..."
+                      value={facebookUrl}
+                      onChange={(e) => setFacebookUrl(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-[#E1306C]">
+                      Instagram URL
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://instagram.com/..."
+                      value={instagramUrl}
+                      onChange={(e) => setInstagramUrl(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                    />
+                  </div>
                 </div>
               </div>
 
