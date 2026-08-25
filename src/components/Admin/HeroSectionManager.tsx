@@ -494,6 +494,127 @@ export const HeroSectionManager: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Social Media Links Card */}
+          <div className="bg-white dark:bg-darklight p-6 rounded-2xl border border-border dark:border-dark_border shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-border/60 dark:border-dark_border/60 pb-3">
+              <h2 className="text-lg font-bold text-dark dark:text-white flex items-center gap-2">
+                <span>Social Media Profiles</span>
+              </h2>
+              <span className="text-[11px] text-gray-500">Managed in Hero Section</span>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Add links to your social profiles. Only the profiles with a valid URL will appear as icons in the Hero Section.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              {/* LinkedIn */}
+              <div>
+                <label className="block text-xs font-semibold text-[#0A66C2] mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#0A66C2]"></span>
+                  <span>LinkedIn Profile URL</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://linkedin.com/in/username"
+                  value={formData.linkedinUrl || ""}
+                  onChange={(e) => handleChange("linkedinUrl", e.target.value)}
+                  className="w-full rounded-xl border border-border dark:border-dark_border bg-white dark:bg-darkmode px-3.5 py-2 text-xs text-dark dark:text-white focus:border-primary focus:outline-hidden"
+                />
+              </div>
+
+              {/* GitHub */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-gray-800 dark:bg-white"></span>
+                  <span>GitHub Profile URL</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://github.com/username"
+                  value={formData.githubUrl || ""}
+                  onChange={(e) => handleChange("githubUrl", e.target.value)}
+                  className="w-full rounded-xl border border-border dark:border-dark_border bg-white dark:bg-darkmode px-3.5 py-2 text-xs text-dark dark:text-white focus:border-primary focus:outline-hidden"
+                />
+              </div>
+
+              {/* Instagram */}
+              <div>
+                <label className="block text-xs font-semibold text-[#E1306C] mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#E1306C]"></span>
+                  <span>Instagram Profile URL</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://instagram.com/username"
+                  value={formData.instagramUrl || ""}
+                  onChange={(e) => handleChange("instagramUrl", e.target.value)}
+                  className="w-full rounded-xl border border-border dark:border-dark_border bg-white dark:bg-darkmode px-3.5 py-2 text-xs text-dark dark:text-white focus:border-primary focus:outline-hidden"
+                />
+              </div>
+
+              {/* Facebook */}
+              <div>
+                <label className="block text-xs font-semibold text-[#1877F2] mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#1877F2]"></span>
+                  <span>Facebook Profile URL</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://facebook.com/username"
+                  value={formData.facebookUrl || ""}
+                  onChange={(e) => handleChange("facebookUrl", e.target.value)}
+                  className="w-full rounded-xl border border-border dark:border-dark_border bg-white dark:bg-darkmode px-3.5 py-2 text-xs text-dark dark:text-white focus:border-primary focus:outline-hidden"
+                />
+              </div>
+
+              {/* X / Twitter */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-black dark:bg-white"></span>
+                  <span>X (Twitter) Profile URL</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://x.com/username"
+                  value={formData.twitterUrl || ""}
+                  onChange={(e) => handleChange("twitterUrl", e.target.value)}
+                  className="w-full rounded-xl border border-border dark:border-dark_border bg-white dark:bg-darkmode px-3.5 py-2 text-xs text-dark dark:text-white focus:border-primary focus:outline-hidden"
+                />
+              </div>
+
+              {/* WhatsApp */}
+              <div>
+                <label className="block text-xs font-semibold text-[#25D366] mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#25D366]"></span>
+                  <span>WhatsApp Link (Optional)</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://wa.me/94700000000"
+                  value={formData.whatsappUrl || ""}
+                  onChange={(e) => handleChange("whatsappUrl", e.target.value)}
+                  className="w-full rounded-xl border border-border dark:border-dark_border bg-white dark:bg-darkmode px-3.5 py-2 text-xs text-dark dark:text-white focus:border-primary focus:outline-hidden"
+                />
+              </div>
+
+              {/* YouTube */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-[#FF0000] mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#FF0000]"></span>
+                  <span>YouTube Channel URL (Optional)</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://youtube.com/@channel"
+                  value={formData.youtubeUrl || ""}
+                  onChange={(e) => handleChange("youtubeUrl", e.target.value)}
+                  className="w-full rounded-xl border border-border dark:border-dark_border bg-white dark:bg-darkmode px-3.5 py-2 text-xs text-dark dark:text-white focus:border-primary focus:outline-hidden"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </form>
