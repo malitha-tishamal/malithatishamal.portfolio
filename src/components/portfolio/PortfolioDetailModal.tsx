@@ -60,7 +60,7 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
         <div className='mb-5 pr-10'>
           <div className='flex flex-wrap items-center gap-2 mb-1.5'>
             <span className='px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20'>
-              {item.subtitle || 'Events , wins & Achivements'}
+              {item.subtitle || 'Events'}
             </span>
             {item.displayOrder && (
               <span className='px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-400'>
