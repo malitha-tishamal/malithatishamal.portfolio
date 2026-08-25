@@ -64,6 +64,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
               {activeTab === "roles" && "Roles & Permissions"}
               {activeTab === "hero" && "Hero Section Manager"}
               {activeTab === "portfolio" && "Portfolio Manager"}
+              {activeTab === "testimonials" && "Testimonials Manager"}
             </span>
           </div>
         </div>
@@ -125,6 +126,16 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
           >
             <span>Portfolio</span>
             <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400">✦</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("testimonials")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center gap-1 ${
+              activeTab === "testimonials"
+                ? "bg-white dark:bg-darklight text-primary shadow-xs font-semibold"
+                : "text-gray-600 dark:text-gray-400 hover:text-dark dark:hover:text-white"
+            }`}
+          >
+            <span>Testimonials</span>
           </button>
         </div>
 
