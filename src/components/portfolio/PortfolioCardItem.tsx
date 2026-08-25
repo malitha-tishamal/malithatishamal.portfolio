@@ -19,7 +19,24 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
   onClick,
 }) => {
   const images = item.images || []
-  const layout = item.imageLayout || (images.length >= 4 ? 'grid_4' : images.length >= 2 ? 'split_horizontal_2' : 'single')
+  const layout =
+    item.imageLayout ||
+    (images.length >= 4 ? 'grid_4' : images.length >= 2 ? 'split_horizontal_2' : 'single')
+  const fit = item.imageFit || 'cover'
+
+  // Image object-fit class
+  const imgFitClass =
+    fit === 'contain'
+      ? 'object-contain p-1 bg-gray-50/50 dark:bg-black/20'
+      : 'object-cover object-top'
+
+  // Card Aspect Ratio
+  const cardAspectClass =
+    fit === 'portrait_tall'
+      ? 'aspect-[3/4]'
+      : fit === 'contain'
+      ? 'aspect-[4/4]'
+      : 'aspect-[4/3.8]'
 
   // Format date helper
   const formatDate = (val: any): string => {
@@ -43,7 +60,8 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
       }`}>
       <div>
         {/* CARD IMAGE FRAME (Preserves exact aspect ratio & rounded corners) */}
-        <div className='relative w-full aspect-[4/3.8] rounded-2xl overflow-hidden bg-gray-100 dark:bg-darkmode shadow-xs group-hover:shadow-lg transition-all duration-500 border border-border/40 dark:border-dark_border/40'>
+        <div
+          className={`relative w-full ${cardAspectClass} rounded-2xl overflow-hidden bg-gray-100 dark:bg-darkmode shadow-xs group-hover:shadow-lg transition-all duration-500 border border-border/40 dark:border-dark_border/40`}>
           {images.length === 0 ? (
             <div className='w-full h-full flex items-center justify-center text-xs text-gray-400'>
               No Image
@@ -57,7 +75,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
                   alt={`${item.title} Top`}
                   fill
                   unoptimized
-                  className='object-cover group-hover:scale-105 transition-transform duration-500'
+                  className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
                 />
               </div>
               <div className='relative w-full h-full overflow-hidden'>
@@ -66,7 +84,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
                   alt={`${item.title} Bottom`}
                   fill
                   unoptimized
-                  className='object-cover group-hover:scale-105 transition-transform duration-500'
+                  className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
                 />
               </div>
             </div>
@@ -80,7 +98,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
                     alt={`${item.title} ${i + 1}`}
                     fill
                     unoptimized
-                    className='object-cover group-hover:scale-105 transition-transform duration-500'
+                    className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
                   />
                 </div>
               ))}
@@ -93,7 +111,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
                 alt={item.title}
                 fill
                 unoptimized
-                className='object-cover group-hover:scale-110 transition-transform duration-500'
+                className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
               />
             </div>
           )}
@@ -101,10 +119,10 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
 
         {/* Category Pill & Date */}
         <div className='flex items-center justify-between gap-2 mt-4 mb-1'>
-          <span className='text-xs font-bold text-primary dark:text-blue-400 uppercase tracking-wider'>
-            {item.subtitle || 'Designation'}
+          <span className='text-[11px] font-bold text-primary dark:text-blue-400 uppercase tracking-wider line-clamp-1'>
+            {item.subtitle || 'Events , wins & Achivements'}
           </span>
-          <span className='text-[11px] font-medium text-gray-400 dark:text-gray-500'>
+          <span className='text-[10px] font-medium text-gray-400 dark:text-gray-500 shrink-0'>
             Updated: {formatDate(item.updatedAt || item.createdAt)}
           </span>
         </div>
@@ -114,7 +132,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
           {item.title}
         </h4>
 
-        {/* Description (Now explicitly displayed as requested!) */}
+        {/* Description */}
         {item.description && (
           <p className='text-xs sm:text-sm text-grey dark:text-gray-300 font-normal mt-1.5 line-clamp-2 leading-relaxed'>
             {item.description}
