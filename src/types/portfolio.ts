@@ -4,7 +4,7 @@ export type PortfolioImageFit = "cover" | "contain" | "portrait_tall";
 export interface PortfolioItem {
   id: string;
   title: string;
-  subtitle: string; // Category (Events , wins & Achivements, Office, Training Programs, Travel)
+  subtitle: string; // Category (Events, Wins & Achivements, Office, Training Programs, Travel)
   description?: string;
   tags?: string[];
   projectUrl?: string; // Live Project URL
@@ -23,7 +23,8 @@ export interface PortfolioItem {
 
 export const PORTFOLIO_CATEGORIES = [
   "All Photos",
-  "Events , wins & Achivements",
+  "Events",
+  "Wins & Achivements",
   "Office",
   "Training Programs",
   "Travel",
@@ -52,7 +53,7 @@ export const defaultPortfolioItems: PortfolioItem[] = [
   {
     id: "hackathon-award",
     title: "National Tech Wins & Innovation",
-    subtitle: "Events , wins & Achivements",
+    subtitle: "Wins & Achivements",
     description: "Awarded 1st place in National Software Innovation Summit for developing high-impact intelligent cloud platforms.",
     tags: ["Hackathon", "Innovation", "Award"],
     projectUrl: "https://github.com/malitha-tishamal",
@@ -90,9 +91,9 @@ export const defaultPortfolioItems: PortfolioItem[] = [
   {
     id: "tech-expedition",
     title: "Global Tech Summit",
-    subtitle: "Travel",
+    subtitle: "Events",
     description: "Keynote presentation and technical exploration at the Asia-Pacific Tech & Cybersecurity Conference.",
-    tags: ["Travel", "Conference", "Cybersecurity"],
+    tags: ["Events", "Conference", "Cybersecurity"],
     projectUrl: "https://github.com/malitha-tishamal",
     linkedinUrl: "https://linkedin.com/in/malitha-tishamal",
     facebookUrl: "https://facebook.com/malithatishamal",
@@ -128,7 +129,7 @@ export const defaultPortfolioItems: PortfolioItem[] = [
   {
     id: "fusion-dynamics",
     title: "Fusion Dynamics Multi-Perspective",
-    subtitle: "Events , wins & Achivements",
+    subtitle: "Wins & Achivements",
     description: "High-performance real-time data visualizer with 4 synchronized operational perspectives and analytical graphs.",
     tags: ["Analytics", "React", "TypeScript"],
     projectUrl: "https://github.com/malitha-tishamal",
