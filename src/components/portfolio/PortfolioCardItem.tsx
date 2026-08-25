@@ -120,7 +120,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
         {/* Category Pill & Date */}
         <div className='flex items-center justify-between gap-2 mt-4 mb-1'>
           <span className='text-[11px] font-bold text-primary dark:text-blue-400 uppercase tracking-wider line-clamp-1'>
-            {item.subtitle || 'Events , wins & Achivements'}
+            {item.subtitle || 'Events'}
           </span>
           <span className='text-[10px] font-medium text-gray-400 dark:text-gray-500 shrink-0'>
             Updated: {formatDate(item.updatedAt || item.createdAt)}
