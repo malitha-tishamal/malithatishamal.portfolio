@@ -102,8 +102,17 @@ const Testimonial: React.FC = () => {
             </p>
           </div>
 
-          {/* Action Button: Add Testimonial */}
-          <div className='shrink-0'>
+          {/* Action Buttons: View All & Add Testimonial */}
+          <div className='shrink-0 flex items-center gap-3'>
+            <Link
+              href='/testimonials'
+              className='px-4 py-2.5 rounded-xl border border-primary text-primary hover:bg-primary hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-primary dark:hover:text-white transition duration-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs'>
+              <span>View All</span>
+              <svg className='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M14 5l7 7m0 0l-7 7m7-7H3' />
+              </svg>
+            </Link>
+
             <button
               type='button'
               onClick={() => setIsAddModalOpen(true)}
