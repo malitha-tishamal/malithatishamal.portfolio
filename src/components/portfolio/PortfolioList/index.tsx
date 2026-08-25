@@ -11,6 +11,14 @@ import {
 import { PortfolioCardItem } from '@/components/portfolio/PortfolioCardItem'
 import { PortfolioDetailModal } from '@/components/portfolio/PortfolioDetailModal'
 
+const normalizeCategory = (cat: string): string => {
+  const c = cat.trim()
+  if (c === 'Health & Lifestyle Community' || c === 'Events & wins' || c === 'Events , wins & Achivements') {
+    return 'Events'
+  }
+  return c
+}
+
 const PortfolioList: React.FC = () => {
   const [items, setItems] = useState<PortfolioItem[]>(defaultPortfolioItems)
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
@@ -25,9 +33,11 @@ const PortfolioList: React.FC = () => {
           if (!snapshot.empty) {
             const fetched: PortfolioItem[] = []
             snapshot.forEach((docSnap) => {
+              const data = docSnap.data() as PortfolioItem
               fetched.push({
-                ...(docSnap.data() as PortfolioItem),
+                ...data,
                 id: docSnap.id,
+                subtitle: normalizeCategory(data.subtitle || 'Events'),
               })
             })
             fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
@@ -48,11 +58,21 @@ const PortfolioList: React.FC = () => {
     }
   }, [])
 
-  // Combine standard categories and any custom categories in database
+  // Excluded obsolete categories
+  const excludedCategories = new Set([
+    'health & lifestyle community',
+    'events & wins',
+    'events , wins & achivements',
+    'designation',
+  ])
+
+  // Combine standard categories and any valid custom categories in database
   const dynamicCategories = Array.from(
     new Set([
       ...PORTFOLIO_CATEGORIES,
-      ...items.map((i) => i.subtitle).filter(Boolean),
+      ...items
+        .map((i) => normalizeCategory(i.subtitle || ''))
+        .filter((cat) => cat && !excludedCategories.has(cat.toLowerCase())),
     ])
   )
 
@@ -61,15 +81,19 @@ const PortfolioList: React.FC = () => {
     activeCategory === 'All Photos' || activeCategory === 'All'
       ? items
       : items.filter((i) => {
-          const cat = i.subtitle?.toLowerCase().trim() || ''
+          const cat = normalizeCategory(i.subtitle || '').toLowerCase()
           const target = activeCategory.toLowerCase().trim()
-          return cat === target || cat.includes(target) || i.tags?.some((t) => t.toLowerCase() === target)
+          return (
+            cat === target ||
+            cat.includes(target) ||
+            i.tags?.some((t) => t.toLowerCase() === target)
+          )
         })
 
   return (
     <section id='portfolio' className='md:pb-20 pb-12 pt-2 dark:bg-darkmode bg-white transition-colors'>
       <div className='container mx-auto max-w-[120rem] px-4 sm:px-6 lg:px-8'>
-        {/* Category Filter Pills (All Photos, Events , wins & Achivements, Office, Training Programs, Travel, etc.) */}
+        {/* Category Filter Pills (All Photos, Events, Wins & Achivements, Office, Training Programs, Travel) */}
         <div className='flex flex-wrap items-center justify-center gap-2.5 mb-10'>
           {dynamicCategories.map((cat) => (
             <button
