@@ -21,6 +21,7 @@ import { AccountManagementTab } from "@/components/Admin/AccountManagementTab";
 import { RolesPermissionsTab } from "@/components/Admin/RolesPermissionsTab";
 import { HeroSectionManager } from "@/components/Admin/HeroSectionManager";
 import { PortfolioSectionManager } from "@/components/Admin/PortfolioSectionManager";
+import { ProjectsSectionManager } from "@/components/Admin/ProjectsSectionManager";
 import { TestimonialsManager } from "@/components/Admin/TestimonialsManager";
 
 export default function AdminDashboardPage() {
@@ -241,7 +242,12 @@ export default function AdminDashboardPage() {
             <PortfolioSectionManager />
           )}
 
-          {/* Tab 6: Testimonials Manager */}
+          {/* Tab 6: Projects Section Manager */}
+          {activeTab === "projects" && (
+            <ProjectsSectionManager />
+          )}
+
+          {/* Tab 7: Testimonials Manager */}
           {activeTab === "testimonials" && (
             <TestimonialsManager />
           )}
