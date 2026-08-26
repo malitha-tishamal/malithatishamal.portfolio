@@ -1,0 +1,168 @@
+"use client";
+
+import React, { useState } from "react";
+import Image from "next/image";
+import { CertificationItem } from "@/types/certification";
+import toast from "react-hot-toast";
+
+interface CertificationCardItemProps {
+  item: CertificationItem;
+  onPreview: (item: CertificationItem) => void;
+}
+
+export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
+  item,
+  onPreview,
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyId = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!item.credentialId) return;
+    if (typeof navigator !== "undefined") {
+      navigator.clipboard.writeText(item.credentialId);
+      setCopied(true);
+      toast.success("Credential ID copied!");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-darklight rounded-2xl border border-border/80 dark:border-dark_border p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full group">
+      
+      {/* Top Section: Issuer Logo & Header */}
+      <div>
+        <div className="flex items-start gap-3.5 mb-4">
+          <div className="w-12 h-12 rounded-xl bg-gray-900 text-white flex items-center justify-center p-2 shrink-0 shadow-xs relative overflow-hidden border border-gray-800">
+            {item.issuerLogo ? (
+              <Image
+                src={item.issuerLogo}
+                alt={item.issuer}
+                width={40}
+                height={40}
+                className="object-contain filter brightness-110"
+                unoptimized
+              />
+            ) : (
+              <span className="font-bold text-xs">CERT</span>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h3
+              onClick={() => onPreview(item)}
+              className="font-bold text-dark dark:text-white group-hover:text-primary transition-colors text-base sm:text-lg leading-tight line-clamp-2 cursor-pointer"
+            >
+              {item.title}
+            </h3>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
+              {item.issuer}
+            </p>
+          </div>
+        </div>
+
+        {/* Issued Date & Expiration Badges */}
+        <div className="flex flex-wrap items-center gap-2 mb-3.5">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-darkmode text-gray-700 dark:text-gray-300 border border-border/60">
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Issued {item.issueDate}
+          </span>
+
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <span className="text-sm font-bold">♾</span>
+            {item.expirationDate || "No Expiration"}
+          </span>
+        </div>
+
+        {/* Credential ID Chip (If present) */}
+        {item.credentialId && (
+          <div className="flex items-center gap-2 mb-3.5 px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border/60 text-xs text-gray-600 dark:text-gray-400">
+            <span className="font-semibold text-gray-500 shrink-0">ID:</span>
+            <span className="font-mono truncate flex-1 text-[11px]">{item.credentialId}</span>
+            <button
+              onClick={handleCopyId}
+              title="Copy ID"
+              className="text-[11px] font-bold text-primary hover:underline shrink-0 cursor-pointer"
+            >
+              {copied ? "✓ Copied" : "Copy"}
+            </button>
+          </div>
+        )}
+
+        {/* Skills / Tags */}
+        {item.skills && item.skills.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {item.skills.slice(0, 4).map((skill, idx) => (
+              <span
+                key={idx}
+                className="px-2.5 py-0.8 rounded-lg text-[11px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50"
+              >
+                {skill}
+              </span>
+            ))}
+            {item.skills.length > 4 && (
+              <span className="px-2 py-0.8 rounded-lg text-[11px] font-bold bg-gray-100 dark:bg-darkmode text-gray-500 border border-border">
+                +{item.skills.length - 4}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Certificate Preview Card */}
+        {item.certificateImage && (
+          <div
+            onClick={() => onPreview(item)}
+            className="relative h-36 w-full rounded-xl overflow-hidden border border-border/80 dark:border-dark_border mb-5 cursor-pointer group/preview bg-gray-100 dark:bg-darkmode"
+          >
+            <Image
+              src={item.certificateImage}
+              alt={item.title}
+              fill
+              className="object-cover group-hover/preview:scale-105 transition duration-300"
+              unoptimized
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-darklight/90 text-dark dark:text-white text-xs font-bold shadow-md flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Preview Certificate
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Actions Bar */}
+      <div className="pt-2">
+        {item.credentialUrl ? (
+          <a
+            href={item.credentialUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2.5 px-4 rounded-xl border-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary text-primary hover:text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-xs cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <span>Show credential</span>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        ) : (
+          <button
+            onClick={() => onPreview(item)}
+            className="w-full py-2.5 px-4 rounded-xl border border-border bg-gray-50 dark:bg-darkmode text-dark dark:text-white font-bold text-xs sm:text-sm hover:bg-primary hover:text-white hover:border-primary transition cursor-pointer"
+          >
+            View Certificate Details
+          </button>
+        )}
+      </div>
+
+    </div>
+  );
+};
