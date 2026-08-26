@@ -1,205 +1,164 @@
 'use client'
 
-import React, { FC } from 'react'
+import React, { FC, useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { getImgPath } from '@/utils/image'
+import { FooterContent, defaultFooterContent } from '@/types/footer'
+import toast from 'react-hot-toast'
+
+const SOCIAL_COLORS: Record<string, string> = {
+  LinkedIn: 'bg-[#0A66C2]',
+  GitHub: 'bg-[#24292e]',
+  Instagram: 'bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400',
+  Facebook: 'bg-[#1877F2]',
+  X: 'bg-black',
+  WhatsApp: 'bg-[#25D366]',
+  YouTube: 'bg-[#FF0000]',
+}
+
+interface SocialIconProps { platform: string; className?: string }
+const SocialIcon = ({ platform, className = 'w-5 h-5' }: SocialIconProps) => {
+  if (platform === 'LinkedIn') return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+  if (platform === 'GitHub') return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+  if (platform === 'Instagram') return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+  if (platform === 'Facebook') return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+  if (platform === 'X') return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  if (platform === 'WhatsApp') return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  if (platform === 'YouTube') return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+  return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+}
 
 const Footer: FC = () => {
   const pathUrl = usePathname()
+  const [data, setData] = useState<FooterContent>(defaultFooterContent)
+  const [email, setEmail] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [subscribed, setSubscribed] = useState(false)
 
-  // Hide the public footer on Admin pages
-  if (pathUrl?.startsWith('/admin')) {
-    return null
+  useEffect(() => {
+    const fetchFooter = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'siteContent', 'footer'))
+        if (snap.exists()) {
+          setData({ ...defaultFooterContent, ...(snap.data() as FooterContent) })
+        }
+      } catch (err) {
+        console.error('Footer fetch error:', err)
+      }
+    }
+    fetchFooter()
+  }, [])
+
+  if (pathUrl?.startsWith('/admin')) return null
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email || !email.includes('@')) { toast.error('Please enter a valid email address.'); return }
+    setSubmitting(true)
+    try {
+      await addDoc(collection(db, 'newsletterSubscribers'), { email, subscribedAt: serverTimestamp() })
+      setSubscribed(true)
+      setEmail('')
+      toast.success('Successfully subscribed!')
+    } catch (err) {
+      console.error(err)
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
+  const enabledSocials = (data.socialLinks || []).filter(s => s.enabled)
+  const enabledNavLinks = (data.navLinks || []).filter(l => l.enabled)
+
   return (
-    <footer className='bg-darkmode relative z-1 border-t border-dark_border px-6'>
-      <div className='container mx-auto max-w-6xl px-4'>
-        <div className='grid md:grid-cols-12 grid-cols-1 sm:grid-cols-12'>
-          <div className='md:col-span-4 sm:col-span-6 col-span-12 sm:border-r border-b border-solid border-dark_border flex items-center sm:border-b-0 sm:min-h-25 py-10 shrink-0 '>
-            <div className='sm:content-normal sm:text-start text-center content-center sm:w-auto w-full'>
-              <Link href='/' className='md:block flex justify-center'>
-                <Image
-                  src={getImgPath('/images/logo/malitha-logo-white.png')}
-                  alt='Malitha'
-                  width={280}
-                  height={90}
-                  style={{ width: 'auto', height: '78px' }}
-                  quality={100}
-                  unoptimized
-                />
+    <footer className="bg-darkmode relative z-1 border-t border-dark_border px-6">
+      <div className="container mx-auto max-w-6xl px-4">
+        <div className="grid md:grid-cols-12 grid-cols-1 sm:grid-cols-12">
+          <div className="md:col-span-4 sm:col-span-6 col-span-12 sm:border-r border-b border-solid border-dark_border flex items-center sm:border-b-0 sm:min-h-25 py-10 shrink-0">
+            <div className="sm:content-normal sm:text-start text-center content-center sm:w-auto w-full">
+              <Link href="/" className="md:block flex justify-center">
+                <Image src={getImgPath('/images/logo/malitha-logo-white.png')} alt="Malitha" width={280} height={90} style={{ width: 'auto', height: '78px' }} quality={100} unoptimized />
               </Link>
-              <h2 className='text-white py-10 text-[40px] leading-tight font-bold'>
-                Ready to get started?
-              </h2>
-              <Link
-                href='#'
-                className='px-9 py-3 rounded-lg bg-primary text-white hover:bg-blue-700 hover:shadow-none'>
-                Get Started
-              </Link>
+              <h2 className="text-white py-10 text-[40px] leading-tight font-bold">{data.tagline}</h2>
+              <Link href={data.ctaHref} className="px-9 py-3 rounded-lg bg-primary text-white hover:bg-blue-700 hover:shadow-none transition">{data.ctaLabel}</Link>
             </div>
           </div>
-          <div className='md:col-span-4 sm:col-span-6 col-span-12 sm:flex items-center sm:min-h-25 py-10 justify-center shrink-0 md:border-r border-b sm:border-b-0 border-solid border-dark_border'>
-            <div className='flex flex-col md:items-start items-center'>
-              <span className='text-lg font-bold text-white pb-4 inline-block'>
-                Support
-              </span>
-              <div className='pb-5 sm:block flex'>
-                <p className='text-base font-bold text-white'>Phone</p>
-                <Link
-                  href='tel:+(690) 2560 0020'
-                  className='text-2xl text-white/50 hover:text-white'>
-                  +(690) 2560 0020
-                </Link>
+
+          <div className="md:col-span-4 sm:col-span-6 col-span-12 sm:flex items-center sm:min-h-25 py-10 justify-center shrink-0 md:border-r border-b sm:border-b-0 border-solid border-dark_border">
+            <div className="flex flex-col md:items-start items-center">
+              <span className="text-lg font-bold text-white pb-4 inline-block">{data.supportTitle}</span>
+              <div className="pb-5 sm:block flex">
+                <p className="text-base font-bold text-white">Phone</p>
+                <Link href={data.phoneHref} className="text-2xl text-white/50 hover:text-white">{data.phone}</Link>
               </div>
-              <div className='sm:block flex items-center gap-3'>
-                <p className='text-base font-bold text-white'>Email</p>
-                <Link
-                  href='mailto:info@venus.com'
-                  className='text-2xl text-white/50 hover:text-white'>
-                  info@Venus.com
-                </Link>
+              <div className="sm:block flex items-center gap-3">
+                <p className="text-base font-bold text-white">Email</p>
+                <Link href={data.emailHref} className="text-2xl text-white/50 hover:text-white">{data.email}</Link>
               </div>
-              <div>
-                <ul className='flex items-center gap-3 mt-[1.875rem]'>
-                  <li className='group'>
-                    <Link href='#' className=''>
-                      <svg
-                        width='25'
-                        height='25'
-                        viewBox='0 0 25 25'
-                        fill='#A3BBD1'
-                        xmlns='http://www.w3.org/2000/svg'
-                        className='group-hover:fill-primary'>
-                        <g clipPath='url(#clip0_1_343)'>
-                          <path d='M22.9128 0.769043H2.06165C1.34768 0.769472 0.7689 1.34854 0.769043 2.0628V22.9139C0.769472 23.6279 1.34854 24.2067 2.0628 24.2065H13.2889V15.1428H10.2448V11.5952H13.2889V8.98433C13.2889 5.95665 15.1372 4.3087 17.838 4.3087C19.1317 4.3087 20.2433 4.40512 20.5673 4.44818V7.61261H18.7049C17.2355 7.61261 16.951 8.31084 16.951 9.33566V11.5952H20.4643L20.0066 15.1428H16.951V24.2065H22.9128C23.6272 24.2067 24.2064 23.6278 24.2065 22.9134C24.2065 22.9132 24.2065 22.9131 24.2065 22.9128V2.06165C24.2063 1.34768 23.627 0.7689 22.9128 0.769043Z' />
-                        </g>
-                        <defs>
-                          <clipPath id='clip0_1_343'>
-                            <rect width='25' height='25' />
-                          </clipPath>
-                        </defs>
-                      </svg>
-                    </Link>
-                  </li>
-                  <li className='group'>
-                    <Link href='#'>
-                      <svg
-                        width='23'
-                        height='23'
-                        viewBox='0 0 23 23'
-                        fill='#A3BBD1'
-                        xmlns='http://www.w3.org/2000/svg'
-                        className='group-hover:fill-primary'>
-                        <g clipPath='url(#clip0_1_345)'>
-                          <path d='M21.3412 0H1.65878C0.742615 0 0 0.742615 0 1.65878V21.3412C0 22.2574 0.742615 23 1.65878 23H21.3412C22.2574 23 23 22.2574 23 21.3412V1.65878C23 0.742615 22.2574 0 21.3412 0V0ZM16.7508 8.96648C16.7559 9.07966 16.7583 9.19337 16.7583 9.3076C16.7583 12.7955 14.1034 16.8176 9.24812 16.8178H9.24829H9.24812C7.75745 16.8178 6.37031 16.3809 5.20216 15.6321C5.4087 15.6565 5.61892 15.6686 5.83177 15.6686C7.06853 15.6686 8.20667 15.2468 9.11019 14.5387C7.95468 14.5173 6.98044 13.7542 6.64423 12.7053C6.80514 12.7362 6.97061 12.7531 7.1403 12.7531C7.38123 12.7531 7.61461 12.7206 7.83641 12.6601C6.62861 12.4183 5.71877 11.3508 5.71877 10.0727C5.71877 10.0607 5.71877 10.05 5.71912 10.039C6.07481 10.2367 6.48156 10.3557 6.91463 10.3691C6.20589 9.89615 5.74 9.08773 5.74 8.17192C5.74 7.68831 5.87073 7.23523 6.09744 6.84515C7.39912 8.44233 9.34445 9.49273 11.5383 9.6031C11.493 9.40973 11.4696 9.20828 11.4696 9.00122C11.4696 7.54407 12.6518 6.36189 14.1095 6.36189C14.8688 6.36189 15.5546 6.68283 16.0362 7.19592C16.6376 7.0773 17.2023 6.8576 17.7124 6.55526C17.515 7.17136 17.0966 7.68831 16.5516 8.01522C17.0856 7.95135 17.5945 7.80974 18.0674 7.59952C17.7141 8.12893 17.2661 8.59394 16.7508 8.96648Z' />
-                        </g>
-                        <defs>
-                          <clipPath id='clip0_1_345'>
-                            <rect width='23' height='23' fill='white' />
-                          </clipPath>
-                        </defs>
-                      </svg>
-                    </Link>
-                  </li>
-                  <li className='group'>
-                    <Link href='#'>
-                      <svg
-                        width='22'
-                        height='23'
-                        viewBox='0 0 22 23'
-                        fill='#A3BBD1'
-                        xmlns='http://www.w3.org/2000/svg'
-                        className='group-hover:fill-primary'>
-                        <g clipPath='url(#clip0_1_347)'>
-                          <path d='M20.4133 0H1.58665C0.710327 0 0 0.742615 0 1.65878V21.3412C0 22.2574 0.710327 23 1.58665 23H20.4133C21.2897 23 22 22.2574 22 21.3412V1.65878C22 0.742615 21.2897 0 20.4133 0ZM7.80353 17.3848H5.12453V8.95858H7.80353V17.3848ZM6.46411 7.80798H6.44666C5.54767 7.80798 4.96625 7.161 4.96625 6.35241C4.96625 5.52557 5.56546 4.89648 6.4819 4.89648C7.39835 4.89648 7.96231 5.52557 7.97977 6.35241C7.97977 7.161 7.39835 7.80798 6.46411 7.80798ZM17.4634 17.3848H14.7848V12.877C14.7848 11.7441 14.3969 10.9715 13.4276 10.9715C12.6875 10.9715 12.2468 11.4926 12.0531 11.9957C11.9822 12.1758 11.965 12.4274 11.965 12.6792V17.3848H9.28612C9.28612 17.3848 9.3212 9.7491 9.28612 8.95858H11.965V10.1516C12.321 9.57748 12.9579 8.76082 14.3793 8.76082C16.1418 8.76082 17.4634 9.96511 17.4634 12.5532V17.3848Z' />
-                        </g>
-                        <defs>
-                          <clipPath id='clip0_1_347'>
-                            <rect width='22' height='23' fill='white' />
-                          </clipPath>
-                        </defs>
-                      </svg>
-                    </Link>
-                  </li>
+              {enabledSocials.length > 0 && (
+                <ul className="flex flex-wrap items-center gap-2 mt-7">
+                  {enabledSocials.map(social => {
+                    const colorClass = SOCIAL_COLORS[social.platform] || 'bg-gray-600'
+                    return (
+                      <li key={social.platform}>
+                        <Link href={social.url || '#'} target="_blank" rel="noopener noreferrer" title={social.platform}
+                          className={`${colorClass} w-9 h-9 rounded-lg flex items-center justify-center text-white hover:-translate-y-1 hover:shadow-lg transition-all duration-200`}>
+                          <SocialIcon platform={social.platform} className="w-4 h-4" />
+                        </Link>
+                      </li>
+                    )
+                  })}
                 </ul>
-              </div>
+              )}
             </div>
           </div>
-          <div className='md:col-span-4 col-span-12 border-t md:border-none border-solid border-dark_border sm:flex items-center justify-end md:min-h-25 py-10 shrink-0'>
-            <div className='md:w-3/4 w-full sm:text-start text-center'>
-              <span className='font-bold text-white pb-4 inline-block text-2xl'>
-                Subscribe newsletter
-              </span>
-              <p className='text-MistyBlue text-base pb-7 text-white/50'>
-                To be updated with all the latest trends and product
-              </p>
-              <form className='newsletter-form flex rounded-lg sm:w-full w-3/4 sm:mx-0 mx-auto'>
-                <input
-                  type='email'
-                  placeholder='Email*'
-                  className='p-4 text-base border-transparent rounded-s-lg rounded-e-none! outline-0 focus:border-primary dark:focus:border-primary w-[calc(100%_-_137px)] flex bg-white dark:bg-midnight_text dark:text-white dark:border-solid dark:border dark:border-border_color'
-                />
-                <button
-                  type='submit'
-                  className='p-[0.625rem] text-base font-medium bg-primary text-white border-none cursor-pointer rounded-e-lg outline-0 text-center w-[8.5625rem] hover:bg-blue-700 hover:shadow-none'>
-                  Subscribe
-                </button>
-              </form>
+
+          <div className="md:col-span-4 col-span-12 border-t md:border-none border-solid border-dark_border sm:flex items-center justify-end md:min-h-25 py-10 shrink-0">
+            <div className="md:w-3/4 w-full sm:text-start text-center">
+              <span className="font-bold text-white pb-4 inline-block text-2xl">{data.newsletterTitle}</span>
+              <p className="text-MistyBlue text-base pb-7 text-white/50">{data.newsletterSubtitle}</p>
+              {subscribed ? (
+                <div className="flex items-center gap-3 bg-green-500/15 border border-green-500/30 rounded-lg px-5 py-4">
+                  <svg className="w-6 h-6 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <div>
+                    <p className="text-green-300 font-semibold text-sm">You are subscribed!</p>
+                    <p className="text-green-400/70 text-xs">Thank you! We will keep you updated.</p>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubscribe} className="newsletter-form flex rounded-lg sm:w-full w-3/4 sm:mx-0 mx-auto">
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email*"
+                    className="p-4 text-base border-transparent rounded-s-lg rounded-e-none! outline-0 focus:border-primary dark:focus:border-primary w-[calc(100%_-_137px)] flex bg-white dark:bg-midnight_text dark:text-white dark:border-solid dark:border dark:border-border_color"
+                    disabled={submitting} />
+                  <button type="submit" disabled={submitting}
+                    className="p-[0.625rem] text-base font-medium bg-primary text-white border-none cursor-pointer rounded-e-lg outline-0 text-center w-[8.5625rem] hover:bg-blue-700 hover:shadow-none disabled:opacity-60 transition">
+                    {submitting ? 'Sending...' : 'Subscribe'}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>
       </div>
-      <div className='text-center gap-4 md:gap-0 flex-wrap p-7 border-t border-solid border-dark_border'>
-        <div>
-          <ul className='flex justify-center mb-4 items-center sm:gap-7 gap-3'>
-            <li className='text-base text-white/50'>
-              <Link href='/#about' className='hover:text-primary'>
-                About
-              </Link>
-            </li>
-            <li className='text-base text-white/50'>
-              <Link href='/#services' className='hover:text-primary'>
-                Services
-              </Link>
-            </li>
-            <li className='text-base text-white/50'>
-              <Link href='/portfolio' className='hover:text-primary'>
-                Portfolio
-              </Link>
-            </li>
-            <li className='text-base text-white/50'>
-              <Link href='/blog' className='hover:text-primary'>
-                Blog
-              </Link>
-            </li>
-            <li className='text-base text-white/50'>
-              <Link href='/contact' className='hover:text-primary'>
-                Contact
-              </Link>
-            </li>
+
+      <div className="text-center gap-4 md:gap-0 flex-wrap p-7 border-t border-solid border-dark_border">
+        {enabledNavLinks.length > 0 && (
+          <ul className="flex justify-center mb-4 items-center sm:gap-7 gap-3 flex-wrap">
+            {enabledNavLinks.map(link => (
+              <li key={link.label} className="text-base text-white/50">
+                <Link href={link.href} className="hover:text-primary transition">{link.label}</Link>
+              </li>
+            ))}
           </ul>
-        </div>
-        <div>
-          <p className='text-base text-white/50'>
-            © All rights reserved. Made by{' '}
-            <Link
-              href='https://getnextjstemplates.com/'
-              target='_blank'
-              className='hover:text-primary'>
-              GetNextJs Templates
-            </Link>{' '}
-            • Distributed by
-            <Link
-              href='https://themewagon.com/'
-              target='_blank'
-              className='hover:text-primary'>
-              {' '}ThemeWagon
-            </Link>
-          </p>
-        </div>
+        )}
+        <p className="text-base text-white/50">{data.copyright}</p>
       </div>
     </footer>
   )
