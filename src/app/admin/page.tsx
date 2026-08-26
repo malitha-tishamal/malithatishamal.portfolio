@@ -20,6 +20,7 @@ import { DashboardOverview } from "@/components/Admin/DashboardOverview";
 import { AccountManagementTab } from "@/components/Admin/AccountManagementTab";
 import { RolesPermissionsTab } from "@/components/Admin/RolesPermissionsTab";
 import { HeroSectionManager } from "@/components/Admin/HeroSectionManager";
+import { CertificationsManager } from "@/components/Admin/CertificationsManager";
 import { PortfolioSectionManager } from "@/components/Admin/PortfolioSectionManager";
 import { ProjectsSectionManager } from "@/components/Admin/ProjectsSectionManager";
 import { TestimonialsManager } from "@/components/Admin/TestimonialsManager";
@@ -239,7 +240,12 @@ export default function AdminDashboardPage() {
             <HeroSectionManager />
           )}
 
-          {/* Tab 5: Portfolio Section Manager */}
+          {/* Tab 5: Certifications Manager */}
+          {activeTab === "certifications" && (
+            <CertificationsManager />
+          )}
+
+          {/* Tab 6: Portfolio Section Manager */}
           {activeTab === "portfolio" && (
             <PortfolioSectionManager />
           )}
