@@ -23,6 +23,7 @@ import { HeroSectionManager } from "@/components/Admin/HeroSectionManager";
 import { PortfolioSectionManager } from "@/components/Admin/PortfolioSectionManager";
 import { ProjectsSectionManager } from "@/components/Admin/ProjectsSectionManager";
 import { TestimonialsManager } from "@/components/Admin/TestimonialsManager";
+import { FooterManager } from "@/components/Admin/FooterManager";
 
 export default function AdminDashboardPage() {
   const { user, userProfile, logout } = useAuth();
@@ -250,6 +251,11 @@ export default function AdminDashboardPage() {
           {/* Tab 7: Testimonials Manager */}
           {activeTab === "testimonials" && (
             <TestimonialsManager />
+          )}
+
+          {/* Tab 8: Footer Manager */}
+          {activeTab === "footer" && (
+            <FooterManager />
           )}
         </main>
       </div>
