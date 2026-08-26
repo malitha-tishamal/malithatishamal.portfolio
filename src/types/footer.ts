@@ -37,13 +37,14 @@ export const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
 ];
 
 export const DEFAULT_NAV_LINKS: FooterNavLink[] = [
-  { label: 'About',        href: '/#about',       enabled: true },
-  { label: 'Services',     href: '/#services',    enabled: true },
-  { label: 'Portfolio',    href: '/portfolio',    enabled: true },
-  { label: 'Projects',     href: '/projects',     enabled: true },
-  { label: 'Testimonials', href: '/testimonials', enabled: true },
-  { label: 'Blog & News',  href: '/blog',         enabled: true },
-  { label: 'Contact',      href: '/contact',      enabled: true },
+  { label: 'About',          href: '/#about',          enabled: true },
+  { label: 'Services',       href: '/#services',       enabled: true },
+  { label: 'Certifications', href: '/certifications',  enabled: true },
+  { label: 'Portfolio',      href: '/portfolio',       enabled: true },
+  { label: 'Projects',       href: '/projects',        enabled: true },
+  { label: 'Testimonials',   href: '/testimonials',    enabled: true },
+  { label: 'Blog & News',    href: '/blog',            enabled: true },
+  { label: 'Contact',        href: '/contact',         enabled: true },
 ];
 
 export const defaultFooterContent: FooterContent = {
