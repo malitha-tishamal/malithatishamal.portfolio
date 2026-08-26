@@ -42,7 +42,7 @@ export const DEFAULT_NAV_LINKS: FooterNavLink[] = [
   { label: 'Portfolio',    href: '/portfolio',    enabled: true },
   { label: 'Projects',     href: '/projects',     enabled: true },
   { label: 'Testimonials', href: '/testimonials', enabled: true },
-  { label: 'Blog',         href: '/blog',         enabled: true },
+  { label: 'Blog & News',  href: '/blog',         enabled: true },
   { label: 'Contact',      href: '/contact',      enabled: true },
 ];
 
@@ -59,5 +59,5 @@ export const defaultFooterContent: FooterContent = {
   newsletterTitle: 'Subscribe newsletter',
   newsletterSubtitle: 'Stay updated with all the latest trends and updates.',
   navLinks: DEFAULT_NAV_LINKS,
-  copyright: '(c) 2025 Malitha Tishamal. All rights reserved.',
+  copyright: '© 2025 Malitha Tishamal. All rights reserved.',
 };
