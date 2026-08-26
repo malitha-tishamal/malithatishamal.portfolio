@@ -5,7 +5,7 @@ import Link from "next/link";
 import Logo from "@/components/Layout/Header/Logo";
 import { UserProfile } from "@/context/AuthContext";
 
-export type AdminTab = "overview" | "accounts" | "roles" | "hero" | "portfolio" | "projects" | "testimonials";
+export type AdminTab = "overview" | "accounts" | "roles" | "hero" | "portfolio" | "projects" | "testimonials" | "footer";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -120,6 +120,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       badge: (
         <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20">
           REVIEWS
+        </span>
+      ),
+    },
+    {
+      id: "footer" as AdminTab,
+      label: "Footer Manager",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
+        </svg>
+      ),
+      badge: (
+        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+          FOOTER
         </span>
       ),
     },
