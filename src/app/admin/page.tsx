@@ -23,6 +23,7 @@ import { HeroSectionManager } from "@/components/Admin/HeroSectionManager";
 import { PortfolioSectionManager } from "@/components/Admin/PortfolioSectionManager";
 import { ProjectsSectionManager } from "@/components/Admin/ProjectsSectionManager";
 import { TestimonialsManager } from "@/components/Admin/TestimonialsManager";
+import { BlogManager } from "@/components/Admin/BlogManager";
 import { FooterManager } from "@/components/Admin/FooterManager";
 
 export default function AdminDashboardPage() {
@@ -253,7 +254,12 @@ export default function AdminDashboardPage() {
             <TestimonialsManager />
           )}
 
-          {/* Tab 8: Footer Manager */}
+          {/* Tab 8: Blog & News Manager */}
+          {activeTab === "blogs" && (
+            <BlogManager />
+          )}
+
+          {/* Tab 9: Footer Manager */}
           {activeTab === "footer" && (
             <FooterManager />
           )}
