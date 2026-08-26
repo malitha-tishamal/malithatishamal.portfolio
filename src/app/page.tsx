@@ -4,8 +4,9 @@ import Hero from '@/components/Home/Hero';
 import Counter from '@/components/Home/Counter'
 import Progresswork from '@/components/Home/WorkProgress';
 import Services from '@/components/Home/Services';
-import Portfolio from '@/components/SharedComponent/portfollio'
-import Projects from '@/components/SharedComponent/Projects'
+import Certifications from '@/components/SharedComponent/Certifications';
+import Portfolio from '@/components/SharedComponent/portfollio';
+import Projects from '@/components/SharedComponent/Projects';
 import Testimonial from '@/components/SharedComponent/Testimonial'
 import Blog from '@/components/SharedComponent/Blog'
 import Contactform from '@/components/Home/Contact';
@@ -21,6 +22,7 @@ export default function Home() {
       <Counter isColorMode={false} />
       <Progresswork isColorMode={false} />
       <Services />
+      <Certifications />
       <Portfolio />
       <Projects />
       <Testimonial />
