@@ -23,7 +23,7 @@ const HeaderLink: React.FC<{ item: HeaderItem }> = ({ item }) => {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <Link href={item.href} className={`text-base flex py-2 font-normal hover:text-primary dark:hover:text-primary text-black dark:text-white  ${path === item.href ? 'text-primary dark:text-primary!' : '  '} ${path.startsWith("/blog") && item.href==="/blog"?"text-primary! dark:text-primary!":null} ${path.startsWith("/portfolio") && item.href==="/portfolio"?"text-primary! dark:text-primary!":null}`}>
+      <Link href={item.href} className={`text-sm xl:text-base flex py-2 font-normal whitespace-nowrap hover:text-primary dark:hover:text-primary text-black dark:text-white ${path === item.href ? 'text-primary dark:text-primary!' : ''} ${path.startsWith("/blog") && item.href==="/blog"?"text-primary! dark:text-primary!":null} ${path.startsWith("/portfolio") && item.href==="/portfolio"?"text-primary! dark:text-primary!":null}`}>
         {item.label}
         {item.submenu && (
           <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 24 24">
