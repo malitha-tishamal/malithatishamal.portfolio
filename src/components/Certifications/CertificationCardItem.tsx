@@ -114,13 +114,13 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         {item.certificateImage && (
           <div
             onClick={() => onPreview(item)}
-            className="relative h-36 w-full rounded-xl overflow-hidden border border-border/80 dark:border-dark_border mb-5 cursor-pointer group/preview bg-gray-100 dark:bg-darkmode"
+            className="relative h-48 w-full rounded-xl overflow-hidden border border-border/80 dark:border-dark_border mb-5 cursor-pointer group/preview bg-slate-900/5 dark:bg-slate-950/40 p-2 flex items-center justify-center"
           >
             <Image
               src={item.certificateImage}
               alt={item.title}
               fill
-              className="object-cover group-hover/preview:scale-105 transition duration-300"
+              className="object-contain p-1.5 group-hover/preview:scale-[1.02] transition duration-300"
               unoptimized
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
