@@ -100,19 +100,19 @@ const Header: React.FC = () => {
           ? 'shadow-lg bg-white dark:shadow-dark-md dark:bg-darklight!'
           : 'shadow-none'
       }`}>
-      <div className='container mx-auto max-w-6xl flex items-center justify-between p-6'>
+      <div className='container mx-auto max-w-[1400px] flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5'>
         <Logo />
-        <nav className='hidden lg:flex grow items-center justify-center gap-6'>
+        <nav className='hidden lg:flex grow items-center justify-center gap-3 xl:gap-5 2xl:gap-6 px-4'>
           {headerData.map((item, index) => (
             <HeaderLink key={index} item={item} />
           ))}
         </nav>
-        <div className='flex items-center gap-3'>
+        <div className='flex items-center gap-3 xl:gap-4 shrink-0 pl-4 lg:pl-6 border-l border-gray-200/70 dark:border-gray-700/70 ml-2 lg:ml-4'>
           {/* Theme toggler */}
           <button
             aria-label='Toggle theme'
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className='flex h-8 w-8 items-center justify-center text-body-color duration-300 dark:text-white cursor-pointer'>
+            className='flex h-8 w-8 items-center justify-center text-body-color duration-300 dark:text-white cursor-pointer shrink-0'>
             <svg
               viewBox='0 0 16 16'
               className={`hidden h-6 w-6 dark:block ${
@@ -134,14 +134,14 @@ const Header: React.FC = () => {
 
           {/* If authenticated user */}
           {user ? (
-            <div className='hidden lg:flex items-center gap-3'>
+            <div className='hidden lg:flex items-center gap-3 shrink-0'>
               {/* Clickable Profile Badge */}
               <button
                 onClick={() => {
                   closeAllModals()
                   setIsProfileModalOpen(true)
                 }}
-                className='flex items-center gap-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-3.5 py-1.5 rounded-full transition cursor-pointer border border-border/50 dark:border-dark_border/60 shadow-2xs'>
+                className='flex items-center gap-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-3.5 py-1.5 rounded-full transition cursor-pointer border border-border/50 dark:border-dark_border/60 shadow-2xs whitespace-nowrap shrink-0'>
                 <div className='w-6 h-6 rounded-full overflow-hidden bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0'>
                   {userPhoto ? (
                     <Image
@@ -166,18 +166,18 @@ const Header: React.FC = () => {
 
               <button
                 onClick={handleSignOut}
-                className='text-xs font-medium border border-red-500/80 text-red-500 px-3.5 py-1.5 rounded-lg hover:bg-red-500 hover:text-white transition cursor-pointer'>
+                className='text-xs font-medium border border-red-500/80 text-red-500 px-3.5 py-1.5 rounded-lg hover:bg-red-500 hover:text-white transition cursor-pointer whitespace-nowrap shrink-0'>
                 Sign Out
               </button>
             </div>
           ) : (
-            <div className='hidden lg:flex items-center gap-3'>
+            <div className='hidden lg:flex items-center gap-3 shrink-0'>
               <button
                 onClick={() => {
                   closeAllModals()
                   setIsSignInOpen(true)
                 }}
-                className='bg-transparent border border-primary text-primary px-4 py-2 rounded-lg hover:bg-blue-600 hover:text-white transition cursor-pointer'>
+                className='bg-transparent border border-primary text-primary px-4 py-2 text-sm font-medium rounded-lg hover:bg-blue-600 hover:text-white transition cursor-pointer whitespace-nowrap shrink-0'>
                 Sign In
               </button>
               <button
@@ -185,7 +185,7 @@ const Header: React.FC = () => {
                   closeAllModals()
                   setIsSignUpOpen(true)
                 }}
-                className='bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition cursor-pointer'>
+                className='bg-primary text-white px-4 py-2 text-sm font-medium rounded-lg hover:bg-blue-700 transition cursor-pointer whitespace-nowrap shrink-0'>
                 Sign Up
               </button>
             </div>
