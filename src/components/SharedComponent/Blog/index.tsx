@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import { BlogPost, defaultBlogPosts } from "@/types/blog";
 
 const Blog: React.FC = () => {
-  const [posts, setPosts] = useState<BlogPost[]>(defaultBlogPosts.slice(0, 3));
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,12 +35,13 @@ const Blog: React.FC = () => {
             return new Date(b.date).getTime() - new Date(a.date).getTime();
           });
 
-          if (list.length > 0) {
-            setPosts(list.slice(0, 3));
-          }
+          setPosts(list.length > 0 ? list.slice(0, 3) : defaultBlogPosts.slice(0, 3));
+        } else {
+          setPosts(defaultBlogPosts.slice(0, 3));
         }
       } catch (err) {
         console.error("Error fetching homepage blogs:", err);
+        setPosts(defaultBlogPosts.slice(0, 3));
       } finally {
         setLoading(false);
       }
@@ -75,19 +76,36 @@ const Blog: React.FC = () => {
         </div>
 
         {/* Blog Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-          {posts.map((blog, i) => (
-            <div
-              key={blog.id || i}
-              className="w-full"
-              data-aos="fade-up"
-              data-aos-delay={`${i * 150}`}
-              data-aos-duration="800"
-            >
-              <BlogCard blog={blog} />
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl bg-gray-100 dark:bg-darklight p-5 h-84 animate-pulse border border-border/40 dark:border-dark_border/40 flex flex-col justify-between"
+              >
+                <div className="h-44 bg-gray-200 dark:bg-darkmode rounded-xl w-full" />
+                <div className="space-y-2.5 mt-4">
+                  <div className="h-4 bg-gray-200 dark:bg-darkmode rounded-md w-3/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-darkmode rounded-md w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+            {posts.map((blog, i) => (
+              <div
+                key={blog.id || i}
+                className="w-full"
+                data-aos="fade-up"
+                data-aos-delay={`${i * 150}`}
+                data-aos-duration="800"
+              >
+                <BlogCard blog={blog} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
