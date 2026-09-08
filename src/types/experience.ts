@@ -41,6 +41,10 @@ export interface ExperienceItem {
   skills: string[]; // e.g. ["Flutter", "Firebase", "PHP"]
   logoUrl?: string;
   logoShape?: LogoShape;
+  colorTheme?: "linkedin" | "black" | "blue" | "emerald" | "purple" | "custom";
+  accentColor?: string; // Custom Hex (e.g. "#0a66c2")
+  badgeColor?: string; // Custom Hex (e.g. "#0a66c2")
+  cardBgColor?: string; // Custom Hex or empty for default
   media?: ExperienceMedia[];
   displayOrder?: number;
   published?: boolean;
@@ -74,7 +78,7 @@ export const defaultExperiences: ExperienceItem[] = [
       "Docker",
       "Database Systems",
     ],
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Emblem_of_Sri_Lanka.svg/1200px-Emblem_of_Sri_Lanka.svg.png",
+    logoUrl: "https://api.iconify.design/heroicons:academic-cap-20-solid.svg?color=%237c3aed",
     logoShape: "circle",
     displayOrder: 1,
     published: true,
