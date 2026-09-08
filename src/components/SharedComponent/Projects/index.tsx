@@ -9,7 +9,8 @@ import { ProjectCardItem } from '@/components/Projects/ProjectCardItem'
 import { ProjectDetailModal } from '@/components/Projects/ProjectDetailModal'
 
 const ProjectsSection: React.FC = () => {
-  const [projects, setProjects] = useState<ProjectItem[]>(defaultProjects)
+  const [projects, setProjects] = useState<ProjectItem[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
 
   // Real-time Firestore sync
@@ -31,16 +32,19 @@ const ProjectsSection: React.FC = () => {
           } else {
             setProjects(defaultProjects)
           }
+          setLoading(false)
         },
         (error) => {
           console.warn('Firestore projects listener notice:', error.message)
           setProjects(defaultProjects)
+          setLoading(false)
         }
       )
       return () => unsubscribe()
     } catch (err) {
       console.error('Error setting up projects listener:', err)
       setProjects(defaultProjects)
+      setLoading(false)
     }
   }, [])
 
@@ -85,15 +89,32 @@ const ProjectsSection: React.FC = () => {
         </div>
 
         {/* 6 Projects in 3x2 Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'>
-          {displayedProjects.map((project) => (
-            <ProjectCardItem
-              key={project.id}
-              project={project}
-              onClick={() => setSelectedProject(project)}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className='rounded-3xl bg-gray-100 dark:bg-darklight p-5 h-84 animate-pulse border border-border/40 dark:border-dark_border/40 flex flex-col justify-between'
+              >
+                <div className='h-44 bg-gray-200 dark:bg-darkmode rounded-2xl w-full' />
+                <div className='space-y-2.5 mt-4'>
+                  <div className='h-4 bg-gray-200 dark:bg-darkmode rounded-md w-3/4' />
+                  <div className='h-3 bg-gray-200 dark:bg-darkmode rounded-md w-1/2' />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'>
+            {displayedProjects.map((project) => (
+              <ProjectCardItem
+                key={project.id}
+                project={project}
+                onClick={() => setSelectedProject(project)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Bottom View All Button */}
         <div className='text-center pt-10'>
