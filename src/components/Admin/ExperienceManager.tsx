@@ -1,0 +1,1049 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  deleteDoc,
+  serverTimestamp,
+  query,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import {
+  ExperienceItem,
+  ExperienceCategory,
+  LocationType,
+  LogoShape,
+  defaultExperiences,
+} from "@/types/experience";
+import { uploadToCloudinary } from "@/utils/cloudinary";
+import toast from "react-hot-toast";
+
+const POPULAR_SKILLS = [
+  "Flutter",
+  "Firebase",
+  "React",
+  "Next.js",
+  "TypeScript",
+  "Node.js",
+  "Tailwind CSS",
+  "PHP",
+  "MySQL",
+  "Docker",
+  "Java",
+  "Python",
+  "Web Hosting",
+  "Git",
+  "REST APIs",
+  "Cybersecurity",
+  "UI/UX Design",
+  "DevOps",
+];
+
+const PRESETS = [
+  {
+    label: "🎓 SLIATE HND IT",
+    data: {
+      category: "education" as ExperienceCategory,
+      organization: "Sri Lanka Institute of Advanced Technological Education (SLIATE)",
+      title: "Higher National Diploma, Information Technology",
+      fieldOfStudy: "Information Technology",
+      employmentType: "Higher National Diploma",
+      location: "Colombo / Galle, Sri Lanka",
+      locationType: "On-site" as LocationType,
+      startDate: "Jul 2024",
+      endDate: "Jul 2027",
+      isCurrent: true,
+      grade: "Merit Standing",
+      activities: "IT Society, Robotics & Cybersecurity Club",
+      description:
+        "Specializing in software engineering, mobile application development, database management systems, network infrastructure, and enterprise systems.",
+      skills: ["Flutter", "Firebase", "Java", "Next.js", "Docker", "Database Systems"],
+      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Emblem_of_Sri_Lanka.svg/1200px-Emblem_of_Sri_Lanka.svg.png",
+      logoShape: "circle" as LogoShape,
+    },
+  },
+  {
+    label: "🎓 SITEC Web Design",
+    data: {
+      category: "education" as ExperienceCategory,
+      organization: "Southern IT Education Center - SITEC",
+      title: "Certificate, Web Design",
+      fieldOfStudy: "Web Design & Development",
+      employmentType: "Certificate",
+      location: "Southern Province, Sri Lanka",
+      locationType: "On-site" as LocationType,
+      startDate: "Feb 2023",
+      endDate: "Sep 2023",
+      isCurrent: false,
+      grade: "Distinction",
+      activities: "Frontend Web Workshops, UI Challenge Exhibitions",
+      description:
+        "Hands-on training in responsive layout design, HTML5, CSS3, JavaScript, PHP backends, MySQL relational databases, and live web hosting deployment.",
+      skills: ["Web Hosting", "PHP", "MySQL", "JavaScript", "HTML5", "CSS3", "UI/UX Design"],
+      logoUrl: "https://api.iconify.design/heroicons:academic-cap.svg",
+      logoShape: "circle" as LogoShape,
+    },
+  },
+  {
+    label: "💼 Full Stack Freelance",
+    data: {
+      category: "work" as ExperienceCategory,
+      organization: "Independent Client Engagements",
+      title: "Full Stack Developer & DevOps Engineer",
+      employmentType: "Freelance",
+      location: "Remote",
+      locationType: "Remote" as LocationType,
+      startDate: "Jan 2024",
+      endDate: "Present",
+      isCurrent: true,
+      description:
+        "Building production-ready web apps with Next.js 15, TypeScript, and Tailwind CSS. Implementing containerized Docker microservices, automated CI/CD deployment, and high-performance serverless backends.",
+      skills: ["Next.js", "React", "TypeScript", "Node.js", "Docker", "Firebase", "Tailwind CSS"],
+      logoUrl: "https://api.iconify.design/heroicons:code-bracket-square.svg",
+      logoShape: "rounded" as LogoShape,
+    },
+  },
+  {
+    label: "🤝 Tech Volunteer",
+    data: {
+      category: "volunteer" as ExperienceCategory,
+      organization: "Sri Lanka Tech Community",
+      title: "Community Tech Mentor & Volunteer",
+      employmentType: "Volunteer",
+      location: "Sri Lanka",
+      locationType: "Hybrid" as LocationType,
+      startDate: "Jun 2023",
+      endDate: "Present",
+      isCurrent: true,
+      description:
+        "Organizing tech meetups, guiding beginners into open source, and conducting hands-on sessions on cybersecurity awareness and modern web frameworks.",
+      skills: ["Mentoring", "Open Source", "Public Speaking", "Cybersecurity Awareness"],
+      logoUrl: "https://api.iconify.design/heroicons:heart.svg",
+      logoShape: "circle" as LogoShape,
+    },
+  },
+];
+
+export const ExperienceManager: React.FC = () => {
+  const [items, setItems] = useState<ExperienceItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [seeding, setSeeding] = useState<boolean>(false);
+
+  // Filter state
+  const [categoryFilter, setCategoryFilter] = useState<"all" | ExperienceCategory>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Modal & Edit state
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingItem, setEditingItem] = useState<ExperienceItem | null>(null);
+
+  // Form State
+  const [formData, setFormData] = useState<Partial<ExperienceItem>>({
+    category: "work",
+    title: "",
+    organization: "",
+    employmentType: "Full-time",
+    fieldOfStudy: "",
+    location: "Colombo, Sri Lanka",
+    locationType: "Hybrid",
+    startDate: "Jan 2024",
+    endDate: "Present",
+    isCurrent: true,
+    grade: "",
+    activities: "",
+    description: "",
+    skills: ["Next.js", "React", "TypeScript"],
+    logoUrl: "",
+    logoShape: "rounded",
+    displayOrder: 1,
+    published: true,
+  });
+
+  const [newSkill, setNewSkill] = useState<string>("");
+  const [logoProgress, setLogoProgress] = useState<number | null>(null);
+
+  // Fetch Items from Firestore
+  const fetchItems = async () => {
+    try {
+      setLoading(true);
+      const snapshot = await getDocs(query(collection(db, "experiences")));
+      if (!snapshot.empty) {
+        const list: ExperienceItem[] = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<ExperienceItem, "id">),
+        }));
+        list.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        setItems(list);
+      } else {
+        setItems(defaultExperiences);
+      }
+    } catch (err) {
+      console.error("Error fetching experiences:", err);
+      toast.error("Failed to load experience records.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  // Seed default items
+  const handleSeedDefaults = async () => {
+    if (!confirm("This will seed default LinkedIn Experience & Education into Firestore. Continue?")) {
+      return;
+    }
+    try {
+      setSeeding(true);
+      for (const item of defaultExperiences) {
+        const docRef = doc(db, "experiences", item.id);
+        await setDoc(docRef, {
+          ...item,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      toast.success("Default Experience & Education seeded successfully!");
+      fetchItems();
+    } catch (err: any) {
+      console.error("Error seeding experiences:", err);
+      toast.error("Failed to seed items.");
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  // Open modal for new item
+  const handleAddNew = (category: ExperienceCategory = "work") => {
+    setEditingItem(null);
+    setFormData({
+      category,
+      title: "",
+      organization: "",
+      employmentType: category === "education" ? "Higher National Diploma" : "Full-time",
+      fieldOfStudy: "",
+      location: "Colombo, Sri Lanka",
+      locationType: "Hybrid",
+      startDate: "Jan 2024",
+      endDate: "Present",
+      isCurrent: true,
+      grade: "",
+      activities: "",
+      description: "",
+      skills: ["React", "TypeScript", "Next.js"],
+      logoUrl: "",
+      logoShape: category === "education" ? "circle" : "rounded",
+      displayOrder: items.length + 1,
+      published: true,
+    });
+    setIsModalOpen(true);
+  };
+
+  // Open modal for editing
+  const handleEdit = (item: ExperienceItem) => {
+    setEditingItem(item);
+    setFormData({
+      ...item,
+      skills: item.skills || [],
+    });
+    setIsModalOpen(true);
+  };
+
+  // Apply a preset template
+  const applyPreset = (preset: typeof PRESETS[0]["data"]) => {
+    setFormData((prev) => ({
+      ...prev,
+      ...preset,
+      displayOrder: prev.displayOrder || items.length + 1,
+    }));
+    toast.success("Preset applied! You can adjust details below.");
+  };
+
+  // Logo upload to Cloudinary
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setLogoProgress(10);
+      const res = await uploadToCloudinary(file);
+      setFormData((prev) => ({ ...prev, logoUrl: res.secure_url || res.url }));
+      setLogoProgress(100);
+      toast.success("Logo uploaded!");
+      setTimeout(() => setLogoProgress(null), 1000);
+    } catch (err: any) {
+      console.error("Logo upload failed:", err);
+      toast.error("Logo upload failed.");
+      setLogoProgress(null);
+    }
+  };
+
+  // Skill tag management
+  const addSkill = (skillToAdd?: string) => {
+    const s = (skillToAdd || newSkill).trim();
+    if (!s) return;
+    const current = formData.skills || [];
+    if (!current.includes(s)) {
+      setFormData((prev) => ({ ...prev, skills: [...current, s] }));
+    }
+    if (!skillToAdd) setNewSkill("");
+  };
+
+  const removeSkill = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      skills: (prev.skills || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  // Save Item
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title?.trim() || !formData.organization?.trim()) {
+      toast.error("Please provide both Title/Degree and School/Organization name.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const id = editingItem ? editingItem.id : `exp-${Date.now()}`;
+      const docRef = doc(db, "experiences", id);
+      const payload: ExperienceItem = {
+        id,
+        category: (formData.category || "work") as ExperienceCategory,
+        title: formData.title.trim(),
+        organization: formData.organization.trim(),
+        employmentType: formData.employmentType || "",
+        fieldOfStudy: formData.fieldOfStudy || "",
+        location: formData.location || "",
+        locationType: (formData.locationType || "Hybrid") as LocationType,
+        startDate: formData.startDate || "",
+        endDate: formData.isCurrent ? "Present" : formData.endDate || "",
+        isCurrent: !!formData.isCurrent,
+        grade: formData.grade || "",
+        activities: formData.activities || "",
+        description: formData.description || "",
+        skills: formData.skills || [],
+        logoUrl: formData.logoUrl || "",
+        logoShape: (formData.logoShape || "rounded") as LogoShape,
+        displayOrder: Number(formData.displayOrder) || items.length + 1,
+        published: formData.published !== false,
+        updatedAt: serverTimestamp(),
+      };
+
+      await setDoc(docRef, payload, { merge: true });
+      toast.success(editingItem ? "Record updated!" : "New record added!");
+      setIsModalOpen(false);
+      fetchItems();
+    } catch (err: any) {
+      console.error("Save error:", err);
+      toast.error(err.message || "Failed to save record.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete item
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    try {
+      await deleteDoc(doc(db, "experiences", id));
+      toast.success("Record deleted.");
+      fetchItems();
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      toast.error("Failed to delete record.");
+    }
+  };
+
+  // Toggle published
+  const handleTogglePublish = async (item: ExperienceItem) => {
+    try {
+      const docRef = doc(db, "experiences", item.id);
+      await setDoc(docRef, { published: !item.published }, { merge: true });
+      toast.success(item.published ? "Record hidden." : "Record published!");
+      fetchItems();
+    } catch (err) {
+      toast.error("Failed to toggle visibility.");
+    }
+  };
+
+  // Filter items
+  const filteredItems = items.filter((item) => {
+    const matchCat = categoryFilter === "all" || item.category === categoryFilter;
+    const q = searchQuery.toLowerCase().trim();
+    const matchSearch =
+      !q ||
+      item.title.toLowerCase().includes(q) ||
+      item.organization.toLowerCase().includes(q) ||
+      item.skills?.some((s) => s.toLowerCase().includes(q));
+    return matchCat && matchSearch;
+  });
+
+  const inputCls =
+    "w-full px-3.5 py-2 rounded-xl text-xs sm:text-sm bg-gray-50 dark:bg-darkmode border border-border/80 dark:border-dark_border text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40";
+  const labelCls = "block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1";
+
+  return (
+    <div className="space-y-6">
+      
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-darklight p-6 rounded-3xl border border-border dark:border-dark_border shadow-xs">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">
+              LinkedIn Style Career & Academics
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold text-dark dark:text-white">
+            Experience & Education Manager
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Manage your work history, degrees, volunteer achievements, logos, and verified skills.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <button
+            onClick={handleSeedDefaults}
+            disabled={seeding}
+            className="px-4 py-2.5 rounded-xl border border-border dark:border-dark_border text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-darkmode transition cursor-pointer"
+          >
+            {seeding ? "Seeding..." : "✦ Seed Default SLIATE & Work"}
+          </button>
+
+          <button
+            onClick={() => handleAddNew("work")}
+            className="px-4 py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-bold hover:bg-blue-700 transition shadow-md shadow-primary/20 flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>+ Add Experience</span>
+          </button>
+
+          <button
+            onClick={() => handleAddNew("education")}
+            className="px-4 py-2.5 rounded-xl bg-purple-600 text-white text-xs sm:text-sm font-bold hover:bg-purple-700 transition shadow-md shadow-purple-600/20 flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>+ Add Education</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-darklight p-4 rounded-2xl border border-border dark:border-dark_border shadow-xs">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
+          <div className="relative flex-1 sm:max-w-xs">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search role, school, skill..."
+              className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-gray-50 dark:bg-darkmode border border-border/80 dark:border-dark_border text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            <svg
+              className="w-4 h-4 text-gray-400 absolute left-3 top-2.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+
+          {/* Category Tabs */}
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-darkmode p-1 rounded-xl">
+            {(["all", "work", "education", "volunteer"] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition cursor-pointer ${
+                  categoryFilter === cat
+                    ? "bg-white dark:bg-darklight text-primary shadow-xs font-bold"
+                    : "text-gray-500 hover:text-dark dark:hover:text-white"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <span className="text-xs text-gray-500 font-semibold">
+          {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Items Table */}
+      <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border shadow-xs overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center">
+            <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            <p className="text-xs text-gray-500">Loading records...</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="p-12 text-center text-gray-400">
+            <p className="text-sm font-semibold mb-2">No records found</p>
+            <p className="text-xs">Click &quot;+ Add Experience&quot; or &quot;Seed Default SLIATE & Work&quot; to populate.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead className="bg-gray-50 dark:bg-darkmode border-b border-border dark:border-dark_border text-gray-500 uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th className="py-3.5 px-4 font-bold">Category</th>
+                  <th className="py-3.5 px-4 font-bold">Organization / School</th>
+                  <th className="py-3.5 px-4 font-bold">Title / Degree</th>
+                  <th className="py-3.5 px-4 font-bold">Period</th>
+                  <th className="py-3.5 px-4 font-bold">Status</th>
+                  <th className="py-3.5 px-4 font-bold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60 dark:divide-dark_border/60">
+                {filteredItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-darkmode/50 transition">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${
+                          item.category === "education"
+                            ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                            : item.category === "volunteer"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : "bg-blue-500/10 text-primary border border-primary/20"
+                        }`}
+                      >
+                        {item.category}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-9 h-9 ${
+                            item.logoShape === "circle"
+                              ? "rounded-full"
+                              : item.logoShape === "square"
+                              ? "rounded-md"
+                              : "rounded-xl"
+                          } bg-gray-100 dark:bg-darkmode border border-border flex items-center justify-center shrink-0 overflow-hidden`}
+                        >
+                          {item.logoUrl ? (
+                            <Image
+                              src={item.logoUrl}
+                              alt={item.organization}
+                              width={36}
+                              height={36}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <span className="font-bold text-xs text-gray-400">
+                              {item.organization.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-dark dark:text-white line-clamp-1">
+                            {item.organization}
+                          </p>
+                          {item.location && (
+                            <p className="text-[11px] text-gray-400">{item.location}</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-dark dark:text-white">{item.title}</p>
+                      {item.employmentType && (
+                        <p className="text-[11px] text-gray-400">{item.employmentType}</p>
+                      )}
+                    </td>
+
+                    <td className="py-3.5 px-4 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
+                      {item.startDate} – {item.endDate || (item.isCurrent ? "Present" : "")}
+                    </td>
+
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <button
+                        onClick={() => handleTogglePublish(item)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer ${
+                          item.published !== false
+                            ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+                            : "bg-gray-100 dark:bg-darkmode text-gray-400 border border-border"
+                        }`}
+                      >
+                        {item.published !== false ? "Visible" : "Hidden"}
+                      </button>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition text-xs font-bold cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id, item.title)}
+                          className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition text-xs font-bold cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ═══════════ ADD / EDIT MODAL ═══════════ */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-darklight rounded-3xl border border-border dark:border-dark_border shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 my-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-border dark:border-dark_border mb-5">
+              <div>
+                <h3 className="text-xl font-bold text-dark dark:text-white">
+                  {editingItem ? "Edit Experience / Education" : "Add Experience / Education"}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Follows LinkedIn profile specification with custom logo shapes and skills tags.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-darkmode text-gray-500 hover:text-dark dark:hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Quick Presets / Autofill Buttons */}
+            {!editingItem && (
+              <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 mb-6">
+                <span className="text-[11px] font-bold text-primary block mb-2 uppercase tracking-wider">
+                  ⚡ 1-Click Fast Presets (Click to autofill all options):
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => applyPreset(p.data)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-darklight text-dark dark:text-white border border-border hover:border-primary hover:text-primary transition shadow-2xs cursor-pointer"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSave} className="space-y-5">
+              
+              {/* Category & Employment Type */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Category *</label>
+                  <select
+                    value={formData.category || "work"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        category: e.target.value as ExperienceCategory,
+                        logoShape: e.target.value === "education" ? "circle" : prev.logoShape,
+                      }))
+                    }
+                    className={inputCls}
+                  >
+                    <option value="work">💼 Work Experience</option>
+                    <option value="education">🎓 Education</option>
+                    <option value="volunteer">🤝 Volunteer Experience</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className={labelCls}>
+                    {formData.category === "education" ? "Degree / Qualification Type" : "Employment Type"}
+                  </label>
+                  <select
+                    value={formData.employmentType || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, employmentType: e.target.value }))}
+                    className={inputCls}
+                  >
+                    {formData.category === "education" ? (
+                      <>
+                        <option value="Higher National Diploma">Higher National Diploma</option>
+                        <option value="Bachelor's Degree">Bachelor&apos;s Degree</option>
+                        <option value="Master's Degree">Master&apos;s Degree</option>
+                        <option value="Certificate">Certificate</option>
+                        <option value="Diploma">Diploma</option>
+                        <option value="Secondary Education">Secondary Education</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Full-time">Full-time</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Contract">Contract</option>
+                        <option value="Self-employed">Self-employed</option>
+                        <option value="Internship">Internship</option>
+                        <option value="Volunteer">Volunteer</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {/* Organization & Title */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>
+                    {formData.category === "education" ? "School / Institution *" : "Company / Organization *"}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.organization || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, organization: e.target.value }))}
+                    placeholder={
+                      formData.category === "education"
+                        ? "e.g. SLIATE or Boston University"
+                        : "e.g. Google or Freelance"
+                    }
+                    className={inputCls}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelCls}>
+                    {formData.category === "education" ? "Degree / Title *" : "Job Title / Role *"}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder={
+                      formData.category === "education"
+                        ? "e.g. Higher National Diploma, Information Technology"
+                        : "e.g. Full Stack Developer"
+                    }
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
+              {/* Field of Study & Grade (for Education) or Location (for Work) */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>
+                    {formData.category === "education" ? "Field of Study" : "Location"}
+                  </label>
+                  <input
+                    type="text"
+                    value={
+                      formData.category === "education"
+                        ? formData.fieldOfStudy || ""
+                        : formData.location || ""
+                    }
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        ...(formData.category === "education"
+                          ? { fieldOfStudy: e.target.value }
+                          : { location: e.target.value }),
+                      }))
+                    }
+                    placeholder={
+                      formData.category === "education"
+                        ? "e.g. Information Technology"
+                        : "e.g. Colombo, Sri Lanka"
+                    }
+                    className={inputCls}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelCls}>
+                    {formData.category === "education" ? "Grade / Classification" : "Workplace Type"}
+                  </label>
+                  {formData.category === "education" ? (
+                    <input
+                      type="text"
+                      value={formData.grade || ""}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, grade: e.target.value }))}
+                      placeholder="e.g. Merit Standing, First Class, 3.8 GPA"
+                      className={inputCls}
+                    />
+                  ) : (
+                    <select
+                      value={formData.locationType || "Hybrid"}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          locationType: e.target.value as LocationType,
+                        }))
+                      }
+                      className={inputCls}
+                    >
+                      <option value="On-site">On-site</option>
+                      <option value="Hybrid">Hybrid</option>
+                      <option value="Remote">Remote</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Start Date (Month Year)</label>
+                  <input
+                    type="text"
+                    value={formData.startDate || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
+                    placeholder="e.g. Jul 2024"
+                    className={inputCls}
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={labelCls}>End Date</label>
+                    <label className="flex items-center gap-1.5 text-xs text-primary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={!!formData.isCurrent}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            isCurrent: e.target.checked,
+                            endDate: e.target.checked ? "Present" : "",
+                          }))
+                        }
+                        className="rounded"
+                      />
+                      <span>Currently {formData.category === "education" ? "studying" : "working"}</span>
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    disabled={!!formData.isCurrent}
+                    value={formData.isCurrent ? "Present" : formData.endDate || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
+                    placeholder="e.g. Jul 2027 or Sep 2023"
+                    className={`${inputCls} ${formData.isCurrent ? "opacity-60 cursor-not-allowed" : ""}`}
+                  />
+                </div>
+              </div>
+
+              {/* Activities & societies (for education) */}
+              {formData.category === "education" && (
+                <div>
+                  <label className={labelCls}>Activities & Societies</label>
+                  <input
+                    type="text"
+                    value={formData.activities || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, activities: e.target.value }))}
+                    placeholder="e.g. IT Club, Volleyball Team, Student Representative"
+                    className={inputCls}
+                  />
+                </div>
+              )}
+
+              {/* Description */}
+              <div>
+                <label className={labelCls}>Description / Key Responsibilities</label>
+                <textarea
+                  rows={3}
+                  value={formData.description || ""}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Outline key projects, practical modules, technical skills acquired, or team achievements..."
+                  className={inputCls}
+                />
+              </div>
+
+              {/* Logo & Shape Selector */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-3">
+                <label className={labelCls}>Organization / School Logo</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={formData.logoUrl || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, logoUrl: e.target.value }))}
+                    placeholder="https://... logo image URL"
+                    className={`${inputCls} flex-1`}
+                  />
+                  <label className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-blue-700 transition cursor-pointer shrink-0">
+                    <span>{logoProgress !== null ? `${logoProgress}%` : "Upload"}</span>
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                  </label>
+                </div>
+
+                {/* Logo Shape Choice */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs font-semibold text-gray-500">Logo Shape:</span>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { id: "circle", label: "Circle (LinkedIn)", cls: "rounded-full" },
+                      { id: "rounded", label: "Rounded", cls: "rounded-xl" },
+                      { id: "square", label: "Square", cls: "rounded-md" },
+                    ].map((shape) => (
+                      <button
+                        key={shape.id}
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, logoShape: shape.id as LogoShape }))
+                        }
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                          formData.logoShape === shape.id
+                            ? "bg-primary text-white border-primary shadow-xs"
+                            : "bg-white dark:bg-darklight text-gray-600 dark:text-gray-300 border-border"
+                        }`}
+                      >
+                        <span className={`w-3 h-3 bg-current ${shape.cls} inline-block`} />
+                        <span>{shape.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Verified Skills Tags */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-3">
+                <label className={labelCls}>Top Skills (Diamond 💎 badge on card)</label>
+                
+                {/* Popular Skill Quick Add Chips */}
+                <div className="flex flex-wrap gap-1.5 pb-2">
+                  {POPULAR_SKILLS.map((sk) => {
+                    const isAdded = formData.skills?.includes(sk);
+                    return (
+                      <button
+                        key={sk}
+                        type="button"
+                        onClick={() => !isAdded && addSkill(sk)}
+                        disabled={isAdded}
+                        className={`px-2.5 py-0.5 rounded-lg text-[11px] font-medium transition cursor-pointer ${
+                          isAdded
+                            ? "bg-gray-200 dark:bg-darklight text-gray-400 opacity-50 cursor-default"
+                            : "bg-white dark:bg-darklight text-gray-700 dark:text-gray-300 border border-border hover:border-primary hover:text-primary"
+                        }`}
+                      >
+                        + {sk}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Skill Input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addSkill();
+                      }
+                    }}
+                    placeholder="Type custom skill (e.g. Flutter)..."
+                    className={inputCls}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addSkill()}
+                    className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {/* Selected Skills */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {(formData.skills || []).map((skill, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-blue-50 dark:bg-blue-950/50 text-primary border border-blue-200/60 dark:border-blue-900/60"
+                    >
+                      <span>💎 {skill}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeSkill(index)}
+                        className="hover:text-red-500 font-bold ml-1 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Display Order & Visibility */}
+              <div className="grid sm:grid-cols-2 gap-4 items-center pt-2">
+                <div>
+                  <label className={labelCls}>Display Order</label>
+                  <input
+                    type="number"
+                    value={formData.displayOrder || 1}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, displayOrder: parseInt(e.target.value) || 1 }))
+                    }
+                    className={inputCls}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 sm:mt-5">
+                  <input
+                    type="checkbox"
+                    id="publishedExp"
+                    checked={formData.published !== false}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, published: e.target.checked }))
+                    }
+                    className="w-4 h-4 rounded text-primary"
+                  />
+                  <label htmlFor="publishedExp" className="text-xs font-semibold text-dark dark:text-white cursor-pointer">
+                    Visible on Public Website
+                  </label>
+                </div>
+              </div>
+
+              {/* Submit / Cancel Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-5 border-t border-border dark:border-dark_border">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-border text-xs font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-darkmode transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-6 py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-bold hover:bg-blue-700 transition shadow-md shadow-primary/20 cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : editingItem ? "Update Record" : "Save Record"}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default ExperienceManager;
