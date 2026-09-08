@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useContext } from "react";
+import { useRouter } from "next/navigation";
 import SocialSignUp from "../SocialSignUp";
 import Logo from "@/components/Layout/Header/Logo";
 import Loader from "@/components/Common/Loader";
@@ -22,6 +23,7 @@ const SignUp: React.FC<SignUpProps> = ({ signUpOpen, onOpenSignIn }) => {
 
   const authDialog = useContext(AuthDialogContext);
   const { signUpWithEmail } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,13 +41,18 @@ const SignUp: React.FC<SignUpProps> = ({ signUpOpen, onOpenSignIn }) => {
     setLoading(true);
     try {
       const res = await signUpWithEmail(name, email, password);
-      setSuccessInfo(res.message);
-      toast.success("Account created successfully!");
-      authDialog?.setIsUserRegistered(true);
-
-      setTimeout(() => {
-        authDialog?.setIsUserRegistered(false);
-      }, 3000);
+      if (res.isApproved) {
+        toast.success("Admin account created successfully!");
+        if (signUpOpen) signUpOpen(false);
+        router.push("/admin");
+      } else {
+        setSuccessInfo(res.message);
+        toast.success("Registration submitted! Pending admin approval.");
+        authDialog?.setIsUserRegistered(true);
+        setTimeout(() => {
+          authDialog?.setIsUserRegistered(false);
+        }, 3000);
+      }
     } catch (err: any) {
       console.error("Sign up error:", err);
       let msg = "Failed to create account.";
