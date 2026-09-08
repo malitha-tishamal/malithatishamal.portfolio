@@ -11,7 +11,8 @@ import { PortfolioCardItem } from '@/components/portfolio/PortfolioCardItem'
 import { PortfolioDetailModal } from '@/components/portfolio/PortfolioDetailModal'
 
 const PortfolioCard: React.FC = () => {
-  const [items, setItems] = useState<PortfolioItem[]>(defaultPortfolioItems)
+  const [items, setItems] = useState<PortfolioItem[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
 
   // Real-time Firestore sync
@@ -33,16 +34,19 @@ const PortfolioCard: React.FC = () => {
           } else {
             setItems(defaultPortfolioItems)
           }
+          setLoading(false)
         },
         (error) => {
           console.warn('Homepage portfolio listener notice:', error.message)
           setItems(defaultPortfolioItems)
+          setLoading(false)
         }
       )
       return () => unsubscribe()
     } catch (err) {
       console.error('Error setting up homepage portfolio listener:', err)
       setItems(defaultPortfolioItems)
+      setLoading(false)
     }
   }, [])
 
@@ -80,6 +84,29 @@ const PortfolioCard: React.FC = () => {
         },
       },
     ],
+  }
+
+  if (loading) {
+    return (
+      <div id='portfolio' className='dark:bg-darkmode'>
+        <div className='lg:px-9 m-auto px-4 max-w-[1600px] pb-12'>
+          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'>
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className='rounded-3xl bg-gray-100 dark:bg-darklight p-5 h-84 animate-pulse border border-border/40 dark:border-dark_border/40 flex flex-col justify-between'
+              >
+                <div className='h-44 bg-gray-200 dark:bg-darkmode rounded-2xl w-full' />
+                <div className='space-y-2.5 mt-4'>
+                  <div className='h-4 bg-gray-200 dark:bg-darkmode rounded-md w-3/4' />
+                  <div className='h-3 bg-gray-200 dark:bg-darkmode rounded-md w-1/2' />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
