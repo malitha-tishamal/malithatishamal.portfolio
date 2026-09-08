@@ -35,6 +35,7 @@ export const CertificationsManager: React.FC = () => {
     title: "",
     issuer: "Cisco Networking Academy",
     issuerLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Cisco_logo_blue_2016.svg/1200px-Cisco_logo_blue_2016.svg.png",
+    logoShape: "rounded",
     issueDate: "Mar 2026",
     expirationDate: "No Expiration",
     credentialId: "",
@@ -119,6 +120,7 @@ export const CertificationsManager: React.FC = () => {
       title: "",
       issuer: "Cisco Networking Academy",
       issuerLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Cisco_logo_blue_2016.svg/1200px-Cisco_logo_blue_2016.svg.png",
+      logoShape: "rounded",
       issueDate: "Mar 2026",
       expirationDate: "No Expiration",
       credentialId: "",
@@ -628,6 +630,41 @@ export const CertificationsManager: React.FC = () => {
                 </div>
               </div>
 
+              {/* Logo Display Shape Selector */}
+              <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-dark dark:text-white block">
+                      Issuer Logo Shape
+                    </label>
+                    <p className="text-[11px] text-gray-500">
+                      Choose whether the organization badge appears as Rounded, Circle, or Square.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { id: "rounded", label: "Rounded", cls: "rounded-xl" },
+                      { id: "circle", label: "Circle", cls: "rounded-full" },
+                      { id: "square", label: "Square", cls: "rounded-md" },
+                    ].map((shape) => (
+                      <button
+                        key={shape.id}
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, logoShape: shape.id as any }))}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                          formData.logoShape === shape.id
+                            ? "bg-primary text-white border-primary shadow-xs"
+                            : "bg-white dark:bg-darklight text-gray-600 dark:text-gray-300 border-border hover:border-primary"
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 bg-current ${shape.cls} inline-block`} />
+                        <span>{shape.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {/* Dates & Credential ID */}
               <div className="grid sm:grid-cols-3 gap-4">
                 <div>
@@ -687,7 +724,7 @@ export const CertificationsManager: React.FC = () => {
                         src={formData.certificateImage}
                         alt="Preview"
                         fill
-                        className="object-cover"
+                        className="object-contain p-1"
                         unoptimized
                       />
                     </div>
