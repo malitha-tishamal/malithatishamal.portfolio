@@ -27,13 +27,22 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
     }
   };
 
+  const logoShapeClass =
+    item.logoShape === "circle"
+      ? "rounded-full"
+      : item.logoShape === "square"
+      ? "rounded-md"
+      : "rounded-xl";
+
+  const [imgFailed, setImgFailed] = useState(false);
+
   return (
     <div className="bg-white dark:bg-darklight rounded-2xl border border-border/80 dark:border-dark_border p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full group">
       
       {/* Top Section: Issuer Logo & Header */}
       <div>
         <div className="flex items-start gap-3.5 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-gray-900 text-white flex items-center justify-center p-2 shrink-0 shadow-xs relative overflow-hidden border border-gray-800">
+          <div className={`w-12 h-12 ${logoShapeClass} bg-gray-900 text-white flex items-center justify-center p-2 shrink-0 shadow-xs relative overflow-hidden border border-gray-800`}>
             {item.issuerLogo ? (
               <Image
                 src={item.issuerLogo}
@@ -111,29 +120,57 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         )}
 
         {/* Certificate Preview Card */}
-        {item.certificateImage && (
-          <div
-            onClick={() => onPreview(item)}
-            className="relative h-48 w-full rounded-xl overflow-hidden border border-border/80 dark:border-dark_border mb-5 cursor-pointer group/preview bg-slate-900/5 dark:bg-slate-950/40 p-2 flex items-center justify-center"
-          >
+        <div
+          onClick={() => onPreview(item)}
+          className="relative h-48 w-full rounded-xl overflow-hidden border border-border/80 dark:border-dark_border mb-5 cursor-pointer group/preview bg-slate-900/5 dark:bg-slate-950/40 p-2 flex items-center justify-center"
+        >
+          {item.certificateImage && !imgFailed ? (
             <Image
               src={item.certificateImage}
               alt={item.title}
               fill
               className="object-contain p-1.5 group-hover/preview:scale-[1.02] transition duration-300"
               unoptimized
+              onError={() => setImgFailed(true)}
             />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
-              <span className="px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-darklight/90 text-dark dark:text-white text-xs font-bold shadow-md flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Preview Certificate
-              </span>
+          ) : (
+            <div className="w-full h-full rounded-lg bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/80 dark:from-slate-900 dark:via-darkmode dark:to-blue-950/30 p-3.5 flex flex-col justify-between border border-blue-100 dark:border-blue-900/30 text-center select-none">
+              <div className="flex items-center justify-between border-b border-blue-100 dark:border-slate-800 pb-1.5">
+                <span className="text-[10px] font-bold tracking-widest text-primary uppercase">
+                  {item.issuer}
+                </span>
+                <span className="text-[10px] text-gray-400 font-mono">
+                  {item.issueDate}
+                </span>
+              </div>
+              <div className="py-1">
+                <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-semibold">
+                  Certificate of Achievement
+                </p>
+                <h4 className="text-xs font-bold text-dark dark:text-white line-clamp-2 mt-0.5">
+                  {item.title}
+                </h4>
+                <p className="text-[11px] text-primary font-medium mt-1">
+                  Malitha Tishamal
+                </p>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-blue-100 dark:border-slate-800 text-[9px] text-gray-400">
+                <span>Verified Credential</span>
+                <span className="text-emerald-500 font-semibold">✓ Official</span>
+              </div>
             </div>
+          )}
+
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+            <span className="px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-darklight/90 text-dark dark:text-white text-xs font-bold shadow-md flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Preview Certificate
+            </span>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Bottom Actions Bar */}
