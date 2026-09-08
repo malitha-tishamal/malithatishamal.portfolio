@@ -13,7 +13,8 @@ import { getImgPath } from '@/utils/image'
 import { AddReviewModal } from './AddReviewModal'
 
 const Testimonial: React.FC = () => {
-  const [testimonials, setTestimonials] = useState<TestimonialItem[]>(defaultTestimonials)
+  const [testimonials, setTestimonials] = useState<TestimonialItem[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   // Real-time Firestore sync
@@ -38,16 +39,19 @@ const Testimonial: React.FC = () => {
           } else {
             setTestimonials(defaultTestimonials)
           }
+          setLoading(false)
         },
         (error) => {
           console.warn('Firestore testimonials listener notice:', error.message)
           setTestimonials(defaultTestimonials)
+          setLoading(false)
         }
       )
       return () => unsubscribe()
     } catch (err) {
       console.error('Error setting up testimonials listener:', err)
       setTestimonials(defaultTestimonials)
+      setLoading(false)
     }
   }, [])
 
@@ -130,7 +134,23 @@ const Testimonial: React.FC = () => {
         <div className='grid grid-cols-1 lg:grid-cols-12 gap-8 items-start'>
           {/* Main Slider (Left/Center Column) */}
           <div className='lg:col-span-8 space-y-6'>
-            {testimonials.length === 1 ? (
+            {loading ? (
+              <div className='p-6 sm:p-8 rounded-3xl bg-white dark:bg-darkmode border border-border/70 dark:border-dark_border shadow-lg animate-pulse min-h-[300px] flex flex-col justify-between'>
+                <div className='space-y-3'>
+                  <div className='h-4 bg-gray-200 dark:bg-darklight rounded-md w-1/4' />
+                  <div className='h-3 bg-gray-200 dark:bg-darklight rounded-md w-full' />
+                  <div className='h-3 bg-gray-200 dark:bg-darklight rounded-md w-5/6' />
+                  <div className='h-3 bg-gray-200 dark:bg-darklight rounded-md w-3/4' />
+                </div>
+                <div className='flex items-center gap-3 pt-4 border-t border-border/40 dark:border-dark_border/40'>
+                  <div className='w-12 h-12 rounded-full bg-gray-200 dark:bg-darklight shrink-0' />
+                  <div className='space-y-1.5 flex-1'>
+                    <div className='h-4 bg-gray-200 dark:bg-darklight rounded-md w-1/3' />
+                    <div className='h-3 bg-gray-200 dark:bg-darklight rounded-md w-1/4' />
+                  </div>
+                </div>
+              </div>
+            ) : testimonials.length === 1 ? (
               /* Single Testimonial Card */
               <div className='p-6 sm:p-8 rounded-3xl bg-white dark:bg-darkmode border border-border/70 dark:border-dark_border shadow-lg hover:shadow-xl transition-all duration-300 relative'>
                 {/* Accent Top Border */}
