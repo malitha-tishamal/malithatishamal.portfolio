@@ -33,11 +33,6 @@ const Header: React.FC = () => {
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
-  // Hide the public header on Admin pages to prevent overlapping headers
-  if (pathUrl?.startsWith('/admin')) {
-    return null
-  }
-
   const signInCardRef = useRef<HTMLDivElement>(null)
   const signUpCardRef = useRef<HTMLDivElement>(null)
   const forgotPasswordCardRef = useRef<HTMLDivElement>(null)
@@ -92,6 +87,11 @@ const Header: React.FC = () => {
   const userEmail = userProfile?.email || user?.email || ''
   const userPhoto = userProfile?.photoURL || user?.photoURL || getImgPath('/images/hero/malitha-hero.png')
   const userRole = userProfile?.role || (isAdmin ? 'admin' : 'user')
+
+  // Hide the public header on Admin pages to prevent overlapping headers
+  if (pathUrl?.startsWith('/admin')) {
+    return null
+  }
 
   return (
     <header
