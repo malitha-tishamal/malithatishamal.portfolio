@@ -62,7 +62,7 @@ const PRESETS = [
       description:
         "Specializing in software engineering, mobile application development, database management systems, network infrastructure, and enterprise systems.",
       skills: ["Flutter", "Firebase", "Java", "Next.js", "Docker", "Database Systems"],
-      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Emblem_of_Sri_Lanka.svg/1200px-Emblem_of_Sri_Lanka.svg.png",
+      logoUrl: "https://api.iconify.design/heroicons:academic-cap-20-solid.svg?color=%237c3aed",
       logoShape: "circle" as LogoShape,
     },
   },
@@ -160,6 +160,10 @@ export const ExperienceManager: React.FC = () => {
     skills: ["Next.js", "React", "TypeScript"],
     logoUrl: "",
     logoShape: "rounded",
+    colorTheme: "linkedin",
+    accentColor: "#0a66c2",
+    badgeColor: "#0a66c2",
+    cardBgColor: "",
     displayOrder: 1,
     published: true,
   });
@@ -238,6 +242,10 @@ export const ExperienceManager: React.FC = () => {
       skills: ["React", "TypeScript", "Next.js"],
       logoUrl: "",
       logoShape: category === "education" ? "circle" : "rounded",
+      colorTheme: "linkedin",
+      accentColor: "#0a66c2",
+      badgeColor: "#0a66c2",
+      cardBgColor: "",
       displayOrder: items.length + 1,
       published: true,
     });
@@ -250,6 +258,10 @@ export const ExperienceManager: React.FC = () => {
     setFormData({
       ...item,
       skills: item.skills || [],
+      colorTheme: item.colorTheme || "linkedin",
+      accentColor: item.accentColor || "#0a66c2",
+      badgeColor: item.badgeColor || "#0a66c2",
+      cardBgColor: item.cardBgColor || "",
     });
     setIsModalOpen(true);
   };
@@ -332,6 +344,11 @@ export const ExperienceManager: React.FC = () => {
         logoShape: (formData.logoShape || "rounded") as LogoShape,
         displayOrder: Number(formData.displayOrder) || items.length + 1,
         published: formData.published !== false,
+        // Color customization fields
+        accentColor: formData.accentColor || "",
+        badgeColor: formData.badgeColor || "",
+        colorTheme: formData.colorTheme || "linkedin",
+        cardBgColor: formData.cardBgColor || "",
         updatedAt: serverTimestamp(),
       };
 
@@ -498,6 +515,7 @@ export const ExperienceManager: React.FC = () => {
                   <th className="py-3.5 px-4 font-bold">Organization / School</th>
                   <th className="py-3.5 px-4 font-bold">Title / Degree</th>
                   <th className="py-3.5 px-4 font-bold">Period</th>
+                  <th className="py-3.5 px-4 font-bold">Color</th>
                   <th className="py-3.5 px-4 font-bold">Status</th>
                   <th className="py-3.5 px-4 font-bold text-right">Actions</th>
                 </tr>
@@ -565,6 +583,27 @@ export const ExperienceManager: React.FC = () => {
 
                     <td className="py-3.5 px-4 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
                       {item.startDate} – {item.endDate || (item.isCurrent ? "Present" : "")}
+                    </td>
+
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="w-4 h-4 rounded-full border border-white/30 shadow-sm shrink-0"
+                          style={{
+                            backgroundColor:
+                              item.accentColor ||
+                              (item.category === "volunteer"
+                                ? "#057642"
+                                : item.category === "education"
+                                ? "#7c3aed"
+                                : "#0a66c2"),
+                          }}
+                          title={item.accentColor || "default"}
+                        />
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          {item.accentColor || "default"}
+                        </span>
+                      </div>
                     </td>
 
                     <td className="py-3.5 px-4 whitespace-nowrap">
@@ -915,6 +954,214 @@ export const ExperienceManager: React.FC = () => {
                         <span>{shape.label}</span>
                       </button>
                     ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══════════ CARD COLOR THEME & ACCENT MANAGER ═══════════ */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-darkmode dark:to-blue-950/20 border border-slate-200 dark:border-dark_border space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                      <span>🎨 Card Color Theme & Accent Manager</span>
+                    </label>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      Fully customize card colors (left glow bar, badge pills, live accents). Default is LinkedIn Blue & Black.
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-primary px-2.5 py-0.5 rounded-lg bg-white dark:bg-darklight border border-slate-200 dark:border-dark_border">
+                    {formData.colorTheme?.toUpperCase() || "LINKEDIN"}
+                  </span>
+                </div>
+
+                {/* Theme Presets */}
+                <div>
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 block mb-2">
+                    Quick Presets:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      {
+                        id: "linkedin",
+                        label: "LinkedIn Blue (Default)",
+                        accent: "#0a66c2",
+                        badge: "#0a66c2",
+                        dot: "bg-[#0a66c2]",
+                      },
+                      {
+                        id: "black",
+                        label: "Black / Dark Slate",
+                        accent: "#181818",
+                        badge: "#1e293b",
+                        dot: "bg-slate-900 dark:bg-white",
+                      },
+                      {
+                        id: "blue",
+                        label: "Electric Royal Blue",
+                        accent: "#2563eb",
+                        badge: "#1d4ed8",
+                        dot: "bg-blue-600",
+                      },
+                      {
+                        id: "emerald",
+                        label: "Emerald Green",
+                        accent: "#057642",
+                        badge: "#057642",
+                        dot: "bg-[#057642]",
+                      },
+                      {
+                        id: "purple",
+                        label: "Deep Purple",
+                        accent: "#7c3aed",
+                        badge: "#6d28d9",
+                        dot: "bg-purple-600",
+                      },
+                      {
+                        id: "custom",
+                        label: "Custom Palette",
+                        accent: formData.accentColor || "#0a66c2",
+                        badge: formData.badgeColor || "#0a66c2",
+                        dot: "bg-gradient-to-r from-pink-500 via-amber-500 to-blue-500",
+                      },
+                    ].map((preset) => {
+                      const isSelected = formData.colorTheme === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              colorTheme: preset.id as any,
+                              accentColor: preset.accent,
+                              badgeColor: preset.badge,
+                            }))
+                          }
+                          className={`flex items-center gap-2 p-2 rounded-xl border text-left transition cursor-pointer ${
+                            isSelected
+                              ? "bg-white dark:bg-darklight border-primary shadow-sm ring-1 ring-primary"
+                              : "bg-white/80 dark:bg-darklight/60 border-slate-200 dark:border-dark_border hover:border-slate-300"
+                          }`}
+                        >
+                          <span className={`w-3.5 h-3.5 rounded-full ${preset.dot} shrink-0 shadow-2xs`} />
+                          <span className="text-xs font-semibold text-dark dark:text-white truncate">
+                            {preset.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Pickers Row */}
+                <div className="pt-2 border-t border-slate-200/80 dark:border-dark_border/80 grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">
+                      Accent Glow Line Color:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={formData.accentColor || "#0a66c2"}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            colorTheme: "custom",
+                            accentColor: e.target.value,
+                          }))
+                        }
+                        className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={formData.accentColor || "#0a66c2"}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            colorTheme: "custom",
+                            accentColor: e.target.value,
+                          }))
+                        }
+                        placeholder="#0a66c2"
+                        className={`${inputCls} font-mono text-xs`}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">
+                      Badge / Highlight Color:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={formData.badgeColor || "#0a66c2"}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            colorTheme: "custom",
+                            badgeColor: e.target.value,
+                          }))
+                        }
+                        className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={formData.badgeColor || "#0a66c2"}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            colorTheme: "custom",
+                            badgeColor: e.target.value,
+                          }))
+                        }
+                        placeholder="#0a66c2"
+                        className={`${inputCls} font-mono text-xs`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Card Preview */}
+                <div className="pt-2">
+                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                    Live Card Preview:
+                  </span>
+                  <div
+                    className="p-3.5 rounded-xl border relative overflow-hidden bg-white dark:bg-darkmode transition-all shadow-xs"
+                    style={{
+                      borderLeftColor: formData.accentColor || "#0a66c2",
+                      borderLeftWidth: "4px",
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-xs"
+                        style={{ backgroundColor: formData.accentColor || "#0a66c2" }}
+                      >
+                        {formData.category === "education" ? "🎓" : "💼"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h5 className="text-xs font-bold text-dark dark:text-white truncate">
+                            {formData.title || "Position / Program Title"}
+                          </h5>
+                          <span
+                            className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                            style={{
+                              color: formData.badgeColor || "#0a66c2",
+                              borderColor: `${formData.badgeColor || "#0a66c2"}40`,
+                              backgroundColor: `${formData.badgeColor || "#0a66c2"}15`,
+                            }}
+                          >
+                            {formData.employmentType || "Full-time"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                          {formData.organization || "Company or Institution"} · {formData.startDate || "Jan 2024"} – {formData.endDate || "Present"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
