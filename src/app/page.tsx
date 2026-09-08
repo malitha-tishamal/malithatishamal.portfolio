@@ -4,6 +4,7 @@ import Hero from '@/components/Home/Hero';
 import Counter from '@/components/Home/Counter'
 import Progresswork from '@/components/Home/WorkProgress';
 import Services from '@/components/Home/Services';
+import ExperienceEducation from '@/components/SharedComponent/ExperienceEducation';
 import Certifications from '@/components/SharedComponent/Certifications';
 import Portfolio from '@/components/SharedComponent/portfollio';
 import Projects from '@/components/SharedComponent/Projects';
@@ -22,6 +23,7 @@ export default function Home() {
       <Counter isColorMode={false} />
       <Progresswork isColorMode={false} />
       <Services />
+      <ExperienceEducation />
       <Certifications />
       <Portfolio />
       <Projects />
