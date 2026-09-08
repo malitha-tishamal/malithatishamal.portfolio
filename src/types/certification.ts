@@ -3,6 +3,7 @@ export interface CertificationItem {
   title: string;
   issuer: string;
   issuerLogo?: string;
+  logoShape?: "rounded" | "circle" | "square";
   issueDate: string; // e.g. "Mar 2026"
   expirationDate?: string; // e.g. "No Expiration" or "Mar 2029"
   credentialId?: string; // e.g. "e4e1215f-35c6-4416-8d4c-83407362d262"
