@@ -19,17 +19,15 @@ const SocialSignIn: React.FC<SocialSignInProps> = ({ onSuccess, onError }) => {
     setLoadingProvider("google");
     try {
       const profile = await signInWithGoogle();
+      if (!profile) return;
       toast.success("Signed in successfully!");
       if (onSuccess) onSuccess();
-      if (profile.role === "admin") {
-        router.push("/admin");
-      }
+      router.push("/admin");
     } catch (err: any) {
-      console.error("Google sign in error:", err);
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
-        // User voluntarily closed popup
         return;
       }
+      console.error("Google sign in error:", err);
       const msg = err.message || "Failed to sign in with Google.";
       toast.error(msg, { duration: 5000 });
       if (onError) onError(msg);
@@ -42,16 +40,15 @@ const SocialSignIn: React.FC<SocialSignInProps> = ({ onSuccess, onError }) => {
     setLoadingProvider("github");
     try {
       const profile = await signInWithGithub();
+      if (!profile) return;
       toast.success("Signed in successfully!");
       if (onSuccess) onSuccess();
-      if (profile.role === "admin") {
-        router.push("/admin");
-      }
+      router.push("/admin");
     } catch (err: any) {
-      console.error("GitHub sign in error:", err);
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
         return;
       }
+      console.error("GitHub sign in error:", err);
       const msg = err.message || "Failed to sign in with GitHub.";
       toast.error(msg, { duration: 5000 });
       if (onError) onError(msg);
