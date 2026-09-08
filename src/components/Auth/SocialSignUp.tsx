@@ -19,17 +19,21 @@ const SocialSignUp: React.FC<SocialSignUpProps> = ({ onSuccess, onError }) => {
     setLoadingProvider("google");
     try {
       const profile = await signInWithGoogle();
-      toast.success("Account created successfully!");
+      if (!profile) return;
+      toast.success("Signed in successfully!");
       if (onSuccess) onSuccess();
-      if (profile.role === "admin") {
-        router.push("/admin");
-      }
+      router.push("/admin");
     } catch (err: any) {
-      console.error("Google sign up error:", err);
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
         return;
       }
       const msg = err.message || "Failed to sign up with Google.";
+      if (msg.includes("pending administrator approval")) {
+        toast(msg, { icon: "⏳", duration: 6000 });
+        if (onSuccess) onSuccess();
+        return;
+      }
+      console.error("Google sign up error:", err);
       toast.error(msg, { duration: 5000 });
       if (onError) onError(msg);
     } finally {
@@ -41,17 +45,21 @@ const SocialSignUp: React.FC<SocialSignUpProps> = ({ onSuccess, onError }) => {
     setLoadingProvider("github");
     try {
       const profile = await signInWithGithub();
-      toast.success("Account created successfully!");
+      if (!profile) return;
+      toast.success("Signed in successfully!");
       if (onSuccess) onSuccess();
-      if (profile.role === "admin") {
-        router.push("/admin");
-      }
+      router.push("/admin");
     } catch (err: any) {
-      console.error("GitHub sign up error:", err);
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
         return;
       }
       const msg = err.message || "Failed to sign up with GitHub.";
+      if (msg.includes("pending administrator approval")) {
+        toast(msg, { icon: "⏳", duration: 6000 });
+        if (onSuccess) onSuccess();
+        return;
+      }
+      console.error("GitHub sign up error:", err);
       toast.error(msg, { duration: 5000 });
       if (onError) onError(msg);
     } finally {
