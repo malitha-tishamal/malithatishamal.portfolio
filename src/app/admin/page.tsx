@@ -26,6 +26,7 @@ import { PortfolioSectionManager } from "@/components/Admin/PortfolioSectionMana
 import { ProjectsSectionManager } from "@/components/Admin/ProjectsSectionManager";
 import { TestimonialsManager } from "@/components/Admin/TestimonialsManager";
 import { BlogManager } from "@/components/Admin/BlogManager";
+import { ContactManager } from "@/components/Admin/ContactManager";
 import { FooterManager } from "@/components/Admin/FooterManager";
 
 export default function AdminDashboardPage() {
@@ -35,6 +36,26 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [unreadInquiriesCount, setUnreadInquiriesCount] = useState<number>(0);
+
+  // Subscribe to real-time inquiries for unread badge count
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(collection(db, "inquiries"), (snapshot) => {
+        let count = 0;
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d.status === "new" || !d.status) {
+            count++;
+          }
+        });
+        setUnreadInquiriesCount(count);
+      });
+      return () => unsub();
+    } catch (e) {
+      console.error("Error setting up inquiries counter listener:", e);
+    }
+  }, []);
 
   // Subscribe to real-time users collection from Firestore
   useEffect(() => {
@@ -187,6 +208,7 @@ export default function AdminDashboardPage() {
           setIsOpen={setIsSidebarOpen}
           pendingCount={pendingCount}
           totalUsersCount={totalCount}
+          unreadInquiriesCount={unreadInquiriesCount}
           userProfile={userProfile}
           onSignOut={logout}
         />
@@ -271,7 +293,12 @@ export default function AdminDashboardPage() {
             <BlogManager />
           )}
 
-          {/* Tab 9: Footer Manager */}
+          {/* Tab 9: Contact & Inquiries Manager */}
+          {activeTab === "contact" && (
+            <ContactManager />
+          )}
+
+          {/* Tab 10: Footer Manager */}
           {activeTab === "footer" && (
             <FooterManager />
           )}
