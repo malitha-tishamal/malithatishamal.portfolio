@@ -5,7 +5,7 @@ import Link from "next/link";
 import Logo from "@/components/Layout/Header/Logo";
 import { UserProfile } from "@/context/AuthContext";
 
-export type AdminTab = "overview" | "accounts" | "roles" | "hero" | "services" | "experience" | "certifications" | "portfolio" | "projects" | "testimonials" | "blogs" | "contact" | "footer";
+export type AdminTab = "overview" | "accounts" | "roles" | "hero" | "counter" | "services" | "techstack" | "experience" | "certifications" | "portfolio" | "projects" | "testimonials" | "blogs" | "contact" | "footer";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -84,6 +84,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       ),
     },
     {
+      id: "counter" as AdminTab,
+      label: "Stats & Counter",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      ),
+      badge: (
+        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+          STATS
+        </span>
+      ),
+    },
+    {
       id: "services" as AdminTab,
       label: "Services & Capabilities",
       icon: (
@@ -94,6 +108,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       badge: (
         <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20">
           SERVICES
+        </span>
+      ),
+    },
+    {
+      id: "techstack" as AdminTab,
+      label: "Tech Stack & Skills",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+      ),
+      badge: (
+        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+          TECH
         </span>
       ),
     },
