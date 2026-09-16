@@ -24,6 +24,20 @@ export interface FooterContent {
   newsletterSubtitle: string;
   navLinks: FooterNavLink[];
   copyright: string;
+
+  // Dynamic Copyright Settings
+  copyrightMode?: "auto" | "custom"; // "auto" uses current year dynamically, "custom" uses manual text
+  copyrightOwnerName?: string; // e.g. "Malitha Tishamal"
+  copyrightSuffix?: string; // e.g. "All rights reserved."
+  customCopyrightText?: string; // e.g. "© 2024-2026 Malitha Tishamal. All rights reserved."
+
+  // Color Theme & Customization
+  colorPreset?: "default" | "pitch_black" | "midnight_slate" | "charcoal" | "custom";
+  bgColor?: string; // Footer background (default: #0b1120 or darkmode)
+  textColor?: string; // Main headings and text (default: #ffffff)
+  subTextColor?: string; // Muted subtext & labels (default: #94a3b8)
+  accentColor?: string; // Primary buttons & hover accents (default: #0a66c2)
+  borderColor?: string; // Separator borders (default: #1e293b)
 }
 
 export const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
@@ -52,13 +66,27 @@ export const defaultFooterContent: FooterContent = {
   ctaLabel: 'Get Started',
   ctaHref: '/#contact',
   supportTitle: 'Support',
-  phone: '+94 XX XXX XXXX',
-  phoneHref: 'tel:+94XXXXXXXXX',
-  email: 'hello@malithatishamal.com',
-  emailHref: 'mailto:hello@malithatishamal.com',
+  phone: '+94 785530992',
+  phoneHref: 'tel:+94785530992',
+  email: 'malithatishamal@gmail.com',
+  emailHref: 'mailto:malithatishamal@gmail.com',
   socialLinks: DEFAULT_SOCIAL_LINKS,
   newsletterTitle: 'Subscribe newsletter',
   newsletterSubtitle: 'Stay updated with all the latest trends and updates.',
   navLinks: DEFAULT_NAV_LINKS,
-  copyright: '© 2025 Malitha Tishamal. All rights reserved.',
+  copyright: `© ${new Date().getFullYear()} Malitha Tishamal. All rights reserved.`,
+
+  // Dynamic Copyright
+  copyrightMode: "auto",
+  copyrightOwnerName: "Malitha Tishamal",
+  copyrightSuffix: "All rights reserved.",
+  customCopyrightText: "",
+
+  // Colors
+  colorPreset: "default",
+  bgColor: "#0b1120",
+  textColor: "#ffffff",
+  subTextColor: "rgba(255, 255, 255, 0.5)",
+  accentColor: "#0a66c2",
+  borderColor: "rgba(255, 255, 255, 0.1)",
 };
