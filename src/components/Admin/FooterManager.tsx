@@ -323,16 +323,261 @@ export const FooterManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Copyright */}
+          {/* ─── COPYRIGHT ─────────────────────────────────────────────────── */}
           <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-6">
-            <h3 className="text-sm font-bold text-dark dark:text-white mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-bold text-dark dark:text-white mb-1 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-gray-500 inline-block" /> Copyright Text
             </h3>
-            <input className={inputCls} value={formData.copyright} onChange={e => setField("copyright", e.target.value)} placeholder="© 2025 Your Name. All rights reserved." />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+              Choose how the copyright year is handled — auto-updates every year automatically, or write your own fixed text.
+            </p>
+
+            {/* Mode Toggle — 2 prominent option buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+              {/* Option 1: Auto Year */}
+              <button
+                type="button"
+                onClick={() => setField("copyrightMode", "auto")}
+                className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all text-left ${
+                  (formData.copyrightMode ?? "auto") === "auto"
+                    ? "border-primary bg-primary/5 dark:bg-primary/10"
+                    : "border-border dark:border-dark_border hover:border-primary/40"
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 transition ${
+                  (formData.copyrightMode ?? "auto") === "auto"
+                    ? "border-primary bg-primary"
+                    : "border-gray-400"
+                }`}>
+                  {(formData.copyrightMode ?? "auto") === "auto" && (
+                    <span className="w-2 h-2 rounded-full bg-white block" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-dark dark:text-white">
+                    🔄 Auto Year <span className="text-[10px] font-normal text-primary ml-1 bg-primary/10 px-1.5 py-0.5 rounded-full">Recommended</span>
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Automatically shows the current year. <span className="font-semibold text-primary">© {new Date().getFullYear()} Malitha Tishamal. All rights reserved.</span>
+                  </p>
+                  {(formData.copyrightMode ?? "auto") === "auto" && (
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className={labelCls}>Owner Name</label>
+                        <input
+                          className={inputCls}
+                          value={formData.copyrightOwnerName ?? "Malitha Tishamal"}
+                          onChange={e => setField("copyrightOwnerName", e.target.value)}
+                          placeholder="Malitha Tishamal"
+                        />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Suffix</label>
+                        <input
+                          className={inputCls}
+                          value={formData.copyrightSuffix ?? "All rights reserved."}
+                          onChange={e => setField("copyrightSuffix", e.target.value)}
+                          placeholder="All rights reserved."
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </button>
+
+              {/* Option 2: Custom text */}
+              <button
+                type="button"
+                onClick={() => setField("copyrightMode", "custom")}
+                className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all text-left ${
+                  formData.copyrightMode === "custom"
+                    ? "border-primary bg-primary/5 dark:bg-primary/10"
+                    : "border-border dark:border-dark_border hover:border-primary/40"
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 transition ${
+                  formData.copyrightMode === "custom"
+                    ? "border-primary bg-primary"
+                    : "border-gray-400"
+                }`}>
+                  {formData.copyrightMode === "custom" && (
+                    <span className="w-2 h-2 rounded-full bg-white block" />
+                  )}
+                </div>
+                <div className="w-full">
+                  <p className="font-bold text-sm text-dark dark:text-white">✏️ Custom Text</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Write any copyright text — including date ranges, multiple names, etc.
+                  </p>
+                  {formData.copyrightMode === "custom" && (
+                    <div className="mt-3">
+                      <label className={labelCls}>Custom Copyright Text</label>
+                      <input
+                        className={inputCls}
+                        value={formData.customCopyrightText ?? ""}
+                        onChange={e => setField("customCopyrightText", e.target.value)}
+                        placeholder="© 2024-2026 Malitha Tishamal. All rights reserved."
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                </div>
+              </button>
+            </div>
+
+            {/* Live Preview */}
+            <div className="mt-2 px-4 py-3 rounded-xl bg-gray-900 text-center">
+              <p className="text-xs text-gray-400 mb-1 uppercase tracking-wider font-semibold">Live Preview</p>
+              <p className="text-sm font-medium text-white/70">
+                {formData.copyrightMode === "custom"
+                  ? (formData.customCopyrightText || `© ${new Date().getFullYear()} Malitha Tishamal. All rights reserved.`)
+                  : `© ${new Date().getFullYear()} ${formData.copyrightOwnerName || "Malitha Tishamal"}. ${formData.copyrightSuffix || "All rights reserved."}`
+                }
+              </p>
+            </div>
+          </div>
+
+          {/* ─── COLOR THEME CUSTOMIZER ────────────────────────────────────── */}
+          <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-6">
+            <h3 className="text-sm font-bold text-dark dark:text-white mb-1 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" /> Footer Color Theme
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+              Customize the footer background, text, and accent colors. The default is the dark navy blue theme.
+            </p>
+
+            {/* Color Presets */}
+            <div className="mb-5">
+              <label className={labelCls}>Quick Presets</label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {[
+                  { key: "default",        label: "Default Dark Navy", bg: "#0b1120", accent: "#0a66c2" },
+                  { key: "pitch_black",    label: "Pitch Black",       bg: "#000000", accent: "#0a66c2" },
+                  { key: "midnight_slate", label: "Midnight Slate",     bg: "#0f172a", accent: "#0a66c2" },
+                  { key: "charcoal",       label: "Charcoal",          bg: "#1c1c1e", accent: "#6366f1" },
+                ].map(preset => (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    onClick={() => {
+                      setField("colorPreset", preset.key as any);
+                      setField("bgColor", preset.bg);
+                      setField("accentColor", preset.accent);
+                      setField("textColor", "#ffffff");
+                      setField("subTextColor", "rgba(255, 255, 255, 0.5)");
+                      setField("borderColor", "rgba(255, 255, 255, 0.1)");
+                    }}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                      formData.colorPreset === preset.key
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border dark:border-dark_border text-gray-600 dark:text-gray-300 hover:border-primary/50"
+                    }`}
+                  >
+                    <span
+                      className="w-4 h-4 rounded-full border border-white/20 shrink-0"
+                      style={{ backgroundColor: preset.bg }}
+                    />
+                    {preset.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setField("colorPreset", "custom")}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                    formData.colorPreset === "custom"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border dark:border-dark_border text-gray-600 dark:text-gray-300 hover:border-primary/50"
+                  }`}
+                >
+                  🎨 Custom
+                </button>
+              </div>
+            </div>
+
+            {/* Individual Color Pickers */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {[
+                { key: "bgColor",      label: "Background",       val: formData.bgColor      || "#0b1120" },
+                { key: "accentColor",  label: "Accent (Buttons)",  val: formData.accentColor  || "#0a66c2" },
+                { key: "textColor",    label: "Heading Text",      val: formData.textColor    || "#ffffff" },
+              ].map(({ key, label, val }) => (
+                <div key={key}>
+                  <label className={labelCls}>{label}</label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="color"
+                      value={val.startsWith("#") ? val : "#0b1120"}
+                      onChange={e => {
+                        setField("colorPreset", "custom");
+                        setField(key as any, e.target.value);
+                      }}
+                      className="w-10 h-10 rounded-lg cursor-pointer border-2 border-border dark:border-dark_border p-0.5 bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={val}
+                      onChange={e => {
+                        setField("colorPreset", "custom");
+                        setField(key as any, e.target.value);
+                      }}
+                      className={`${inputCls} flex-1 font-mono text-xs`}
+                      placeholder="#0b1120"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer Preview Chip */}
+            <div
+              className="mt-5 rounded-xl px-6 py-4 flex items-center justify-between border"
+              style={{
+                backgroundColor: formData.bgColor || "#0b1120",
+                borderColor: formData.borderColor || "rgba(255,255,255,0.1)",
+              }}
+            >
+              <div>
+                <p
+                  className="font-bold text-sm"
+                  style={{ color: formData.textColor || "#ffffff" }}
+                >
+                  Footer Preview
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: formData.subTextColor || "rgba(255,255,255,0.5)" }}
+                >
+                  Subtext and links color
+                </p>
+              </div>
+              <div
+                className="px-4 py-1.5 rounded-lg text-white text-xs font-bold"
+                style={{ backgroundColor: formData.accentColor || "#0a66c2" }}
+              >
+                Get Started
+              </div>
+            </div>
+
+            {/* Reset Colors button */}
+            <button
+              type="button"
+              onClick={() => {
+                setField("colorPreset", "default");
+                setField("bgColor", "#0b1120");
+                setField("textColor", "#ffffff");
+                setField("subTextColor", "rgba(255, 255, 255, 0.5)");
+                setField("accentColor", "#0a66c2");
+                setField("borderColor", "rgba(255, 255, 255, 0.1)");
+              }}
+              className="mt-3 text-xs text-gray-400 hover:text-primary hover:underline cursor-pointer transition"
+            >
+              ↺ Reset to default colors
+            </button>
           </div>
 
         </div>
       )}
+
 
       {/* ──────────────── SUBSCRIBERS TAB ──────────────── */}
       {activeSection === "subscribers" && (
