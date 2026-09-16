@@ -15,11 +15,56 @@ const Contactform = () => {
     lastName: "",
     email: "",
     country: "",
+    serviceCategory: "",
     message: "",
     consent: false,
   });
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitted, setSubmitted] = useState<boolean>(false);
+  const [serviceOptions, setServiceOptions] = useState<string[]>([
+    "Full-Stack Software Engineering",
+    "DevOps & Cloud Infrastructure",
+    "Cybersecurity & Systems Hardening",
+    "Network Engineering & Server Architecture",
+    "Mobile Application Engineering",
+    "Database Engineering & Optimization",
+  ]);
+
+  // Listen to select-service events from Services section
+  useEffect(() => {
+    const handleSelectService = (e: Event) => {
+      const customEvt = e as CustomEvent<{ serviceTitle: string }>;
+      if (customEvt.detail?.serviceTitle) {
+        setFormData((prev) => ({
+          ...prev,
+          serviceCategory: customEvt.detail.serviceTitle,
+        }));
+      }
+    };
+    window.addEventListener("select-service", handleSelectService);
+    return () => window.removeEventListener("select-service", handleSelectService);
+  }, []);
+
+  // Fetch available services for category dropdown
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(collection(db, "services"), (snap) => {
+        if (!snap.empty) {
+          const names: string[] = [];
+          snap.forEach((d) => {
+            const data = d.data();
+            if (data.title && data.published !== false) {
+              names.push(data.title);
+            }
+          });
+          if (names.length > 0) setServiceOptions(names);
+        }
+      });
+      return () => unsub();
+    } catch (e) {
+      console.warn("Could not fetch services for contact options:", e);
+    }
+  }, []);
 
   // Real-time sync with siteContent/contact
   useEffect(() => {
@@ -87,6 +132,7 @@ const Contactform = () => {
         lastName: formData.lastName.trim(),
         email: formData.email.trim().toLowerCase(),
         country: formData.country.trim(),
+        serviceCategory: formData.serviceCategory.trim() || "General Consultation",
         message: formData.message.trim(),
         status: "new",
         isStarred: false,
@@ -105,6 +151,7 @@ const Contactform = () => {
             lastName: formData.lastName.trim(),
             email: formData.email.trim(),
             country: formData.country.trim(),
+            serviceCategory: formData.serviceCategory.trim() || "General Consultation",
             message: formData.message.trim(),
             notificationEmail: content.notificationEmail || "malithatishamal@gmail.com",
           }),
@@ -120,6 +167,7 @@ const Contactform = () => {
         lastName: "",
         email: "",
         country: "",
+        serviceCategory: "",
         message: "",
         consent: false,
       });
@@ -297,6 +345,43 @@ const Contactform = () => {
                       type="text"
                       placeholder="Country"
                     />
+                  </div>
+
+                  {/* Service / Category Selection */}
+                  <div className="w-full">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400">
+                        Interested Service / Project Category
+                      </label>
+                      {formData.serviceCategory && (
+                        <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <span>✓</span> Selected: {formData.serviceCategory}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <select
+                        name="serviceCategory"
+                        value={formData.serviceCategory}
+                        onChange={handleChange as any}
+                        className="text-midnight_text w-full text-sm sm:text-base transition-[0.5s] bg-white dark:bg-darkmode dark:border-dark_border dark:text-white px-[0.9375rem] py-[0.830rem] border border-border border-solid focus:border-primary dark:focus:border-primary rounded-lg focus-visible:outline-0 appearance-none cursor-pointer"
+                      >
+                        <option value="" className="text-gray-400">
+                          -- Choose a Service Category (Optional) --
+                        </option>
+                        {serviceOptions.map((opt) => (
+                          <option key={opt} value={opt} className="text-midnight_text dark:text-white">
+                            {opt}
+                          </option>
+                        ))}
+                        <option value="General Consultation / Other" className="text-midnight_text dark:text-white">
+                          General Consultation / Other
+                        </option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-gray-400 text-xs">
+                        ▼
+                      </div>
+                    </div>
                   </div>
 
                   {/* Message */}
