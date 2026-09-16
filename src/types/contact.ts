@@ -26,6 +26,7 @@ export interface ContactInquiry {
   lastName: string;
   email: string;
   country: string;
+  serviceCategory?: string;
   message: string;
   status: "new" | "read" | "replied" | "archived";
   isStarred?: boolean;
