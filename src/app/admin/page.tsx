@@ -20,6 +20,7 @@ import { DashboardOverview } from "@/components/Admin/DashboardOverview";
 import { AccountManagementTab } from "@/components/Admin/AccountManagementTab";
 import { RolesPermissionsTab } from "@/components/Admin/RolesPermissionsTab";
 import { HeroSectionManager } from "@/components/Admin/HeroSectionManager";
+import { ServicesManager } from "@/components/Admin/ServicesManager";
 import { ExperienceManager } from "@/components/Admin/ExperienceManager";
 import { CertificationsManager } from "@/components/Admin/CertificationsManager";
 import { PortfolioSectionManager } from "@/components/Admin/PortfolioSectionManager";
@@ -261,6 +262,11 @@ export default function AdminDashboardPage() {
           {/* Tab 4: Hero Section Manager */}
           {activeTab === "hero" && (
             <HeroSectionManager />
+          )}
+
+          {/* Tab: Services & Capabilities Manager */}
+          {activeTab === "services" && (
+            <ServicesManager />
           )}
 
           {/* Tab: Experience & Education Manager */}
