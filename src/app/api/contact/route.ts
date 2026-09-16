@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { firstName, lastName, email, country, message, notificationEmail } = body;
+    const { firstName, lastName, email, country, serviceCategory, message, notificationEmail } = body;
 
     if (!firstName?.trim() || !email?.trim() || !message?.trim()) {
       return NextResponse.json(
@@ -102,6 +102,10 @@ export async function POST(req: Request) {
                             <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 13px; color: #94a3b8;">Country</td>
                             <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; color: #f8fafc;">${country || "Not provided"}</td>
                           </tr>
+                          ${serviceCategory ? `<tr>
+                            <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 13px; color: #94a3b8;">Service Category</td>
+                            <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; color: #a78bfa; font-weight: 600;">${serviceCategory}</td>
+                          </tr>` : ''}
                           <tr>
                             <td style="padding: 14px 18px; font-size: 13px; color: #94a3b8;">Date &amp; Time</td>
                             <td style="padding: 14px 18px; font-size: 13px; color: #cbd5e1;">${dateStr}</td>
