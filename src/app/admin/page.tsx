@@ -20,7 +20,9 @@ import { DashboardOverview } from "@/components/Admin/DashboardOverview";
 import { AccountManagementTab } from "@/components/Admin/AccountManagementTab";
 import { RolesPermissionsTab } from "@/components/Admin/RolesPermissionsTab";
 import { HeroSectionManager } from "@/components/Admin/HeroSectionManager";
+import { CounterManager } from "@/components/Admin/CounterManager";
 import { ServicesManager } from "@/components/Admin/ServicesManager";
+import { TechStackManager } from "@/components/Admin/TechStackManager";
 import { ExperienceManager } from "@/components/Admin/ExperienceManager";
 import { CertificationsManager } from "@/components/Admin/CertificationsManager";
 import { PortfolioSectionManager } from "@/components/Admin/PortfolioSectionManager";
@@ -264,9 +266,19 @@ export default function AdminDashboardPage() {
             <HeroSectionManager />
           )}
 
+          {/* Tab: Stats & Counter Manager */}
+          {activeTab === "counter" && (
+            <CounterManager />
+          )}
+
           {/* Tab: Services & Capabilities Manager */}
           {activeTab === "services" && (
             <ServicesManager />
+          )}
+
+          {/* Tab: Tech Stack & Skills Manager */}
+          {activeTab === "techstack" && (
+            <TechStackManager />
           )}
 
           {/* Tab: Experience & Education Manager */}
