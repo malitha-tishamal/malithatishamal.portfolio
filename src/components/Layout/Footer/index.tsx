@@ -4,7 +4,7 @@ import React, { FC, useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, onSnapshot, collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getImgPath } from '@/utils/image'
 import { FooterContent, defaultFooterContent } from '@/types/footer'
@@ -39,18 +39,24 @@ const Footer: FC = () => {
   const [submitting, setSubmitting] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
 
+  // Real-time Firestore sync
   useEffect(() => {
-    const fetchFooter = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'siteContent', 'footer'))
-        if (snap.exists()) {
-          setData({ ...defaultFooterContent, ...(snap.data() as FooterContent) })
+    try {
+      const unsub = onSnapshot(
+        doc(db, 'siteContent', 'footer'),
+        (snap) => {
+          if (snap.exists()) {
+            setData({ ...defaultFooterContent, ...(snap.data() as FooterContent) })
+          }
+        },
+        (err) => {
+          console.warn('Footer sync notice:', err.message)
         }
-      } catch (err) {
-        console.error('Footer fetch error:', err)
-      }
+      )
+      return () => unsub()
+    } catch (err) {
+      console.error('Footer listener error:', err)
     }
-    fetchFooter()
   }, [])
 
   if (pathUrl?.startsWith('/admin')) return null
@@ -75,30 +81,98 @@ const Footer: FC = () => {
   const enabledSocials = (data.socialLinks || []).filter(s => s.enabled)
   const enabledNavLinks = (data.navLinks || []).filter(l => l.enabled)
 
+  // Dynamic Copyright computation
+  const currentYear = new Date().getFullYear()
+  const copyrightText =
+    data.copyrightMode === 'custom'
+      ? (data.customCopyrightText || data.copyright || `© ${currentYear} Malitha Tishamal. All rights reserved.`)
+      : `© ${currentYear} ${data.copyrightOwnerName || 'Malitha Tishamal'}. ${data.copyrightSuffix || 'All rights reserved.'}`
+
+  // Colors
+  const bgColor = data.bgColor || '#0b1120'
+  const textColor = data.textColor || '#ffffff'
+  const subTextColor = data.subTextColor || 'rgba(255, 255, 255, 0.55)'
+  const accentColor = data.accentColor || '#0a66c2'
+  const borderColor = data.borderColor || 'rgba(255, 255, 255, 0.1)'
+
   return (
-    <footer className="bg-darkmode relative z-1 border-t border-dark_border px-6">
+    <footer
+      className="relative z-1 border-t px-6 transition-colors duration-300"
+      style={{
+        backgroundColor: bgColor,
+        borderColor: borderColor,
+      }}
+    >
       <div className="container mx-auto max-w-6xl px-4">
         <div className="grid md:grid-cols-12 grid-cols-1 sm:grid-cols-12">
-          <div className="md:col-span-4 sm:col-span-6 col-span-12 sm:border-r border-b border-solid border-dark_border flex items-center sm:border-b-0 sm:min-h-25 py-10 shrink-0">
+          {/* Column 1: CTA */}
+          <div
+            className="md:col-span-4 sm:col-span-6 col-span-12 sm:border-r border-b border-solid flex items-center sm:border-b-0 sm:min-h-25 py-10 shrink-0"
+            style={{ borderColor: borderColor }}
+          >
             <div className="sm:content-normal sm:text-start text-center content-center sm:w-auto w-full">
               <Link href="/" className="md:block flex justify-center">
-                <Image src={getImgPath('/images/logo/malitha-logo-white.png')} alt="Malitha" width={280} height={90} style={{ width: 'auto', height: '78px' }} quality={100} unoptimized />
+                <Image
+                  src={getImgPath('/images/logo/malitha-logo-white.png')}
+                  alt="Malitha"
+                  width={280}
+                  height={90}
+                  style={{ width: 'auto', height: '78px' }}
+                  quality={100}
+                  unoptimized
+                />
               </Link>
-              <h2 className="text-white py-10 text-[40px] leading-tight font-bold">{data.tagline}</h2>
-              <Link href={data.ctaHref} className="px-9 py-3 rounded-lg bg-primary text-white hover:bg-blue-700 hover:shadow-none transition">{data.ctaLabel}</Link>
+              <h2
+                className="py-10 text-[40px] leading-tight font-bold"
+                style={{ color: textColor }}
+              >
+                {data.tagline}
+              </h2>
+              <Link
+                href={data.ctaHref}
+                className="px-9 py-3 rounded-lg text-white font-semibold transition hover:opacity-90 inline-block shadow-md"
+                style={{ backgroundColor: accentColor }}
+              >
+                {data.ctaLabel}
+              </Link>
             </div>
           </div>
 
-          <div className="md:col-span-4 sm:col-span-6 col-span-12 sm:flex items-center sm:min-h-25 py-10 justify-center shrink-0 md:border-r border-b sm:border-b-0 border-solid border-dark_border">
+          {/* Column 2: Support & Social */}
+          <div
+            className="md:col-span-4 sm:col-span-6 col-span-12 sm:flex items-center sm:min-h-25 py-10 justify-center shrink-0 md:border-r border-b sm:border-b-0 border-solid"
+            style={{ borderColor: borderColor }}
+          >
             <div className="flex flex-col md:items-start items-center">
-              <span className="text-lg font-bold text-white pb-4 inline-block">{data.supportTitle}</span>
-              <div className="pb-5 sm:block flex">
-                <p className="text-base font-bold text-white">Phone</p>
-                <Link href={data.phoneHref} className="text-2xl text-white/50 hover:text-white">{data.phone}</Link>
+              <span
+                className="text-lg font-bold pb-4 inline-block"
+                style={{ color: textColor }}
+              >
+                {data.supportTitle}
+              </span>
+              <div className="pb-5 sm:block flex flex-col items-center sm:items-start">
+                <p className="text-base font-bold" style={{ color: textColor }}>
+                  Phone
+                </p>
+                <Link
+                  href={data.phoneHref}
+                  className="text-2xl transition hover:opacity-100"
+                  style={{ color: subTextColor }}
+                >
+                  {data.phone}
+                </Link>
               </div>
-              <div className="sm:block flex items-center gap-3">
-                <p className="text-base font-bold text-white">Email</p>
-                <Link href={data.emailHref} className="text-2xl text-white/50 hover:text-white">{data.email}</Link>
+              <div className="sm:block flex flex-col items-center sm:items-start">
+                <p className="text-base font-bold" style={{ color: textColor }}>
+                  Email
+                </p>
+                <Link
+                  href={data.emailHref}
+                  className="text-2xl transition hover:opacity-100 break-all"
+                  style={{ color: subTextColor }}
+                >
+                  {data.email}
+                </Link>
               </div>
               {enabledSocials.length > 0 && (
                 <ul className="flex flex-wrap items-center gap-2 mt-7">
@@ -106,8 +180,13 @@ const Footer: FC = () => {
                     const colorClass = SOCIAL_COLORS[social.platform] || 'bg-gray-600'
                     return (
                       <li key={social.platform}>
-                        <Link href={social.url || '#'} target="_blank" rel="noopener noreferrer" title={social.platform}
-                          className={`${colorClass} w-9 h-9 rounded-lg flex items-center justify-center text-white hover:-translate-y-1 hover:shadow-lg transition-all duration-200`}>
+                        <Link
+                          href={social.url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={social.platform}
+                          className={`${colorClass} w-9 h-9 rounded-lg flex items-center justify-center text-white hover:-translate-y-1 hover:shadow-lg transition-all duration-200`}
+                        >
                           <SocialIcon platform={social.platform} className="w-4 h-4" />
                         </Link>
                       </li>
@@ -118,10 +197,24 @@ const Footer: FC = () => {
             </div>
           </div>
 
-          <div className="md:col-span-4 col-span-12 border-t md:border-none border-solid border-dark_border sm:flex items-center justify-end md:min-h-25 py-10 shrink-0">
+          {/* Column 3: Newsletter */}
+          <div
+            className="md:col-span-4 col-span-12 border-t md:border-none border-solid sm:flex items-center justify-end md:min-h-25 py-10 shrink-0"
+            style={{ borderColor: borderColor }}
+          >
             <div className="md:w-3/4 w-full sm:text-start text-center">
-              <span className="font-bold text-white pb-4 inline-block text-2xl">{data.newsletterTitle}</span>
-              <p className="text-MistyBlue text-base pb-7 text-white/50">{data.newsletterSubtitle}</p>
+              <span
+                className="font-bold pb-4 inline-block text-2xl"
+                style={{ color: textColor }}
+              >
+                {data.newsletterTitle}
+              </span>
+              <p
+                className="text-base pb-7"
+                style={{ color: subTextColor }}
+              >
+                {data.newsletterSubtitle}
+              </p>
               {subscribed ? (
                 <div className="flex items-center gap-3 bg-green-500/15 border border-green-500/30 rounded-lg px-5 py-4">
                   <svg className="w-6 h-6 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,11 +227,20 @@ const Footer: FC = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubscribe} className="newsletter-form flex rounded-lg sm:w-full w-3/4 sm:mx-0 mx-auto">
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email*"
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="Email*"
                     className="p-4 text-base border-transparent rounded-s-lg rounded-e-none! outline-0 focus:border-primary dark:focus:border-primary w-[calc(100%_-_137px)] flex bg-white dark:bg-midnight_text dark:text-white dark:border-solid dark:border dark:border-border_color"
-                    disabled={submitting} />
-                  <button type="submit" disabled={submitting}
-                    className="p-[0.625rem] text-base font-medium bg-primary text-white border-none cursor-pointer rounded-e-lg outline-0 text-center w-[8.5625rem] hover:bg-blue-700 hover:shadow-none disabled:opacity-60 transition">
+                    disabled={submitting}
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="p-[0.625rem] text-base font-medium text-white border-none cursor-pointer rounded-e-lg outline-0 text-center w-[8.5625rem] hover:opacity-90 disabled:opacity-60 transition"
+                    style={{ backgroundColor: accentColor }}
+                  >
                     {submitting ? 'Sending...' : 'Subscribe'}
                   </button>
                 </form>
@@ -148,17 +250,29 @@ const Footer: FC = () => {
         </div>
       </div>
 
-      <div className="text-center gap-4 md:gap-0 flex-wrap p-7 border-t border-solid border-dark_border">
+      {/* Bottom Bar: Nav Links & Copyright */}
+      <div
+        className="text-center gap-4 md:gap-0 flex-wrap p-7 border-t border-solid"
+        style={{ borderColor: borderColor }}
+      >
         {enabledNavLinks.length > 0 && (
           <ul className="flex justify-center mb-4 items-center sm:gap-7 gap-3 flex-wrap">
             {enabledNavLinks.map(link => (
-              <li key={link.label} className="text-base text-white/50">
-                <Link href={link.href} className="hover:text-primary transition">{link.label}</Link>
+              <li key={link.label} className="text-base">
+                <Link
+                  href={link.href}
+                  className="transition hover:underline"
+                  style={{ color: subTextColor }}
+                >
+                  {link.label}
+                </Link>
               </li>
             ))}
           </ul>
         )}
-        <p className="text-base text-white/50">{data.copyright}</p>
+        <p className="text-base font-medium" style={{ color: subTextColor }}>
+          {copyrightText}
+        </p>
       </div>
     </footer>
   )
