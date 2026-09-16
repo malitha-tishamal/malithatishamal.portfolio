@@ -5,7 +5,7 @@ import Link from "next/link";
 import Logo from "@/components/Layout/Header/Logo";
 import { UserProfile } from "@/context/AuthContext";
 
-export type AdminTab = "overview" | "accounts" | "roles" | "hero" | "experience" | "certifications" | "portfolio" | "projects" | "testimonials" | "blogs" | "contact" | "footer";
+export type AdminTab = "overview" | "accounts" | "roles" | "hero" | "services" | "experience" | "certifications" | "portfolio" | "projects" | "testimonials" | "blogs" | "contact" | "footer";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -80,6 +80,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       badge: (
         <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/20">
           HERO
+        </span>
+      ),
+    },
+    {
+      id: "services" as AdminTab,
+      label: "Services & Capabilities",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+      badge: (
+        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+          SERVICES
         </span>
       ),
     },
