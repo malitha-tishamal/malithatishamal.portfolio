@@ -12,7 +12,7 @@ import { CertificationCardItem } from "./CertificationCardItem";
 import { CertificationDetailModal } from "./CertificationDetailModal";
 
 export const CertificationsList: React.FC = () => {
-  const [items, setItems] = useState<CertificationItem[]>(defaultCertifications);
+  const [items, setItems] = useState<CertificationItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<CertificationItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -34,20 +34,20 @@ export const CertificationsList: React.FC = () => {
             fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
             setItems(fetched.filter((c) => c.published !== false));
           } else {
-            setItems(defaultCertifications);
+            setItems([]);
           }
           setLoading(false);
         },
         (error) => {
           console.warn("Certifications listener notice:", error.message);
-          setItems(defaultCertifications);
+          setItems([]);
           setLoading(false);
         }
       );
       return () => unsubscribe();
     } catch (err) {
       console.error("Error in certifications listener:", err);
-      setItems(defaultCertifications);
+      setItems([]);
       setLoading(false);
     }
   }, []);
@@ -140,9 +140,29 @@ export const CertificationsList: React.FC = () => {
 
         {/* Certifications Grid */}
         {loading ? (
-          <div className="text-center py-20">
-            <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-xs text-gray-500">Loading credentials...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="rounded-3xl bg-white dark:bg-darklight p-5 h-80 animate-pulse border border-border/60 dark:border-dark_border/60 flex flex-col justify-between"
+              >
+                <div className="flex gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-darkmode shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-gray-200 dark:bg-darkmode rounded-md w-3/4" />
+                    <div className="h-3 bg-gray-200 dark:bg-darkmode rounded-md w-1/2" />
+                  </div>
+                </div>
+                <div className="space-y-2 mt-4">
+                  <div className="h-3 bg-gray-200 dark:bg-darkmode rounded-md w-full" />
+                  <div className="h-3 bg-gray-200 dark:bg-darkmode rounded-md w-4/5" />
+                </div>
+                <div className="flex justify-between items-center pt-4 border-t border-border/40 dark:border-dark_border/40">
+                  <div className="h-4 bg-gray-200 dark:bg-darkmode rounded-md w-24" />
+                  <div className="h-8 bg-gray-200 dark:bg-darkmode rounded-xl w-24" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
