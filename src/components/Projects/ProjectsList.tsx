@@ -12,7 +12,8 @@ import { ProjectCardItem } from './ProjectCardItem'
 import { ProjectDetailModal } from './ProjectDetailModal'
 
 export const ProjectsList: React.FC = () => {
-  const [projects, setProjects] = useState<ProjectItem[]>(defaultProjects)
+  const [projects, setProjects] = useState<ProjectItem[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [activeCategory, setActiveCategory] = useState<string>('All Projects')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
@@ -34,18 +35,21 @@ export const ProjectsList: React.FC = () => {
             fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
             setProjects(fetched)
           } else {
-            setProjects(defaultProjects)
+            setProjects([])
           }
+          setLoading(false)
         },
         (error) => {
           console.warn('Firestore projects listener notice:', error.message)
-          setProjects(defaultProjects)
+          setProjects([])
+          setLoading(false)
         }
       )
       return () => unsubscribe()
     } catch (err) {
       console.error('Error setting up projects listener:', err)
-      setProjects(defaultProjects)
+      setProjects([])
+      setLoading(false)
     }
   }, [])
 
@@ -123,7 +127,27 @@ export const ProjectsList: React.FC = () => {
         </div>
 
         {/* Projects Grid */}
-        {filteredProjects.length === 0 ? (
+        {loading ? (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className='rounded-3xl bg-gray-100 dark:bg-darklight p-5 h-96 animate-pulse border border-border/40 dark:border-dark_border/40 flex flex-col justify-between'
+              >
+                <div className='h-48 bg-gray-200 dark:bg-darkmode rounded-2xl w-full' />
+                <div className='space-y-3 mt-4'>
+                  <div className='h-5 bg-gray-200 dark:bg-darkmode rounded-md w-3/4' />
+                  <div className='h-3 bg-gray-200 dark:bg-darkmode rounded-md w-full' />
+                  <div className='h-3 bg-gray-200 dark:bg-darkmode rounded-md w-2/3' />
+                  <div className='flex gap-2 pt-2'>
+                    <div className='h-6 bg-gray-200 dark:bg-darkmode rounded-full w-16' />
+                    <div className='h-6 bg-gray-200 dark:bg-darkmode rounded-full w-16' />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredProjects.length === 0 ? (
           <div className='text-center py-20 bg-gray-50 dark:bg-darklight rounded-3xl border border-dashed border-border dark:border-dark_border p-8'>
             <p className='text-base font-bold text-dark dark:text-white'>No projects match your search</p>
             <p className='text-xs text-gray-400 mt-1 mb-4'>Try selecting a different category or search term.</p>
