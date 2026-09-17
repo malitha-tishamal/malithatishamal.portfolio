@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { BlogPost, BLOG_CATEGORIES, defaultBlogPosts } from "@/types/blog";
 
 const BlogList: React.FC = () => {
-  const [posts, setPosts] = useState<BlogPost[]>(defaultBlogPosts);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -142,7 +142,23 @@ const BlogList: React.FC = () => {
         </div>
 
         {/* Blog Cards Grid */}
-        {filteredPosts.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="rounded-3xl bg-gray-100 dark:bg-darklight p-5 h-96 animate-pulse border border-border/40 dark:border-dark_border/40 flex flex-col justify-between"
+              >
+                <div className="h-52 bg-gray-200 dark:bg-darkmode rounded-2xl w-full" />
+                <div className="space-y-3 mt-4">
+                  <div className="h-4 bg-gray-200 dark:bg-darkmode rounded-md w-1/3" />
+                  <div className="h-5 bg-gray-200 dark:bg-darkmode rounded-md w-4/5" />
+                  <div className="h-3.5 bg-gray-200 dark:bg-darkmode rounded-md w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredPosts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
             {filteredPosts.map((blog, i) => (
               <div
