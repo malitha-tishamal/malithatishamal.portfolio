@@ -18,6 +18,10 @@ export interface ProjectItem {
   youtubeUrl?: string; // YouTube URL
   featured?: boolean;
   displayOrder: number;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  altText?: string;
   createdAt: any;
   updatedAt?: any;
 }
