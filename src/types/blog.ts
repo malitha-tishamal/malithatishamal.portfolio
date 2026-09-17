@@ -26,6 +26,9 @@ export interface BlogPost {
   featured?: boolean;
   published: boolean;
   order?: number;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
   createdAt?: any;
   updatedAt?: any;
 }
