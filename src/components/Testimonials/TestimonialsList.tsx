@@ -9,7 +9,8 @@ import { getImgPath } from '@/utils/image'
 import { AddReviewModal } from '@/components/SharedComponent/Testimonial/AddReviewModal'
 
 export const TestimonialsList: React.FC = () => {
-  const [items, setItems] = useState<TestimonialItem[]>(defaultTestimonials)
+  const [items, setItems] = useState<TestimonialItem[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [ratingFilter, setRatingFilter] = useState<number | 'all'>('all')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -32,20 +33,23 @@ export const TestimonialsList: React.FC = () => {
               }
             })
             fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
-            setItems(fetched.length > 0 ? fetched : defaultTestimonials)
+            setItems(fetched)
           } else {
-            setItems(defaultTestimonials)
+            setItems([])
           }
+          setLoading(false)
         },
         (error) => {
           console.warn('Firestore testimonials listener notice:', error.message)
-          setItems(defaultTestimonials)
+          setItems([])
+          setLoading(false)
         }
       )
       return () => unsubscribe()
     } catch (err) {
       console.error('Error setting up testimonials listener:', err)
-      setItems(defaultTestimonials)
+      setItems([])
+      setLoading(false)
     }
   }, [])
 
@@ -158,10 +162,53 @@ export const TestimonialsList: React.FC = () => {
         </div>
 
         {/* Testimonials Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
+        {loading ? (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className='p-6 sm:p-7 rounded-3xl bg-white dark:bg-darklight border border-border/70 dark:border-dark_border shadow-xs animate-pulse flex flex-col justify-between h-64'
+              >
+                <div>
+                  <div className='flex gap-1 mb-4'>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <div key={s} className='w-4 h-4 rounded-full bg-gray-200 dark:bg-darkmode' />
+                    ))}
+                  </div>
+                  <div className='space-y-2'>
+                    <div className='h-3.5 bg-gray-200 dark:bg-darkmode rounded-md w-full' />
+                    <div className='h-3.5 bg-gray-200 dark:bg-darkmode rounded-md w-5/6' />
+                    <div className='h-3.5 bg-gray-200 dark:bg-darkmode rounded-md w-3/4' />
+                  </div>
+                </div>
+                <div className='flex items-center gap-3 pt-4 border-t border-border/40 dark:border-dark_border/40'>
+                  <div className='w-11 h-11 rounded-full bg-gray-200 dark:bg-darkmode shrink-0' />
+                  <div className='space-y-1.5 flex-1'>
+                    <div className='h-3.5 bg-gray-200 dark:bg-darkmode rounded-md w-1/2' />
+                    <div className='h-2.5 bg-gray-200 dark:bg-darkmode rounded-md w-1/3' />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className='text-center py-20 bg-white dark:bg-darklight rounded-3xl border border-dashed border-border dark:border-dark_border p-8'>
+            <p className='text-base font-bold text-dark dark:text-white'>No testimonials found</p>
+            <p className='text-xs text-gray-400 mt-1 mb-4'>Try clearing filters or search terms.</p>
+            <button
+              onClick={() => {
+                setRatingFilter('all')
+                setSearchQuery('')
+              }}
+              className='px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl'>
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {filteredItems.map((item) => (
+              <div
+                key={item.id}
               className='p-6 sm:p-7 rounded-3xl bg-white dark:bg-darklight border border-border/70 dark:border-dark_border shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative group hover:-translate-y-1'>
               {/* Accent Top Border */}
               <div className='absolute top-0 left-6 right-6 h-1 bg-gradient-to-r from-primary to-blue-400 rounded-b-md'></div>
@@ -212,6 +259,7 @@ export const TestimonialsList: React.FC = () => {
             </div>
           ))}
         </div>
+        )}
       </div>
 
       {/* ADD REVIEW MODAL */}
