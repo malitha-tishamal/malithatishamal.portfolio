@@ -21,6 +21,7 @@ import { uploadToCloudinary } from "@/utils/cloudinary";
 import { PortfolioCardItem } from "@/components/portfolio/PortfolioCardItem";
 import { PortfolioDetailModal } from "@/components/portfolio/PortfolioDetailModal";
 import { getImgPath } from "@/utils/image";
+import { generateImageAlt, generateSeoDescription, generateSeoKeywords } from "@/utils/seo";
 import toast from "react-hot-toast";
 
 export const PortfolioSectionManager: React.FC = () => {
@@ -245,6 +246,9 @@ export const PortfolioSectionManager: React.FC = () => {
       imageLayout,
       imageFit,
       displayOrder: Number(displayOrder) || 1,
+      altText: generateImageAlt(title.trim(), subtitle.trim() || "Portfolio Showcase"),
+      seoDescription: generateSeoDescription(description.trim(), title.trim()),
+      seoKeywords: generateSeoKeywords(title.trim(), cleanTags, subtitle.trim()),
       createdAt: editingId ? (items.find((i) => i.id === editingId)?.createdAt || nowFormatted) : nowFormatted,
       updatedAt: nowFormatted,
     };
