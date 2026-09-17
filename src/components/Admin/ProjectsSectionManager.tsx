@@ -20,6 +20,7 @@ import { uploadToCloudinary } from "@/utils/cloudinary";
 import { ProjectCardItem } from "@/components/Projects/ProjectCardItem";
 import { ProjectDetailModal } from "@/components/Projects/ProjectDetailModal";
 import { getImgPath } from "@/utils/image";
+import { generateSeoTitle, generateSeoDescription, generateSeoKeywords, generateImageAlt } from "@/utils/seo";
 import toast from "react-hot-toast";
 
 export const ProjectsSectionManager: React.FC = () => {
@@ -290,6 +291,10 @@ export const ProjectsSectionManager: React.FC = () => {
       instagramUrl: instagramUrl.trim(),
       youtubeUrl: youtubeUrl.trim(),
       displayOrder: Number(displayOrder) || 1,
+      seoTitle: generateSeoTitle(title.trim(), subtitle.trim() || "Software System"),
+      seoDescription: generateSeoDescription(summary.trim() || description.trim(), title.trim()),
+      seoKeywords: generateSeoKeywords(title.trim(), cleanTags, subtitle.trim()),
+      altText: generateImageAlt(title.trim(), subtitle.trim()),
       createdAt: editingId
         ? projects.find((p) => p.id === editingId)?.createdAt || nowFormatted
         : nowFormatted,
