@@ -17,6 +17,9 @@ export interface PortfolioItem {
   imageFit?: PortfolioImageFit; // Cover (Fill), Contain (Full Uncropped), Portrait Tall (Tall 3:4)
   displayOrder: number;
   featured?: boolean;
+  altText?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
   createdAt: any;
   updatedAt?: any;
 }
