@@ -14,6 +14,7 @@ import {
 import { db } from "@/lib/firebase";
 import { BlogPost, BLOG_CATEGORIES, defaultBlogPosts, RelatedLink } from "@/types/blog";
 import { uploadToCloudinary } from "@/utils/cloudinary";
+import { generateSeoTitle, generateSeoDescription, generateSeoKeywords } from "@/utils/seo";
 import toast from "react-hot-toast";
 
 export const BlogManager: React.FC = () => {
@@ -348,6 +349,9 @@ export const BlogManager: React.FC = () => {
       featured: !!formData.featured,
       published: formData.published !== false,
       order: formData.order || 1,
+      seoTitle: formData.seoTitle || generateSeoTitle(formData.title.trim(), formData.category),
+      seoDescription: formData.seoDescription || generateSeoDescription(formData.excerpt || formData.content || "", formData.title.trim()),
+      seoKeywords: formData.seoKeywords || generateSeoKeywords(formData.title.trim(), formData.tags || [], formData.category),
       updatedAt: serverTimestamp(),
       ...(editingPost ? {} : { createdAt: serverTimestamp() }),
     };
