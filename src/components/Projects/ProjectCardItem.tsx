@@ -47,7 +47,7 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
         <div className='relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gray-100 dark:bg-darkmode border border-border/40 dark:border-dark_border/40 shadow-xs mb-4'>
           <Image
             src={getImgPath(cover)}
-            alt={project.title}
+            alt={project.altText || `${project.title} – Software & Engineering by Malitha Tishamal`}
             fill
             unoptimized
             className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
