@@ -72,7 +72,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
               <div className='relative w-full h-full overflow-hidden'>
                 <Image
                   src={getImgPath(images[0])}
-                  alt={`${item.title} Top`}
+                  alt={item.altText ? `${item.altText} - Part 1` : `${item.title} – Showcase by Malitha Tishamal`}
                   fill
                   unoptimized
                   className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
@@ -81,7 +81,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
               <div className='relative w-full h-full overflow-hidden'>
                 <Image
                   src={getImgPath(images[1])}
-                  alt={`${item.title} Bottom`}
+                  alt={item.altText ? `${item.altText} - Part 2` : `${item.title} – Engineering Showcase by Malitha Tishamal`}
                   fill
                   unoptimized
                   className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
@@ -95,7 +95,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
                 <div key={i} className='relative w-full h-full overflow-hidden'>
                   <Image
                     src={getImgPath(img)}
-                    alt={`${item.title} ${i + 1}`}
+                    alt={item.altText ? `${item.altText} - Photo ${i + 1}` : `${item.title} (Photo ${i + 1}) by Malitha Tishamal`}
                     fill
                     unoptimized
                     className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
@@ -108,7 +108,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
             <div className='relative w-full h-full overflow-hidden'>
               <Image
                 src={getImgPath(images[0])}
-                alt={item.title}
+                alt={item.altText || `${item.title} – Portfolio Showcase by Malitha Tishamal`}
                 fill
                 unoptimized
                 className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
