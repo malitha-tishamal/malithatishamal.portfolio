@@ -23,7 +23,7 @@ const defaultConfig: CounterConfig = {
   googleRating: 4.9,
   googleReviewCount: 0,
   googleReviewUrl: "",
-  testimonialsLabel: "Client testimonials received in the year",
+  testimonialsLabel: "Total Client testimonials",
   projectsThisYearLabel: "Projects completed in",
   totalProjectsLabel: "Total projects completed",
   testimonialsOverride: 0,
