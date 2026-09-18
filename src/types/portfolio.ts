@@ -24,6 +24,20 @@ export interface PortfolioItem {
   updatedAt?: any;
 }
 
+export interface PortfolioSliderSettings {
+  autoplay: boolean;
+  autoplaySpeed: number; // ms, e.g. 3000
+  transitionSpeed: number; // ms, e.g. 600
+  pauseOnHover: boolean;
+}
+
+export const defaultPortfolioSliderSettings: PortfolioSliderSettings = {
+  autoplay: true,
+  autoplaySpeed: 3000,
+  transitionSpeed: 600,
+  pauseOnHover: true,
+};
+
 export const PORTFOLIO_CATEGORIES = [
   "All Photos",
   "Events",
