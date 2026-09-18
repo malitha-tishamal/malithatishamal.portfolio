@@ -36,58 +36,76 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
 
   const [imgFailed, setImgFailed] = useState(false);
 
+  // Logo background styling
+  const isTransparent = !item.logoBgColor || item.logoBgColor === "transparent";
+  const isWhite =
+    item.logoBgColor?.toLowerCase() === "#ffffff" ||
+    item.logoBgColor?.toLowerCase() === "white";
+  const customBg = !isTransparent && !isWhite ? item.logoBgColor : undefined;
+
+  const logoContainerCls = `w-11 h-11 ${logoShapeClass} flex items-center justify-center p-1.5 shrink-0 shadow-xs relative overflow-hidden transition-all ${
+    isTransparent
+      ? "bg-transparent border border-border/80 dark:border-dark_border"
+      : isWhite
+      ? "bg-white border border-gray-200 dark:border-gray-700/60 shadow-xs"
+      : "border border-black/15 dark:border-white/15"
+  }`;
+
   return (
-    <div className="bg-white dark:bg-darklight rounded-2xl border border-border/80 dark:border-dark_border p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full group">
+    <div className="bg-white dark:bg-darklight rounded-2xl border border-border/80 dark:border-dark_border p-4 sm:p-5 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full group">
       
       {/* Top Section: Issuer Logo & Header */}
       <div>
-        <div className="flex items-start gap-3.5 mb-4">
-          <div className={`w-12 h-12 ${logoShapeClass} bg-gray-900 text-white flex items-center justify-center p-2 shrink-0 shadow-xs relative overflow-hidden border border-gray-800`}>
+        <div className="flex items-start gap-3 mb-3">
+          <div
+            className={logoContainerCls}
+            style={customBg ? { backgroundColor: customBg } : undefined}
+          >
             {item.issuerLogo ? (
               <Image
                 src={item.issuerLogo}
                 alt={item.issuer}
-                width={40}
-                height={40}
-                className="object-contain filter brightness-110"
+                width={36}
+                height={36}
+                className="object-contain max-h-full max-w-full"
                 unoptimized
               />
             ) : (
-              <span className="font-bold text-xs">CERT</span>
+              <span className="font-bold text-xs text-gray-700 dark:text-gray-300">CERT</span>
             )}
           </div>
 
           <div className="flex-1 min-w-0">
             <h3
               onClick={() => onPreview(item)}
-              className="font-bold text-dark dark:text-white group-hover:text-primary transition-colors text-base sm:text-lg leading-tight line-clamp-2 cursor-pointer"
+              className="font-bold text-dark dark:text-white group-hover:text-primary transition-colors text-sm sm:text-base leading-snug line-clamp-2 cursor-pointer"
             >
               {item.title}
             </h3>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
+            <p className="text-[11px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5 truncate">
               {item.issuer}
             </p>
           </div>
         </div>
 
         {/* Issued Date & Expiration Badges */}
-        <div className="flex flex-wrap items-center gap-2 mb-3.5">
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-darkmode text-gray-700 dark:text-gray-300 border border-border/60">
-            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-darkmode text-gray-700 dark:text-gray-300 border border-border/60">
+            <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             Issued {item.issueDate}
           </span>
 
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <span className="text-sm font-bold">♾</span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <span className="text-xs font-bold">♾</span>
             {item.expirationDate || "No Expiration"}
           </span>
         </div>
 
         {/* Credential ID Chip (If present) */}
         {item.credentialId && (
-          <div className="flex items-center gap-2 mb-3.5 px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border/60 text-xs text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-darkmode border border-border/60 text-[11px] text-gray-600 dark:text-gray-400">
             <span className="font-semibold text-gray-500 shrink-0">ID:</span>
             <span className="font-mono truncate flex-1 text-[11px]">{item.credentialId}</span>
             <button
@@ -102,17 +120,17 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
 
         {/* Skills / Tags */}
         {item.skills && item.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-5">
+          <div className="flex flex-wrap gap-1 mb-3">
             {item.skills.slice(0, 4).map((skill, idx) => (
               <span
                 key={idx}
-                className="px-2.5 py-0.8 rounded-lg text-[11px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50"
+                className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50"
               >
                 {skill}
               </span>
             ))}
             {item.skills.length > 4 && (
-              <span className="px-2 py-0.8 rounded-lg text-[11px] font-bold bg-gray-100 dark:bg-darkmode text-gray-500 border border-border">
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 dark:bg-darkmode text-gray-500 border border-border">
                 +{item.skills.length - 4}
               </span>
             )}
@@ -122,39 +140,39 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         {/* Certificate Preview Card */}
         <div
           onClick={() => onPreview(item)}
-          className="relative h-48 w-full rounded-xl overflow-hidden border border-border/80 dark:border-dark_border mb-5 cursor-pointer group/preview bg-slate-900/5 dark:bg-slate-950/40 p-2 flex items-center justify-center"
+          className="relative h-36 sm:h-40 w-full rounded-xl overflow-hidden border border-border/80 dark:border-dark_border mb-3.5 cursor-pointer group/preview bg-slate-900/5 dark:bg-slate-950/40 p-1.5 flex items-center justify-center"
         >
           {item.certificateImage && !imgFailed ? (
             <Image
               src={item.certificateImage}
               alt={item.title}
               fill
-              className="object-contain p-1.5 group-hover/preview:scale-[1.02] transition duration-300"
+              className="object-contain p-1 group-hover/preview:scale-[1.02] transition duration-300"
               unoptimized
               onError={() => setImgFailed(true)}
             />
           ) : (
-            <div className="w-full h-full rounded-lg bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/80 dark:from-slate-900 dark:via-darkmode dark:to-blue-950/30 p-3.5 flex flex-col justify-between border border-blue-100 dark:border-blue-900/30 text-center select-none">
-              <div className="flex items-center justify-between border-b border-blue-100 dark:border-slate-800 pb-1.5">
-                <span className="text-[10px] font-bold tracking-widest text-primary uppercase">
+            <div className="w-full h-full rounded-lg bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/80 dark:from-slate-900 dark:via-darkmode dark:to-blue-950/30 p-2.5 flex flex-col justify-between border border-blue-100 dark:border-blue-900/30 text-center select-none">
+              <div className="flex items-center justify-between border-b border-blue-100 dark:border-slate-800 pb-1">
+                <span className="text-[9px] font-bold tracking-widest text-primary uppercase">
                   {item.issuer}
                 </span>
-                <span className="text-[10px] text-gray-400 font-mono">
+                <span className="text-[9px] text-gray-400 font-mono">
                   {item.issueDate}
                 </span>
               </div>
-              <div className="py-1">
-                <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-semibold">
+              <div className="py-0.5">
+                <p className="text-[9px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-semibold">
                   Certificate of Achievement
                 </p>
-                <h4 className="text-xs font-bold text-dark dark:text-white line-clamp-2 mt-0.5">
+                <h4 className="text-[11px] font-bold text-dark dark:text-white line-clamp-1 mt-0.5">
                   {item.title}
                 </h4>
-                <p className="text-[11px] text-primary font-medium mt-1">
+                <p className="text-[10px] text-primary font-medium mt-0.5">
                   Malitha Tishamal
                 </p>
               </div>
-              <div className="flex items-center justify-between pt-1 border-t border-blue-100 dark:border-slate-800 text-[9px] text-gray-400">
+              <div className="flex items-center justify-between pt-1 border-t border-blue-100 dark:border-slate-800 text-[8px] text-gray-400">
                 <span>Verified Credential</span>
                 <span className="text-emerald-500 font-semibold">✓ Official</span>
               </div>
@@ -162,8 +180,8 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           )}
 
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
-            <span className="px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-darklight/90 text-dark dark:text-white text-xs font-bold shadow-md flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="px-3 py-1 rounded-full bg-white/90 dark:bg-darklight/90 text-dark dark:text-white text-[11px] font-bold shadow-md flex items-center gap-1.5">
+              <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
@@ -174,26 +192,26 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
       </div>
 
       {/* Bottom Actions Bar */}
-      <div className="pt-2">
+      <div className="pt-1">
         {item.credentialUrl ? (
           <a
             href={item.credentialUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-2.5 px-4 rounded-xl border-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary text-primary hover:text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-xs cursor-pointer"
+            className="w-full py-2 px-3 rounded-xl border-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary text-primary hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-all duration-200 shadow-xs cursor-pointer"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
             <span>Show credential</span>
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
           </a>
         ) : (
           <button
             onClick={() => onPreview(item)}
-            className="w-full py-2.5 px-4 rounded-xl border border-border bg-gray-50 dark:bg-darkmode text-dark dark:text-white font-bold text-xs sm:text-sm hover:bg-primary hover:text-white hover:border-primary transition cursor-pointer"
+            className="w-full py-2 px-3 rounded-xl border border-border bg-gray-50 dark:bg-darkmode text-dark dark:text-white font-bold text-xs hover:bg-primary hover:text-white hover:border-primary transition cursor-pointer"
           >
             View Certificate Details
           </button>
