@@ -23,7 +23,7 @@ const defaultConfig: CounterConfig = {
   googleRating: 4.9,
   googleReviewCount: 0,
   googleReviewUrl: "",
-  testimonialsLabel: "Client testimonials received in the year",
+  testimonialsLabel: "Total Client testimonials",
   projectsThisYearLabel: "Projects completed in",
   totalProjectsLabel: "Total projects completed",
   testimonialsOverride: 0,
@@ -60,34 +60,56 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-// ── Animated number ───────────────────────────────────────────────────────────
-function AnimatedNumber({ target, decimals = 0, suffix = "" }: { target: number; decimals?: number; suffix?: string }) {
-  const [display, setDisplay] = useState(0);
+// ── Animated number (smooth transition to live target values) ─────────────────
+function AnimatedNumber({
+  target,
+  decimals = 0,
+  suffix = "",
+}: {
+  target: number;
+  decimals?: number;
+  suffix?: string;
+}) {
+  const [display, setDisplay] = useState(target);
   const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
+  const currentVal = useRef(0);
+  const animFrame = useRef<number | null>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          const duration = 1600;
-          const start = performance.now();
-          const tick = (now: number) => {
-            const pct = Math.min((now - start) / duration, 1);
-            const eased = 1 - Math.pow(1 - pct, 3);
-            setDisplay(parseFloat((eased * target).toFixed(decimals)));
-            if (pct < 1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.4 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    if (target === 0) {
+      setDisplay(0);
+      currentVal.current = 0;
+      return;
+    }
+
+    const startVal = currentVal.current;
+    const duration = 1200;
+    const startTime = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const val = startVal + (target - startVal) * eased;
+      currentVal.current = val;
+      setDisplay(parseFloat(val.toFixed(decimals)));
+
+      if (progress < 1) {
+        animFrame.current = requestAnimationFrame(tick);
+      } else {
+        currentVal.current = target;
+        setDisplay(target);
+      }
+    };
+
+    if (animFrame.current) {
+      cancelAnimationFrame(animFrame.current);
+    }
+    animFrame.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (animFrame.current) cancelAnimationFrame(animFrame.current);
+    };
   }, [target, decimals]);
 
   return (
@@ -208,7 +230,7 @@ const Counter = ({ isColorMode }: { isColorMode: boolean }) => {
       suffix: "+",
       label: (
         <span className="text-sm text-grey dark:text-white/50 text-center">
-          {config.testimonialsLabel} <span className="font-semibold text-primary">{currentYear}</span>
+          {config.testimonialsLabel || "Total Client testimonials"}
         </span>
       ),
       extra: null,
