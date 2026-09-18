@@ -32,6 +32,10 @@ export const PortfolioSectionManager: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
+  // Slider settings state
+  const [sliderSettings, setSliderSettings] = useState<PortfolioSliderSettings>(defaultPortfolioSliderSettings);
+  const [savingSettings, setSavingSettings] = useState<boolean>(false);
+
   // Preview Modal state
   const [previewItem, setPreviewItem] = useState<PortfolioItem | null>(null);
 
@@ -57,8 +61,9 @@ export const PortfolioSectionManager: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
-  // Subscribe to Firestore portfolio collection
+  // Subscribe to Firestore portfolio collection and load slider settings
   useEffect(() => {
+    fetchSettings();
     try {
       const unsubscribe = onSnapshot(
         collection(db, "portfolio"),
@@ -92,6 +97,37 @@ export const PortfolioSectionManager: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  // Fetch slider settings from Firestore
+  const fetchSettings = async () => {
+    try {
+      const snap = await getDoc(doc(db, "siteContent", "portfolio"));
+      if (snap.exists()) {
+        const data = snap.data() as Partial<PortfolioSliderSettings>;
+        setSliderSettings({
+          autoplay: data.autoplay !== undefined ? data.autoplay : defaultPortfolioSliderSettings.autoplay,
+          autoplaySpeed: Number(data.autoplaySpeed) || defaultPortfolioSliderSettings.autoplaySpeed,
+          transitionSpeed: Number(data.transitionSpeed) || defaultPortfolioSliderSettings.transitionSpeed,
+          pauseOnHover: data.pauseOnHover !== undefined ? data.pauseOnHover : defaultPortfolioSliderSettings.pauseOnHover,
+        });
+      }
+    } catch (err) {
+      console.warn("Notice: could not load portfolio slider settings", err);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      setSavingSettings(true);
+      await setDoc(doc(db, "siteContent", "portfolio"), sliderSettings, { merge: true });
+      toast.success("Slider settings saved!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save slider settings.");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   // Format date helper
   const formatDate = (val: any): string => {
@@ -301,6 +337,20 @@ export const PortfolioSectionManager: React.FC = () => {
     }
   };
 
+  // Direct Numeric Order Change
+  const handleDirectOrderChange = async (id: string, newOrder: number) => {
+    const updated = items.map((it) => (it.id === id ? { ...it, displayOrder: newOrder } : it));
+    updated.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    setItems(updated);
+    try {
+      await setDoc(doc(db, "portfolio", id), { displayOrder: newOrder }, { merge: true });
+      toast.success("Display order updated!");
+    } catch (err: any) {
+      console.error("Direct order change error:", err);
+      toast.error("Failed to update order.");
+    }
+  };
+
   // Push Defaults to Database
   const handleSeedDefaults = async () => {
     if (!confirm("This will upload standard default portfolio cards to Firestore. Continue?")) return;
@@ -359,6 +409,120 @@ export const PortfolioSectionManager: React.FC = () => {
         </div>
       </div>
 
+      {/* ──────────────── HOMEPAGE SLIDER CONTROLS PANEL ──────────────── */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-darklight border border-border dark:border-dark_border shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/70 dark:border-dark_border">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⚙️</span>
+              <h3 className="text-base font-bold text-dark dark:text-white">
+                Homepage Slider &amp; Carousel Controls
+              </h3>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Manage autoplay interval, transition speed, and pause behaviors for the portfolio showcase carousel on the homepage.
+            </p>
+          </div>
+          <button
+            onClick={handleSaveSettings}
+            disabled={savingSettings}
+            className="px-5 py-2.5 rounded-xl bg-primary hover:bg-blue-700 text-white font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 cursor-pointer shrink-0 flex items-center gap-2"
+          >
+            <span>{savingSettings ? "Saving..." : "💾 Save Slider Settings"}</span>
+          </button>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Autoplay Toggle */}
+          <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-dark dark:text-white">Autoplay</p>
+              <p className="text-[11px] text-gray-400">Auto-rotate slides</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={sliderSettings.autoplay}
+              onChange={(e) =>
+                setSliderSettings((p) => ({ ...p, autoplay: e.target.checked }))
+              }
+              className="w-5 h-5 text-primary rounded cursor-pointer"
+            />
+          </div>
+
+          {/* Autoplay Speed / Interval */}
+          <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-dark dark:text-white">Slide Interval</p>
+              <span className="text-xs font-mono font-bold text-primary">
+                {sliderSettings.autoplaySpeed}ms ({(sliderSettings.autoplaySpeed / 1000).toFixed(1)}s)
+              </span>
+            </div>
+            <input
+              type="range"
+              min={1500}
+              max={10000}
+              step={250}
+              value={sliderSettings.autoplaySpeed}
+              onChange={(e) =>
+                setSliderSettings((p) => ({
+                  ...p,
+                  autoplaySpeed: Number(e.target.value),
+                }))
+              }
+              className="w-full accent-primary cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-gray-400">
+              <span>1.5s</span>
+              <span>10s</span>
+            </div>
+          </div>
+
+          {/* Transition Speed */}
+          <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-dark dark:text-white">Transition Speed</p>
+              <span className="text-xs font-mono font-bold text-primary">
+                {sliderSettings.transitionSpeed}ms
+              </span>
+            </div>
+            <input
+              type="range"
+              min={200}
+              max={2000}
+              step={50}
+              value={sliderSettings.transitionSpeed}
+              onChange={(e) =>
+                setSliderSettings((p) => ({
+                  ...p,
+                  transitionSpeed: Number(e.target.value),
+                }))
+              }
+              className="w-full accent-primary cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-gray-400">
+              <span>200ms</span>
+              <span>2000ms</span>
+            </div>
+          </div>
+
+          {/* Pause on Hover */}
+          <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-dark dark:text-white">Pause on Hover</p>
+              <p className="text-[11px] text-gray-400">Halt when hovered</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={sliderSettings.pauseOnHover}
+              onChange={(e) =>
+                setSliderSettings((p) => ({ ...p, pauseOnHover: e.target.checked }))
+              }
+              className="w-5 h-5 text-primary rounded cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-darklight p-4 rounded-2xl border border-border/50 dark:border-dark_border/50 shadow-xs">
         <div className="relative w-full sm:w-80">
@@ -411,35 +575,43 @@ export const PortfolioSectionManager: React.FC = () => {
               <div>
                 {/* Header info & Order badge */}
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-6 h-6 rounded-lg bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-                      #{item.displayOrder || idx + 1}
-                    </span>
+                  <div className="flex items-center gap-2">
+                    {/* Order Controls: Direct Numeric Input + Up/Down */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.displayOrder || idx + 1}
+                        onChange={(e) =>
+                          handleDirectOrderChange(item.id, parseInt(e.target.value) || 1)
+                        }
+                        className="w-12 px-1.5 py-0.5 text-center font-bold text-xs rounded-lg border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white"
+                        title="Display Order"
+                      />
+                      <div className="flex flex-col">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => handleQuickReorder(item, "up")}
+                          className="p-0.5 text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer text-[10px] leading-none"
+                          title="Move Up"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === filteredItems.length - 1}
+                          onClick={() => handleQuickReorder(item, "down")}
+                          className="p-0.5 text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer text-[10px] leading-none"
+                          title="Move Down"
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </div>
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border border-blue-200/50">
                       {item.subtitle || "Events"}
                     </span>
-                  </div>
-
-                  {/* Move Up / Down Buttons */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      disabled={idx === 0}
-                      onClick={() => handleQuickReorder(item, "up")}
-                      className="p-1 rounded-md text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-darkmode disabled:opacity-30 cursor-pointer"
-                      title="Move Up"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === filteredItems.length - 1}
-                      onClick={() => handleQuickReorder(item, "down")}
-                      className="p-1 rounded-md text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-darkmode disabled:opacity-30 cursor-pointer"
-                      title="Move Down"
-                    >
-                      ▼
-                    </button>
                   </div>
                 </div>
 
