@@ -4,9 +4,14 @@ import React, { useState, useEffect } from 'react'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
 import 'slick-carousel/slick/slick-theme.css'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { PortfolioItem, defaultPortfolioItems } from '@/types/portfolio'
+import {
+  PortfolioItem,
+  defaultPortfolioItems,
+  PortfolioSliderSettings,
+  defaultPortfolioSliderSettings,
+} from '@/types/portfolio'
 import { PortfolioCardItem } from '@/components/portfolio/PortfolioCardItem'
 import { PortfolioDetailModal } from '@/components/portfolio/PortfolioDetailModal'
 
@@ -14,8 +19,9 @@ const PortfolioCard: React.FC = () => {
   const [items, setItems] = useState<PortfolioItem[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
+  const [sliderSettings, setSliderSettings] = useState<PortfolioSliderSettings>(defaultPortfolioSliderSettings)
 
-  // Real-time Firestore sync
+  // Real-time Firestore sync for portfolio items
   useEffect(() => {
     try {
       const unsubscribe = onSnapshot(
@@ -50,12 +56,38 @@ const PortfolioCard: React.FC = () => {
     }
   }, [])
 
+  // Real-time Firestore sync for slider settings
+  useEffect(() => {
+    try {
+      const unsubSettings = onSnapshot(
+        doc(db, 'siteContent', 'portfolio'),
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data() as Partial<PortfolioSliderSettings>
+            setSliderSettings({
+              autoplay: data.autoplay !== undefined ? data.autoplay : defaultPortfolioSliderSettings.autoplay,
+              autoplaySpeed: Number(data.autoplaySpeed) || defaultPortfolioSliderSettings.autoplaySpeed,
+              transitionSpeed: Number(data.transitionSpeed) || defaultPortfolioSliderSettings.transitionSpeed,
+              pauseOnHover: data.pauseOnHover !== undefined ? data.pauseOnHover : defaultPortfolioSliderSettings.pauseOnHover,
+            })
+          }
+        },
+        (err) => console.warn('Portfolio slider settings listener:', err.message)
+      )
+      return () => unsubSettings()
+    } catch (err) {
+      console.warn('Portfolio slider settings error:', err)
+    }
+  }, [])
+
   const settings = {
-    autoplay: true,
+    autoplay: sliderSettings.autoplay,
+    autoplaySpeed: sliderSettings.autoplaySpeed,
+    speed: sliderSettings.transitionSpeed,
+    pauseOnHover: sliderSettings.pauseOnHover,
     dots: false,
     arrows: false,
     infinite: items.length > 3,
-    speed: 600,
     slidesToShow: Math.min(items.length, 5),
     slidesToScroll: 1,
     responsive: [
