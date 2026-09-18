@@ -5,20 +5,29 @@ import Link from "next/link";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { CertificationItem, defaultCertifications } from "@/types/certification";
+import {
+  CertificationItem,
+  CertificationSettings,
+  defaultCertifications,
+  defaultCertificationSettings,
+} from "@/types/certification";
 import { CertificationCardItem } from "@/components/Certifications/CertificationCardItem";
 import { CertificationDetailModal } from "@/components/Certifications/CertificationDetailModal";
 
 const Certifications: React.FC = () => {
   const [items, setItems] = useState<CertificationItem[]>([]);
+  const [settings, setSettings] = useState<CertificationSettings>(defaultCertificationSettings);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedItem, setSelectedItem] = useState<CertificationItem | null>(null);
 
   useEffect(() => {
+    let unsubItems = () => {};
+    let unsubSettings = () => {};
+
     try {
-      const unsubscribe = onSnapshot(
+      unsubItems = onSnapshot(
         collection(db, "certifications"),
         (snapshot) => {
           if (!snapshot.empty) {
@@ -42,22 +51,44 @@ const Certifications: React.FC = () => {
           setLoading(false);
         }
       );
-      return () => unsubscribe();
+
+      unsubSettings = onSnapshot(
+        doc(db, "siteContent", "certifications"),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data() as Partial<CertificationSettings>;
+            setSettings({
+              autoplay: data.autoplay !== undefined ? data.autoplay : defaultCertificationSettings.autoplay,
+              autoplaySpeed: Number(data.autoplaySpeed) || defaultCertificationSettings.autoplaySpeed,
+              transitionSpeed: Number(data.transitionSpeed) || defaultCertificationSettings.transitionSpeed,
+              pauseOnHover: data.pauseOnHover !== undefined ? data.pauseOnHover : defaultCertificationSettings.pauseOnHover,
+            });
+          }
+        },
+        (error) => {
+          console.warn("Certifications settings listener notice:", error.message);
+        }
+      );
     } catch (err) {
-      console.error("Error setting up certifications listener:", err);
+      console.error("Error setting up certifications listeners:", err);
       setItems(defaultCertifications);
       setLoading(false);
     }
+
+    return () => {
+      unsubItems();
+      unsubSettings();
+    };
   }, []);
 
   const sliderSettings = {
     dots: false,
     arrows: true,
     infinite: items.length > 3,
-    speed: 600,
-    autoplay: true,
-    autoplaySpeed: 4500,
-    pauseOnHover: true,
+    speed: settings.transitionSpeed,
+    autoplay: settings.autoplay,
+    autoplaySpeed: settings.autoplaySpeed,
+    pauseOnHover: settings.pauseOnHover,
     slidesToShow: Math.min(items.length, 3),
     slidesToScroll: 1,
     responsive: [
