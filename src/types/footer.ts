@@ -38,6 +38,11 @@ export interface FooterContent {
   subTextColor?: string; // Muted subtext & labels (default: #94a3b8)
   accentColor?: string; // Primary buttons & hover accents (default: #0a66c2)
   borderColor?: string; // Separator borders (default: #1e293b)
+
+  // Visitor Counter
+  showVisitorCount?: boolean;
+  visitorCountLabel?: string;
+  visitorCountBase?: number;
 }
 
 export const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
@@ -89,4 +94,9 @@ export const defaultFooterContent: FooterContent = {
   subTextColor: "rgba(255, 255, 255, 0.5)",
   accentColor: "#0a66c2",
   borderColor: "rgba(255, 255, 255, 0.1)",
+
+  // Visitor Counter
+  showVisitorCount: true,
+  visitorCountLabel: "Total Visitors",
+  visitorCountBase: 1250,
 };
