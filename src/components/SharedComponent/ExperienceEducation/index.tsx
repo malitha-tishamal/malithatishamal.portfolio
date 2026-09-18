@@ -6,6 +6,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   ExperienceItem,
+  ExperienceMedia,
   defaultExperiences,
   ExperienceCategory,
 } from "@/types/experience";
@@ -124,6 +125,7 @@ export const ExperienceEducation: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [activeExpFilter, setActiveExpFilter] = useState<"all" | "work" | "volunteer">("all");
   const [selectedItem, setSelectedItem] = useState<ExperienceItem | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<ExperienceMedia | null>(null);
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -451,6 +453,40 @@ export const ExperienceEducation: React.FC = () => {
                             </span>
                           </div>
                         )}
+
+                        {/* Attached Certificates, Event Awards & Documents (Default Thumbnail + Name on Card) */}
+                        {item.media && item.media.length > 0 && (
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-200/50 dark:border-dark_border/50">
+                            {item.media.map((med, mIdx) => (
+                              <div
+                                key={mIdx}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewMedia(med);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 border border-purple-200/70 dark:border-purple-800/70 hover:border-purple-400 hover:shadow-2xs transition group/med cursor-pointer max-w-[210px]"
+                                title={`Click to view: ${med.title}`}
+                              >
+                                {med.url ? (
+                                  <div className="relative w-5 h-5 rounded-md overflow-hidden bg-gray-200 dark:bg-darkmode shrink-0 border border-purple-200 dark:border-purple-800">
+                                    <Image
+                                      src={med.url}
+                                      alt={med.title}
+                                      fill
+                                      unoptimized
+                                      className="object-cover group-hover/med:scale-110 transition-transform"
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs">📜</span>
+                                )}
+                                <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 truncate group-hover/med:text-purple-900 dark:group-hover/med:text-white transition-colors">
+                                  {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"} {med.title}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -646,6 +682,40 @@ export const ExperienceEducation: React.FC = () => {
                             <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 group-hover/card:underline">
                               View details
                             </span>
+                          </div>
+                        )}
+
+                        {/* Attached Certificates, Event Awards & Documents (Default Thumbnail + Name on Card) */}
+                        {item.media && item.media.length > 0 && (
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-200/50 dark:border-dark_border/50">
+                            {item.media.map((med, mIdx) => (
+                              <div
+                                key={mIdx}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewMedia(med);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 border border-purple-200/70 dark:border-purple-800/70 hover:border-purple-400 hover:shadow-2xs transition group/med cursor-pointer max-w-[210px]"
+                                title={`Click to view: ${med.title}`}
+                              >
+                                {med.url ? (
+                                  <div className="relative w-5 h-5 rounded-md overflow-hidden bg-gray-200 dark:bg-darkmode shrink-0 border border-purple-200 dark:border-purple-800">
+                                    <Image
+                                      src={med.url}
+                                      alt={med.title}
+                                      fill
+                                      unoptimized
+                                      className="object-cover group-hover/med:scale-110 transition-transform"
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs">📜</span>
+                                )}
+                                <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 truncate group-hover/med:text-purple-900 dark:group-hover/med:text-white transition-colors">
+                                  {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"} {med.title}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
