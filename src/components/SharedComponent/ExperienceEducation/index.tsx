@@ -974,17 +974,13 @@ export const ExperienceEducation: React.FC = () => {
                         onClick={() => setPreviewMedia(med)}
                         className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-100/80 hover:bg-purple-50/80 dark:bg-slate-800/80 dark:hover:bg-purple-950/40 border border-slate-200/80 dark:border-slate-700/80 hover:border-purple-400 transition cursor-pointer group"
                       >
-                        {med.url && (
-                          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-white dark:bg-darkmode border border-slate-200 dark:border-slate-700 shrink-0 shadow-2xs">
-                            <Image
-                              src={med.url}
-                              alt={med.title}
-                              fill
-                              unoptimized
-                              className="object-cover group-hover:scale-105 transition-transform"
-                            />
-                          </div>
-                        )}
+                        <MediaThumbnail
+                          url={med.url}
+                          thumbnailUrl={med.thumbnailUrl}
+                          type={med.type}
+                          title={med.title}
+                          className="w-12 h-12"
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-bold text-dark dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                             {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"} {med.title}
@@ -1057,7 +1053,7 @@ export const ExperienceEducation: React.FC = () => {
 
             {/* Media Image Content */}
             <div className="p-4 overflow-auto flex items-center justify-center bg-gray-900/5 dark:bg-black/30 min-h-[300px]">
-              {previewMedia.url && (previewMedia.url.endsWith(".pdf") ? (
+              {previewMedia.url && (previewMedia.url.toLowerCase().includes(".pdf") ? (
                 <iframe
                   src={previewMedia.url}
                   title={previewMedia.title}
