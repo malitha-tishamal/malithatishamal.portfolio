@@ -130,6 +130,61 @@ const PRESETS = [
   },
 ];
 
+// ── Admin Media Thumbnail with PDF & fallback support ────────────────────────
+const getAdminMediaThumbnailUrl = (url?: string, thumb?: string): string => {
+  const target = thumb || url || "";
+  if (!target) return "";
+  if (target.toLowerCase().endsWith(".pdf")) {
+    return target.replace(/\.pdf$/i, ".jpg");
+  }
+  return target;
+};
+
+const AdminMediaThumbnail: React.FC<{
+  url?: string;
+  thumbnailUrl?: string;
+  type?: string;
+  title?: string;
+  size?: string;
+}> = ({ url, thumbnailUrl, type, title, size = "w-10 h-10" }) => {
+  const [hasError, setHasError] = useState(false);
+  const displaySrc = getAdminMediaThumbnailUrl(url, thumbnailUrl);
+  const isPdf = url?.toLowerCase().includes(".pdf") || thumbnailUrl?.toLowerCase().includes(".pdf");
+
+  useEffect(() => {
+    setHasError(false);
+  }, [url, thumbnailUrl]);
+
+  if (!displaySrc || hasError) {
+    return (
+      <div
+        className={`${size} rounded-xl bg-purple-100 dark:bg-purple-900/60 border border-purple-300 dark:border-purple-700 flex flex-col items-center justify-center shrink-0 shadow-xs`}
+        title={title}
+      >
+        <span className="text-sm">{isPdf ? "📄" : type === "award" ? "🏆" : type === "certificate" ? "📜" : "📎"}</span>
+        <span className="text-[8px] font-black text-purple-700 dark:text-purple-300 uppercase leading-none mt-0.5">
+          {isPdf ? "PDF" : type || "DOC"}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative ${size} rounded-xl overflow-hidden bg-white dark:bg-darkmode border border-purple-200 dark:border-purple-800 shrink-0 shadow-xs flex items-center justify-center`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={displaySrc}
+        alt=""
+        className="w-full h-full object-cover"
+        onError={() => setHasError(true)}
+        loading="lazy"
+      />
+    </div>
+  );
+};
+
 export const ExperienceManager: React.FC = () => {
   const [items, setItems] = useState<ExperienceItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -176,9 +231,9 @@ export const ExperienceManager: React.FC = () => {
   const [showSkillSuggestions, setShowSkillSuggestions] = useState<boolean>(false);
   const [logoProgress, setLogoProgress] = useState<number | null>(null);
 
-  // Attached media / certificates state
   const [mediaTitle, setMediaTitle] = useState<string>("");
   const [mediaUrl, setMediaUrl] = useState<string>("");
+  const [mediaThumbnail, setMediaThumbnail] = useState<string>("");
   const [mediaType, setMediaType] = useState<"certificate" | "award" | "document" | "image" | "link">("certificate");
   const [mediaProgress, setMediaProgress] = useState<number | null>(null);
 
@@ -361,13 +416,31 @@ export const ExperienceManager: React.FC = () => {
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Automatically extract title from file name if mediaTitle is empty
+    const cleanFileName = file.name
+      .replace(/\.[^/.]+$/, "") // strip extension
+      .replace(/[_-]/g, " ") // replace underscores & dashes with spaces
+      .replace(/\s+/g, " ") // normalize multiple spaces
+      .trim();
+
+    if (!mediaTitle.trim() && cleanFileName) {
+      setMediaTitle(cleanFileName);
+    }
+
     try {
       setMediaProgress(15);
-      const res = await uploadToCloudinary(file);
+      const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf");
+      const res = await uploadToCloudinary(file, (p) => setMediaProgress(p), "auto");
       const uploadedUrl = res.secure_url || res.url;
       setMediaUrl(uploadedUrl);
+
+      // If PDF, compute Cloudinary jpg preview thumbnail
+      const previewThumb = isPdf ? uploadedUrl.replace(/\.pdf$/i, ".jpg") : uploadedUrl;
+      setMediaThumbnail(previewThumb);
+
       setMediaProgress(100);
-      toast.success("Document / Certificate image uploaded!");
+      toast.success(isPdf ? "PDF uploaded & preview thumbnail generated!" : "File uploaded!");
       setTimeout(() => setMediaProgress(null), 1000);
     } catch (err: any) {
       console.error("Media upload failed:", err);
@@ -385,11 +458,15 @@ export const ExperienceManager: React.FC = () => {
       toast.error("Please upload an image or provide a document link.");
       return;
     }
+
+    const isPdf = mediaUrl.toLowerCase().endsWith(".pdf");
+    const finalThumb = mediaThumbnail || (isPdf ? mediaUrl.replace(/\.pdf$/i, ".jpg") : mediaUrl);
+
     const newMedia: ExperienceMedia = {
       title: mediaTitle.trim(),
       url: mediaUrl.trim(),
       type: mediaType,
-      thumbnailUrl: mediaUrl.trim(),
+      thumbnailUrl: finalThumb,
     };
     setFormData((prev) => ({
       ...prev,
@@ -397,6 +474,7 @@ export const ExperienceManager: React.FC = () => {
     }));
     setMediaTitle("");
     setMediaUrl("");
+    setMediaThumbnail("");
     setMediaType("certificate");
     toast.success("Attachment added!");
   };
@@ -1469,15 +1547,13 @@ export const ExperienceManager: React.FC = () => {
                   {/* Thumbnail Preview if mediaUrl exists */}
                   {mediaUrl && (
                     <div className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-darkmode rounded-xl border border-border/60">
-                      <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border shrink-0 bg-gray-200 dark:bg-darkmode">
-                        <Image
-                          src={mediaUrl}
-                          alt={mediaTitle || "Preview"}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
+                      <AdminMediaThumbnail
+                        url={mediaUrl}
+                        thumbnailUrl={mediaThumbnail}
+                        type={mediaType}
+                        title={mediaTitle}
+                        size="w-12 h-12"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-dark dark:text-white truncate">
                           {mediaTitle || "Untitled Attachment"}
@@ -1511,17 +1587,13 @@ export const ExperienceManager: React.FC = () => {
                           className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-darklight border border-border dark:border-dark_border"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            {med.url && (
-                              <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-border shrink-0 bg-gray-100 dark:bg-darkmode">
-                                <Image
-                                  src={med.url}
-                                  alt={med.title}
-                                  fill
-                                  unoptimized
-                                  className="object-cover"
-                                />
-                              </div>
-                            )}
+                            <AdminMediaThumbnail
+                              url={med.url}
+                              thumbnailUrl={med.thumbnailUrl}
+                              type={med.type}
+                              title={med.title}
+                              size="w-10 h-10"
+                            />
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-dark dark:text-white truncate">
                                 {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"}{" "}
