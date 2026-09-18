@@ -15,11 +15,13 @@ import { db } from "@/lib/firebase";
 import {
   ExperienceItem,
   ExperienceCategory,
+  ExperienceMedia,
   LocationType,
   LogoShape,
   defaultExperiences,
 } from "@/types/experience";
 import { uploadToCloudinary } from "@/utils/cloudinary";
+import { searchSkills } from "@/data/skillsDatabase";
 import toast from "react-hot-toast";
 
 const POPULAR_SKILLS = [
@@ -163,13 +165,22 @@ export const ExperienceManager: React.FC = () => {
     colorTheme: "linkedin",
     accentColor: "#0a66c2",
     badgeColor: "#0a66c2",
+    media: [] as ExperienceMedia[],
     cardBgColor: "",
     displayOrder: 1,
     published: true,
   });
 
   const [newSkill, setNewSkill] = useState<string>("");
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
+  const [showSkillSuggestions, setShowSkillSuggestions] = useState<boolean>(false);
   const [logoProgress, setLogoProgress] = useState<number | null>(null);
+
+  // Attached media / certificates state
+  const [mediaTitle, setMediaTitle] = useState<string>("");
+  const [mediaUrl, setMediaUrl] = useState<string>("");
+  const [mediaType, setMediaType] = useState<"certificate" | "award" | "document" | "image" | "link">("certificate");
+  const [mediaProgress, setMediaProgress] = useState<number | null>(null);
 
   // Fetch Items from Firestore
   const fetchItems = async () => {
@@ -246,9 +257,16 @@ export const ExperienceManager: React.FC = () => {
       accentColor: "#0a66c2",
       badgeColor: "#0a66c2",
       cardBgColor: "",
+      media: [],
       displayOrder: items.length + 1,
       published: true,
     });
+    setNewSkill("");
+    setSkillSuggestions([]);
+    setShowSkillSuggestions(false);
+    setMediaTitle("");
+    setMediaUrl("");
+    setMediaType("certificate");
     setIsModalOpen(true);
   };
 
@@ -258,11 +276,18 @@ export const ExperienceManager: React.FC = () => {
     setFormData({
       ...item,
       skills: item.skills || [],
+      media: item.media || [],
       colorTheme: item.colorTheme || "linkedin",
       accentColor: item.accentColor || "#0a66c2",
       badgeColor: item.badgeColor || "#0a66c2",
       cardBgColor: item.cardBgColor || "",
     });
+    setNewSkill("");
+    setSkillSuggestions([]);
+    setShowSkillSuggestions(false);
+    setMediaTitle("");
+    setMediaUrl("");
+    setMediaType("certificate");
     setIsModalOpen(true);
   };
 
@@ -294,7 +319,19 @@ export const ExperienceManager: React.FC = () => {
     }
   };
 
-  // Skill tag management
+  // Skill tag management with 2000+ auto-suggest
+  const handleSkillInputChange = (val: string) => {
+    setNewSkill(val);
+    if (val.trim().length > 0) {
+      const results = searchSkills(val, 15);
+      setSkillSuggestions(results);
+      setShowSkillSuggestions(results.length > 0);
+    } else {
+      setSkillSuggestions([]);
+      setShowSkillSuggestions(false);
+    }
+  };
+
   const addSkill = (skillToAdd?: string) => {
     const s = (skillToAdd || newSkill).trim();
     if (!s) return;
@@ -302,13 +339,66 @@ export const ExperienceManager: React.FC = () => {
     if (!current.includes(s)) {
       setFormData((prev) => ({ ...prev, skills: [...current, s] }));
     }
-    if (!skillToAdd) setNewSkill("");
+    setNewSkill("");
+    setSkillSuggestions([]);
+    setShowSkillSuggestions(false);
   };
 
   const removeSkill = (index: number) => {
     setFormData((prev) => ({
       ...prev,
       skills: (prev.skills || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  // Media / Certificate upload & add
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setMediaProgress(15);
+      const res = await uploadToCloudinary(file);
+      const uploadedUrl = res.secure_url || res.url;
+      setMediaUrl(uploadedUrl);
+      setMediaProgress(100);
+      toast.success("Document / Certificate image uploaded!");
+      setTimeout(() => setMediaProgress(null), 1000);
+    } catch (err: any) {
+      console.error("Media upload failed:", err);
+      toast.error("Upload failed.");
+      setMediaProgress(null);
+    }
+  };
+
+  const handleAddMedia = () => {
+    if (!mediaTitle.trim()) {
+      toast.error("Please enter a title for the document / certificate.");
+      return;
+    }
+    if (!mediaUrl.trim()) {
+      toast.error("Please upload an image or provide a document link.");
+      return;
+    }
+    const newMedia: ExperienceMedia = {
+      title: mediaTitle.trim(),
+      url: mediaUrl.trim(),
+      type: mediaType,
+      thumbnailUrl: mediaUrl.trim(),
+    };
+    setFormData((prev) => ({
+      ...prev,
+      media: [...(prev.media || []), newMedia],
+    }));
+    setMediaTitle("");
+    setMediaUrl("");
+    setMediaType("certificate");
+    toast.success("Attachment added!");
+  };
+
+  const handleRemoveMedia = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      media: (prev.media || []).filter((_, i) => i !== index),
     }));
   };
 
@@ -340,6 +430,7 @@ export const ExperienceManager: React.FC = () => {
         activities: formData.activities || "",
         description: formData.description || "",
         skills: formData.skills || [],
+        media: formData.media || [],
         logoUrl: formData.logoUrl || "",
         logoShape: (formData.logoShape || "rounded") as LogoShape,
         displayOrder: Number(formData.displayOrder) || items.length + 1,
@@ -1192,28 +1283,75 @@ export const ExperienceManager: React.FC = () => {
                   })}
                 </div>
 
-                {/* Custom Skill Input */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addSkill();
-                      }
-                    }}
-                    placeholder="Type custom skill (e.g. Flutter)..."
-                    className={inputCls}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addSkill()}
-                    className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer"
-                  >
-                    Add
-                  </button>
+                {/* Custom Skill Input with 2000+ Auto-Suggest Dropdown */}
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSkill}
+                      onChange={(e) => handleSkillInputChange(e.target.value)}
+                      onFocus={() => {
+                        if (newSkill.trim().length > 0) {
+                          const results = searchSkills(newSkill, 15);
+                          setSkillSuggestions(results);
+                          setShowSkillSuggestions(results.length > 0);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (skillSuggestions.length > 0) {
+                            addSkill(skillSuggestions[0]);
+                          } else {
+                            addSkill();
+                          }
+                        }
+                      }}
+                      placeholder="Type skill (e.g. Python, Docker, Cisco, Kubernetes - 2000+ skills)..."
+                      className={inputCls}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addSkill()}
+                      className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer shrink-0"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Suggestions Dropdown Popover */}
+                  {showSkillSuggestions && skillSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-darklight rounded-2xl border border-primary/30 dark:border-primary/40 shadow-xl max-h-56 overflow-y-auto p-2 space-y-1">
+                      <div className="text-[10px] font-bold text-gray-400 px-2 py-1 uppercase tracking-wider flex justify-between">
+                        <span>Suggested Skills ({skillSuggestions.length})</span>
+                        <span>Click or Enter to add</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {skillSuggestions.map((sug) => {
+                          const isAlreadyAdded = (formData.skills || []).includes(sug);
+                          return (
+                            <button
+                              key={sug}
+                              type="button"
+                              onClick={() => {
+                                addSkill(sug);
+                              }}
+                              disabled={isAlreadyAdded}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold text-left transition flex items-center gap-1.5 cursor-pointer ${
+                                isAlreadyAdded
+                                  ? "bg-gray-100 dark:bg-darkmode text-gray-400 opacity-50 cursor-not-allowed"
+                                  : "bg-blue-50/70 dark:bg-blue-950/40 text-primary hover:bg-primary hover:text-white border border-blue-200/50 dark:border-blue-800/50"
+                              }`}
+                            >
+                              <span>+</span>
+                              <span>{sug}</span>
+                              {isAlreadyAdded && <span className="text-[10px]">✓ added</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Selected Skills */}
@@ -1234,6 +1372,179 @@ export const ExperienceManager: React.FC = () => {
                     </span>
                   ))}
                 </div>
+              </div>
+
+              {/* Media, Documents & Certificates Section */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className={labelCls}>
+                      📜 Documents, Certificates &amp; Event Awards
+                    </label>
+                    <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400">
+                      Thumbnail &amp; name display on card
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Attach certificates, competition trophies, degrees, event win photos, or letters. Users will see a thumbnail and name on the card, and can click to view full resolution.
+                  </p>
+                </div>
+
+                {/* Add New Media Form */}
+                <div className="p-3.5 rounded-xl bg-white dark:bg-darklight border border-border/70 dark:border-dark_border space-y-3">
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                        Document / Certificate Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={mediaTitle}
+                        onChange={(e) => setMediaTitle(e.target.value)}
+                        placeholder="e.g. INTROVA 1.0 1st Place Award, Dean's List Certificate"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                        Attachment Type
+                      </label>
+                      <select
+                        value={mediaType}
+                        onChange={(e) => setMediaType(e.target.value as any)}
+                        className={inputCls}
+                      >
+                        <option value="certificate">📜 Certificate</option>
+                        <option value="award">🏆 Award / Event Win</option>
+                        <option value="document">📄 Official Document</option>
+                        <option value="image">🖼️ Photo / Screenshot</option>
+                        <option value="link">🔗 Verification Link</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                      File / Image URL (Cloudinary or Direct Link) *
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={mediaUrl}
+                        onChange={(e) => setMediaUrl(e.target.value)}
+                        placeholder="https://... image or document URL"
+                        className={inputCls}
+                      />
+                      <label className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center justify-center shrink-0">
+                        <span>{mediaProgress ? `${mediaProgress}%` : "Upload"}</span>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={handleMediaUpload}
+                          className="hidden"
+                          disabled={!!mediaProgress}
+                        />
+                      </label>
+                    </div>
+                    {mediaProgress !== null && (
+                      <div className="w-full h-1 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                        <div
+                          className="h-full bg-purple-600 transition-all duration-300"
+                          style={{ width: `${mediaProgress}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Thumbnail Preview if mediaUrl exists */}
+                  {mediaUrl && (
+                    <div className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-darkmode rounded-xl border border-border/60">
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border shrink-0 bg-gray-200 dark:bg-darkmode">
+                        <Image
+                          src={mediaUrl}
+                          alt={mediaTitle || "Preview"}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-dark dark:text-white truncate">
+                          {mediaTitle || "Untitled Attachment"}
+                        </p>
+                        <p className="text-[10px] text-gray-400 capitalize">{mediaType}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={handleAddMedia}
+                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition shadow-sm cursor-pointer"
+                    >
+                      + Attach Certificate / Document
+                    </button>
+                  </div>
+                </div>
+
+                {/* List of Attached Media */}
+                {formData.media && formData.media.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-gray-500">
+                      Attached Documents ({formData.media.length}):
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      {formData.media.map((med, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-darklight border border-border dark:border-dark_border"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {med.url && (
+                              <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-border shrink-0 bg-gray-100 dark:bg-darkmode">
+                                <Image
+                                  src={med.url}
+                                  alt={med.title}
+                                  fill
+                                  unoptimized
+                                  className="object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-dark dark:text-white truncate">
+                                {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"}{" "}
+                                {med.title}
+                              </p>
+                              <a
+                                href={med.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[10px] text-primary hover:underline truncate block"
+                              >
+                                View full document ↗
+                              </a>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMedia(idx)}
+                            className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 transition cursor-pointer"
+                            title="Remove attachment"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic text-center py-2">
+                    No certificates or documents attached yet.
+                  </p>
+                )}
               </div>
 
               {/* Display Order & Visibility */}
