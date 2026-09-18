@@ -916,23 +916,40 @@ export const ExperienceEducation: React.FC = () => {
                 </div>
               )}
 
-              {/* Media Attachments */}
+              {/* Media & Certificate Attachments in Modal */}
               {selectedItem.media && selectedItem.media.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Attachments &amp; Links
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📜</span> Attached Certificates, Event Awards &amp; Documents ({selectedItem.media.length})
                   </h4>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid sm:grid-cols-2 gap-2.5">
                     {selectedItem.media.map((med, mIdx) => (
-                      <a
+                      <div
                         key={mIdx}
-                        href={med.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-primary transition flex items-center gap-1.5"
+                        onClick={() => setPreviewMedia(med)}
+                        className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-100/80 hover:bg-purple-50/80 dark:bg-slate-800/80 dark:hover:bg-purple-950/40 border border-slate-200/80 dark:border-slate-700/80 hover:border-purple-400 transition cursor-pointer group"
                       >
-                        🔗 {med.title || "View Attachment"} ↗
-                      </a>
+                        {med.url && (
+                          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-white dark:bg-darkmode border border-slate-200 dark:border-slate-700 shrink-0 shadow-2xs">
+                            <Image
+                              src={med.url}
+                              alt={med.title}
+                              fill
+                              unoptimized
+                              className="object-cover group-hover:scale-105 transition-transform"
+                            />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-dark dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                            {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"} {med.title}
+                          </p>
+                          <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1 mt-0.5">
+                            <span>🔍 Click to inspect full image</span>
+                            <span>↗</span>
+                          </span>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -950,6 +967,66 @@ export const ExperienceEducation: React.FC = () => {
               >
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ CERTIFICATE / DOCUMENT LIGHTBOX VIEWER ═══════════ */}
+      {previewMedia && (
+        <div
+          onClick={() => setPreviewMedia(null)}
+          className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl w-full bg-white dark:bg-darklight rounded-3xl overflow-hidden shadow-2xl border border-white/20 flex flex-col max-h-[90vh]"
+          >
+            {/* Header */}
+            <div className="p-4 sm:px-6 border-b border-border dark:border-dark_border flex items-center justify-between bg-gray-50/80 dark:bg-darkmode/80 shrink-0">
+              <div className="min-w-0 pr-4">
+                <h3 className="text-base sm:text-lg font-bold text-dark dark:text-white truncate flex items-center gap-2">
+                  <span>{previewMedia.type === "award" ? "🏆" : previewMedia.type === "certificate" ? "📜" : "📄"}</span>
+                  <span>{previewMedia.title}</span>
+                </h3>
+                <span className="text-xs text-gray-500 capitalize">{previewMedia.type || "Document"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewMedia.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1"
+                >
+                  <span>Open Original</span>
+                  <span>↗</span>
+                </a>
+                <button
+                  onClick={() => setPreviewMedia(null)}
+                  className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 text-dark dark:text-white font-bold text-sm flex items-center justify-center transition cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Media Image Content */}
+            <div className="p-4 overflow-auto flex items-center justify-center bg-gray-900/5 dark:bg-black/30 min-h-[300px]">
+              {previewMedia.url && (previewMedia.url.endsWith(".pdf") ? (
+                <iframe
+                  src={previewMedia.url}
+                  title={previewMedia.title}
+                  className="w-full h-[70vh] rounded-xl border border-border"
+                />
+              ) : (
+                <div className="relative max-w-full max-h-[72vh] flex items-center justify-center">
+                  <img
+                    src={previewMedia.url}
+                    alt={previewMedia.title}
+                    className="max-h-[72vh] max-w-full rounded-xl object-contain shadow-lg"
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </div>
