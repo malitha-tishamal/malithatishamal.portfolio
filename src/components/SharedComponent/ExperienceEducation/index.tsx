@@ -119,6 +119,53 @@ const OrganizationLogo: React.FC<{
   );
 };
 
+// ── Media / Certificate / Document Thumbnail with PDF & fallback support ───
+const getMediaThumbnailUrl = (url?: string, thumbnailUrl?: string): string => {
+  if (thumbnailUrl && !thumbnailUrl.toLowerCase().endsWith(".pdf")) return thumbnailUrl;
+  if (!url) return "";
+  if (url.toLowerCase().endsWith(".pdf")) {
+    return url.replace(/\.pdf$/i, ".jpg");
+  }
+  return url;
+};
+
+const MediaThumbnail: React.FC<{
+  url?: string;
+  thumbnailUrl?: string;
+  type?: string;
+  title?: string;
+  className?: string;
+}> = ({ url, thumbnailUrl, type, title, className = "w-5 h-5" }) => {
+  const [hasError, setHasError] = useState(false);
+  const displaySrc = getMediaThumbnailUrl(url, thumbnailUrl);
+  const isPdf = url?.toLowerCase().includes(".pdf");
+
+  if (!displaySrc || hasError) {
+    return (
+      <div
+        className={`${className} rounded-md bg-purple-100 dark:bg-purple-900/60 border border-purple-300 dark:border-purple-700 flex items-center justify-center shrink-0 text-[10px] font-bold text-purple-700 dark:text-purple-300`}
+        title={title}
+      >
+        {isPdf ? "PDF" : type === "award" ? "🏆" : type === "certificate" ? "📜" : "📄"}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative ${className} rounded-md overflow-hidden bg-white dark:bg-darkmode border border-purple-200 dark:border-purple-800 shrink-0 shadow-2xs`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={displaySrc}
+        alt={title || "Attachment"}
+        className="w-full h-full object-cover group-hover/med:scale-110 transition-transform duration-200"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+};
+
 // ── Main ExperienceEducation Component ──────────────────────────────────────
 export const ExperienceEducation: React.FC = () => {
   const [items, setItems] = useState<ExperienceItem[]>([]);
@@ -454,9 +501,9 @@ export const ExperienceEducation: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Attached Certificates, Event Awards & Documents (Default Thumbnail + Name on Card) */}
+                        {/* Attached Certificates, Event Awards & Documents (Thumbnail + Highlighted Name on Card) */}
                         {item.media && item.media.length > 0 && (
-                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-200/50 dark:border-dark_border/50">
+                          <div className="mt-2.5 flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-dark_border/60">
                             {item.media.map((med, mIdx) => (
                               <div
                                 key={mIdx}
@@ -464,25 +511,24 @@ export const ExperienceEducation: React.FC = () => {
                                   e.stopPropagation();
                                   setPreviewMedia(med);
                                 }}
-                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 border border-purple-200/70 dark:border-purple-800/70 hover:border-purple-400 hover:shadow-2xs transition group/med cursor-pointer max-w-[210px]"
+                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100/90 dark:bg-purple-950/50 dark:hover:bg-purple-900/70 border border-purple-300 dark:border-purple-700/80 hover:border-purple-500 shadow-xs hover:shadow-sm transition-all duration-200 group/med cursor-pointer max-w-full"
                                 title={`Click to view: ${med.title}`}
                               >
-                                {med.url ? (
-                                  <div className="relative w-5 h-5 rounded-md overflow-hidden bg-gray-200 dark:bg-darkmode shrink-0 border border-purple-200 dark:border-purple-800">
-                                    <Image
-                                      src={med.url}
-                                      alt={med.title}
-                                      fill
-                                      unoptimized
-                                      className="object-cover group-hover/med:scale-110 transition-transform"
-                                    />
-                                  </div>
-                                ) : (
-                                  <span className="text-xs">📜</span>
-                                )}
-                                <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 truncate group-hover/med:text-purple-900 dark:group-hover/med:text-white transition-colors">
-                                  {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"} {med.title}
-                                </span>
+                                <MediaThumbnail
+                                  url={med.url}
+                                  thumbnailUrl={med.thumbnailUrl}
+                                  type={med.type}
+                                  title={med.title}
+                                  className="w-6 h-6"
+                                />
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="text-xs shrink-0">
+                                    {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"}
+                                  </span>
+                                  <span className="text-xs font-extrabold text-purple-900 dark:text-purple-100 group-hover/med:text-purple-950 dark:group-hover/med:text-white tracking-wide">
+                                    {med.title}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -685,9 +731,9 @@ export const ExperienceEducation: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Attached Certificates, Event Awards & Documents (Default Thumbnail + Name on Card) */}
+                        {/* Attached Certificates, Event Awards & Documents (Thumbnail + Highlighted Name on Card) */}
                         {item.media && item.media.length > 0 && (
-                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-200/50 dark:border-dark_border/50">
+                          <div className="mt-2.5 flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-dark_border/60">
                             {item.media.map((med, mIdx) => (
                               <div
                                 key={mIdx}
@@ -695,25 +741,24 @@ export const ExperienceEducation: React.FC = () => {
                                   e.stopPropagation();
                                   setPreviewMedia(med);
                                 }}
-                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 border border-purple-200/70 dark:border-purple-800/70 hover:border-purple-400 hover:shadow-2xs transition group/med cursor-pointer max-w-[210px]"
+                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100/90 dark:bg-purple-950/50 dark:hover:bg-purple-900/70 border border-purple-300 dark:border-purple-700/80 hover:border-purple-500 shadow-xs hover:shadow-sm transition-all duration-200 group/med cursor-pointer max-w-full"
                                 title={`Click to view: ${med.title}`}
                               >
-                                {med.url ? (
-                                  <div className="relative w-5 h-5 rounded-md overflow-hidden bg-gray-200 dark:bg-darkmode shrink-0 border border-purple-200 dark:border-purple-800">
-                                    <Image
-                                      src={med.url}
-                                      alt={med.title}
-                                      fill
-                                      unoptimized
-                                      className="object-cover group-hover/med:scale-110 transition-transform"
-                                    />
-                                  </div>
-                                ) : (
-                                  <span className="text-xs">📜</span>
-                                )}
-                                <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 truncate group-hover/med:text-purple-900 dark:group-hover/med:text-white transition-colors">
-                                  {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"} {med.title}
-                                </span>
+                                <MediaThumbnail
+                                  url={med.url}
+                                  thumbnailUrl={med.thumbnailUrl}
+                                  type={med.type}
+                                  title={med.title}
+                                  className="w-6 h-6"
+                                />
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="text-xs shrink-0">
+                                    {med.type === "award" ? "🏆" : med.type === "certificate" ? "📜" : "📄"}
+                                  </span>
+                                  <span className="text-xs font-extrabold text-purple-900 dark:text-purple-100 group-hover/med:text-purple-950 dark:group-hover/med:white tracking-wide">
+                                    {med.title}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                           </div>
