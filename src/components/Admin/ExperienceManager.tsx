@@ -319,7 +319,7 @@ export const ExperienceManager: React.FC = () => {
     }
   };
 
-  // Skill tag management with 2000+ auto-suggest
+  // Skill tag management with 5,500+ auto-suggest (case-insensitive)
   const handleSkillInputChange = (val: string) => {
     setNewSkill(val);
     if (val.trim().length > 0) {
@@ -336,8 +336,14 @@ export const ExperienceManager: React.FC = () => {
     const s = (skillToAdd || newSkill).trim();
     if (!s) return;
     const current = formData.skills || [];
-    if (!current.includes(s)) {
+    // Case-insensitive duplicate check
+    const alreadyExists = current.some(
+      (existing) => existing.toLowerCase() === s.toLowerCase()
+    );
+    if (!alreadyExists) {
       setFormData((prev) => ({ ...prev, skills: [...current, s] }));
+    } else {
+      toast("Skill already added", { icon: "ℹ️" });
     }
     setNewSkill("");
     setSkillSuggestions([]);
@@ -1264,7 +1270,9 @@ export const ExperienceManager: React.FC = () => {
                 {/* Popular Skill Quick Add Chips */}
                 <div className="flex flex-wrap gap-1.5 pb-2">
                   {POPULAR_SKILLS.map((sk) => {
-                    const isAdded = formData.skills?.includes(sk);
+                    const isAdded = (formData.skills || []).some(
+                      (s) => s.toLowerCase() === sk.toLowerCase()
+                    );
                     return (
                       <button
                         key={sk}
@@ -1283,7 +1291,7 @@ export const ExperienceManager: React.FC = () => {
                   })}
                 </div>
 
-                {/* Custom Skill Input with 2000+ Auto-Suggest Dropdown */}
+                {/* Custom Skill Input with 5,500+ Auto-Suggest Dropdown */}
                 <div className="relative">
                   <div className="flex gap-2">
                     <input
@@ -1307,7 +1315,7 @@ export const ExperienceManager: React.FC = () => {
                           }
                         }
                       }}
-                      placeholder="Type skill (e.g. Python, Docker, Cisco, Kubernetes - 2000+ skills)..."
+                      placeholder="Type skill (e.g. Python, Docker, Cisco, Kubernetes - 5,500+ skills, case-insensitive)..."
                       className={inputCls}
                     />
                     <button
@@ -1328,7 +1336,9 @@ export const ExperienceManager: React.FC = () => {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {skillSuggestions.map((sug) => {
-                          const isAlreadyAdded = (formData.skills || []).includes(sug);
+                          const isAlreadyAdded = (formData.skills || []).some(
+                            (s) => s.toLowerCase() === sug.toLowerCase()
+                          );
                           return (
                             <button
                               key={sug}
