@@ -6,6 +6,7 @@ import {
   collection,
   onSnapshot,
   doc,
+  getDoc,
   setDoc,
   deleteDoc,
 } from "firebase/firestore";
@@ -16,6 +17,8 @@ import {
   PortfolioImageFit,
   defaultPortfolioItems,
   PORTFOLIO_CATEGORIES,
+  PortfolioSliderSettings,
+  defaultPortfolioSliderSettings,
 } from "@/types/portfolio";
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import { PortfolioCardItem } from "@/components/portfolio/PortfolioCardItem";
