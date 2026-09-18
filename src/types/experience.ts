@@ -20,7 +20,8 @@ export type EmploymentType =
 export interface ExperienceMedia {
   title: string;
   url: string;
-  type?: "image" | "link" | "document";
+  type?: "certificate" | "award" | "document" | "image" | "link";
+  thumbnailUrl?: string;
 }
 
 export interface ExperienceItem {
