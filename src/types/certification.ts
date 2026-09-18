@@ -4,6 +4,7 @@ export interface CertificationItem {
   issuer: string;
   issuerLogo?: string;
   logoShape?: "rounded" | "circle" | "square";
+  logoBgColor?: string; // e.g. "transparent", "#ffffff", "#0b1120", "#049fd9", etc.
   issueDate: string; // e.g. "Mar 2026"
   expirationDate?: string; // e.g. "No Expiration" or "Mar 2029"
   credentialId?: string; // e.g. "e4e1215f-35c6-4416-8d4c-83407362d262"
@@ -17,6 +18,20 @@ export interface CertificationItem {
   featured?: boolean;
   published?: boolean;
 }
+
+export interface CertificationSettings {
+  autoplay: boolean;
+  autoplaySpeed: number; // ms
+  transitionSpeed: number; // ms
+  pauseOnHover: boolean;
+}
+
+export const defaultCertificationSettings: CertificationSettings = {
+  autoplay: true,
+  autoplaySpeed: 4500,
+  transitionSpeed: 600,
+  pauseOnHover: true,
+};
 
 export const CERTIFICATION_CATEGORIES = [
   "All",
