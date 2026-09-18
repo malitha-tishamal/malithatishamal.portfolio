@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   collection,
   getDocs,
+  getDoc,
   doc,
   setDoc,
   deleteDoc,
@@ -14,17 +15,48 @@ import {
 import { db } from "@/lib/firebase";
 import {
   CertificationItem,
+  CertificationSettings,
   CERTIFICATION_CATEGORIES,
   defaultCertifications,
+  defaultCertificationSettings,
 } from "@/types/certification";
 import { uploadToCloudinary } from "@/utils/cloudinary";
+import { searchSkills } from "@/data/skillsDatabase";
 import toast from "react-hot-toast";
+
+const LOGO_BG_PRESETS = [
+  { id: "transparent", label: "Transparent", color: "transparent", border: "border-gray-300 dark:border-gray-600" },
+  { id: "#ffffff", label: "Clean White", color: "#ffffff", border: "border-gray-300" },
+  { id: "#0b1120", label: "Dark Slate", color: "#0b1120", border: "border-gray-700" },
+  { id: "#049fd9", label: "Cisco Blue", color: "#049fd9", border: "border-[#049fd9]" },
+  { id: "#002c5f", label: "Deep Navy", color: "#002c5f", border: "border-[#002c5f]" },
+  { id: "#057642", label: "Emerald", color: "#057642", border: "border-[#057642]" },
+];
+
+const POPULAR_CERT_SKILLS = [
+  "Cisco Networking",
+  "Cybersecurity",
+  "Packet Tracer",
+  "Threat Detection",
+  "Network Vulnerability",
+  "Privacy And Data Confidentiality",
+  "Internet of Things (IoT)",
+  "Cloud Security",
+  "Switching & Routing",
+  "IPv4/IPv6 Subnetting",
+  "Firewall Administration",
+  "Ethical Hacking",
+];
 
 export const CertificationsManager: React.FC = () => {
   const [items, setItems] = useState<CertificationItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [seeding, setSeeding] = useState<boolean>(false);
+
+  // Slider timing & options state
+  const [sliderSettings, setSliderSettings] = useState<CertificationSettings>(defaultCertificationSettings);
+  const [savingSettings, setSavingSettings] = useState<boolean>(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -36,6 +68,7 @@ export const CertificationsManager: React.FC = () => {
     issuer: "Cisco Networking Academy",
     issuerLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Cisco_logo_blue_2016.svg/1200px-Cisco_logo_blue_2016.svg.png",
     logoShape: "rounded",
+    logoBgColor: "transparent",
     issueDate: "Mar 2026",
     expirationDate: "No Expiration",
     credentialId: "",
@@ -50,6 +83,8 @@ export const CertificationsManager: React.FC = () => {
   });
 
   const [newSkill, setNewSkill] = useState<string>("");
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
+  const [showSkillSuggestions, setShowSkillSuggestions] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
 
@@ -84,8 +119,39 @@ export const CertificationsManager: React.FC = () => {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const snap = await getDoc(doc(db, "siteContent", "certifications"));
+      if (snap.exists()) {
+        const data = snap.data() as Partial<CertificationSettings>;
+        setSliderSettings({
+          autoplay: data.autoplay !== undefined ? data.autoplay : defaultCertificationSettings.autoplay,
+          autoplaySpeed: Number(data.autoplaySpeed) || defaultCertificationSettings.autoplaySpeed,
+          transitionSpeed: Number(data.transitionSpeed) || defaultCertificationSettings.transitionSpeed,
+          pauseOnHover: data.pauseOnHover !== undefined ? data.pauseOnHover : defaultCertificationSettings.pauseOnHover,
+        });
+      }
+    } catch (err) {
+      console.warn("Notice: could not load slider settings", err);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      setSavingSettings(true);
+      await setDoc(doc(db, "siteContent", "certifications"), sliderSettings, { merge: true });
+      toast.success("Slider settings saved successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save slider settings.");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   useEffect(() => {
     fetchItems();
+    fetchSettings();
   }, []);
 
   // ── Seed Default Cisco Certifications ──────────────────────────────────────
@@ -121,6 +187,7 @@ export const CertificationsManager: React.FC = () => {
       issuer: "Cisco Networking Academy",
       issuerLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Cisco_logo_blue_2016.svg/1200px-Cisco_logo_blue_2016.svg.png",
       logoShape: "rounded",
+      logoBgColor: "transparent",
       issueDate: "Mar 2026",
       expirationDate: "No Expiration",
       credentialId: "",
@@ -133,6 +200,9 @@ export const CertificationsManager: React.FC = () => {
       featured: true,
       published: true,
     });
+    setNewSkill("");
+    setSkillSuggestions([]);
+    setShowSkillSuggestions(false);
     setIsModalOpen(true);
   };
 
@@ -141,8 +211,13 @@ export const CertificationsManager: React.FC = () => {
     setEditingItem(item);
     setFormData({
       ...item,
+      logoBgColor: item.logoBgColor || "transparent",
+      logoShape: item.logoShape || "rounded",
       skills: item.skills || [],
     });
+    setNewSkill("");
+    setSkillSuggestions([]);
+    setShowSkillSuggestions(false);
     setIsModalOpen(true);
   };
 
@@ -175,11 +250,26 @@ export const CertificationsManager: React.FC = () => {
 
     newItems[index] = target;
     newItems[targetIndex] = current;
+    newItems.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     setItems(newItems);
 
     try {
       await setDoc(doc(db, "certifications", current.id), { displayOrder: current.displayOrder }, { merge: true });
       await setDoc(doc(db, "certifications", target.id), { displayOrder: target.displayOrder }, { merge: true });
+      toast.success("Order updated!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update order.");
+    }
+  };
+
+  // ── Direct Order Change ────────────────────────────────────────────────────
+  const handleQuickOrderChange = async (id: string, newOrder: number) => {
+    const updated = items.map((it) => (it.id === id ? { ...it, displayOrder: newOrder } : it));
+    updated.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    setItems(updated);
+    try {
+      await setDoc(doc(db, "certifications", id), { displayOrder: newOrder }, { merge: true });
       toast.success("Order updated!");
     } catch (err) {
       console.error(err);
@@ -236,20 +326,46 @@ export const CertificationsManager: React.FC = () => {
     }
   };
 
-  // ── Skill Tag Management ───────────────────────────────────────────────────
-  const addSkill = () => {
-    if (!newSkill.trim()) return;
-    const clean = newSkill.trim();
-    if (!formData.skills?.includes(clean)) {
-      setFormData((prev) => ({ ...prev, skills: [...(prev.skills || []), clean] }));
+  // ── Skill Tag Management with 5,500+ Auto-Suggest (Case-Insensitive) ────────
+  const handleSkillInputChange = (value: string) => {
+    setNewSkill(value);
+    if (value.trim().length > 0) {
+      const results = searchSkills(value, 15);
+      setSkillSuggestions(results);
+      setShowSkillSuggestions(results.length > 0);
+    } else {
+      setSkillSuggestions([]);
+      setShowSkillSuggestions(false);
+    }
+  };
+
+  const addSkill = (skillToAdd?: string) => {
+    const raw = (skillToAdd || newSkill).trim();
+    if (!raw) return;
+
+    // Case-insensitive duplicate check
+    const currentSkills = formData.skills || [];
+    const alreadyExists = currentSkills.some(
+      (s) => s.toLowerCase() === raw.toLowerCase()
+    );
+
+    if (!alreadyExists) {
+      setFormData((prev) => ({
+        ...prev,
+        skills: [...(prev.skills || []), raw],
+      }));
+    } else {
+      toast("Skill already added", { icon: "ℹ️" });
     }
     setNewSkill("");
+    setSkillSuggestions([]);
+    setShowSkillSuggestions(false);
   };
 
   const removeSkill = (skill: string) => {
     setFormData((prev) => ({
       ...prev,
-      skills: prev.skills?.filter((s) => s !== skill) || [],
+      skills: prev.skills?.filter((s) => s.toLowerCase() !== skill.toLowerCase()) || [],
     }));
   };
 
@@ -269,6 +385,8 @@ export const CertificationsManager: React.FC = () => {
       title: formData.title.trim(),
       issuer: formData.issuer.trim(),
       issuerLogo: formData.issuerLogo || "",
+      logoShape: formData.logoShape || "rounded",
+      logoBgColor: formData.logoBgColor || "transparent",
       issueDate: formData.issueDate || "Mar 2026",
       expirationDate: formData.expirationDate || "No Expiration",
       credentialId: formData.credentialId?.trim() || "",
@@ -362,6 +480,109 @@ export const CertificationsManager: React.FC = () => {
         </div>
       </div>
 
+      {/* 🎠 Slider & Carousel Timing Settings Card */}
+      <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60 dark:border-dark_border/60">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">🎠</span>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-dark dark:text-white">
+                Homepage Slider & Carousel Controls
+              </h3>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Manage autoplay interval, transition speed, and pause behaviors for the certifications carousel on the homepage.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSaveSettings}
+            disabled={savingSettings}
+            className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-blue-700 transition shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <span>{savingSettings ? "Saving..." : "💾 Save Slider Settings"}</span>
+          </button>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Autoplay Toggle */}
+          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-dark dark:text-white block">Autoplay</span>
+              <span className="text-[10px] text-gray-500">Auto-rotate slides</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sliderSettings.autoplay}
+                onChange={(e) => setSliderSettings((prev) => ({ ...prev, autoplay: e.target.checked }))}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+
+          {/* Autoplay Speed (Interval) */}
+          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-1.5">
+            <div className="flex justify-between items-center text-xs font-bold text-dark dark:text-white">
+              <span>Slide Interval</span>
+              <span className="text-primary font-mono">{sliderSettings.autoplaySpeed}ms ({((sliderSettings.autoplaySpeed || 4500) / 1000).toFixed(1)}s)</span>
+            </div>
+            <input
+              type="range"
+              min={1500}
+              max={10000}
+              step={250}
+              value={sliderSettings.autoplaySpeed}
+              onChange={(e) => setSliderSettings((prev) => ({ ...prev, autoplaySpeed: Number(e.target.value) }))}
+              className="w-full accent-primary cursor-pointer h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg"
+            />
+            <div className="flex justify-between text-[10px] text-gray-400">
+              <span>1.5s</span>
+              <span>10s</span>
+            </div>
+          </div>
+
+          {/* Transition Speed */}
+          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-1.5">
+            <div className="flex justify-between items-center text-xs font-bold text-dark dark:text-white">
+              <span>Transition Speed</span>
+              <span className="text-primary font-mono">{sliderSettings.transitionSpeed}ms</span>
+            </div>
+            <input
+              type="range"
+              min={200}
+              max={2000}
+              step={50}
+              value={sliderSettings.transitionSpeed}
+              onChange={(e) => setSliderSettings((prev) => ({ ...prev, transitionSpeed: Number(e.target.value) }))}
+              className="w-full accent-primary cursor-pointer h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg"
+            />
+            <div className="flex justify-between text-[10px] text-gray-400">
+              <span>200ms</span>
+              <span>2000ms</span>
+            </div>
+          </div>
+
+          {/* Pause on Hover */}
+          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-dark dark:text-white block">Pause on Hover</span>
+              <span className="text-[10px] text-gray-500">Halt when hovered</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sliderSettings.pauseOnHover}
+                onChange={(e) => setSliderSettings((prev) => ({ ...prev, pauseOnHover: e.target.checked }))}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-darklight p-4 rounded-2xl border border-border dark:border-dark_border shadow-xs">
         <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
@@ -427,59 +648,91 @@ export const CertificationsManager: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60 dark:divide-dark_border/60">
-                {filteredItems.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50/80 dark:hover:bg-darkmode/50 transition"
-                  >
-                    {/* Order Controls */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-xs text-gray-400 w-4">{item.displayOrder || index + 1}</span>
-                        <button
-                          onClick={() => handleMoveOrder(index, "up")}
-                          disabled={index === 0}
-                          className="p-1 text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer"
-                        >
-                          ▲
-                        </button>
-                        <button
-                          onClick={() => handleMoveOrder(index, "down")}
-                          disabled={index === items.length - 1}
-                          className="p-1 text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer"
-                        >
-                          ▼
-                        </button>
-                      </div>
-                    </td>
+                {filteredItems.map((item, index) => {
+                  const itemShapeClass =
+                    item.logoShape === "circle"
+                      ? "rounded-full"
+                      : item.logoShape === "square"
+                      ? "rounded-md"
+                      : "rounded-xl";
+                  const isItemTrans = !item.logoBgColor || item.logoBgColor === "transparent";
+                  const isItemWhite =
+                    item.logoBgColor?.toLowerCase() === "#ffffff" ||
+                    item.logoBgColor?.toLowerCase() === "white";
+                  const itemBgStyle = !isItemTrans && !isItemWhite ? { backgroundColor: item.logoBgColor } : undefined;
 
-                    {/* Certification Title & Issuer */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center p-1.5 shrink-0 border border-gray-800">
-                          {item.issuerLogo ? (
-                            <Image
-                              src={item.issuerLogo}
-                              alt={item.issuer}
-                              width={32}
-                              height={32}
-                              className="object-contain"
-                              unoptimized
-                            />
-                          ) : (
-                            <span className="text-[10px] font-bold">CERT</span>
-                          )}
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50/80 dark:hover:bg-darkmode/50 transition"
+                    >
+                      {/* Order Controls */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.displayOrder || index + 1}
+                            onChange={(e) => handleQuickOrderChange(item.id, parseInt(e.target.value) || 1)}
+                            className="w-12 px-1.5 py-1 text-center font-bold text-xs rounded-lg border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white"
+                          />
+                          <div className="flex flex-col">
+                            <button
+                              onClick={() => handleMoveOrder(index, "up")}
+                              disabled={index === 0}
+                              title="Move Up"
+                              className="p-0.5 text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer text-[10px] leading-none"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              onClick={() => handleMoveOrder(index, "down")}
+                              disabled={index === items.length - 1}
+                              title="Move Down"
+                              className="p-0.5 text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer text-[10px] leading-none"
+                            >
+                              ▼
+                            </button>
+                          </div>
                         </div>
-                        <div className="max-w-md">
-                          <p className="font-bold text-dark dark:text-white line-clamp-1">
-                            {item.title}
-                          </p>
-                          <p className="text-[11px] text-gray-400">
-                            {item.issuer} {item.credentialId && `• ID: ${item.credentialId}`}
-                          </p>
+                      </td>
+
+                      {/* Certification Title & Issuer */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 ${itemShapeClass} flex items-center justify-center p-1.5 shrink-0 border ${
+                              isItemTrans
+                                ? "bg-transparent border-border"
+                                : isItemWhite
+                                ? "bg-white border-gray-200 shadow-xs"
+                                : "border-black/15"
+                            }`}
+                            style={itemBgStyle}
+                          >
+                            {item.issuerLogo ? (
+                              <Image
+                                src={item.issuerLogo}
+                                alt={item.issuer}
+                                width={30}
+                                height={30}
+                                className="object-contain max-h-full max-w-full"
+                                unoptimized
+                              />
+                            ) : (
+                              <span className="text-[10px] font-bold text-gray-500">CERT</span>
+                            )}
+                          </div>
+                          <div className="max-w-md">
+                            <p className="font-bold text-dark dark:text-white line-clamp-1">
+                              {item.title}
+                            </p>
+                            <p className="text-[11px] text-gray-400">
+                              {item.issuer} {item.credentialId && `• ID: ${item.credentialId}`}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
                     {/* Category */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
@@ -665,6 +918,121 @@ export const CertificationsManager: React.FC = () => {
                 </div>
               </div>
 
+              {/* Logo Background Color */}
+              <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-dark dark:text-white block">
+                    Logo Background Color
+                  </label>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Default is transparent. Pick a preset or enter a custom hex color.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {LOGO_BG_PRESETS.map((preset) => {
+                    const isSelected =
+                      (formData.logoBgColor || "transparent") === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        title={preset.label}
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, logoBgColor: preset.id }))
+                        }
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                          isSelected
+                            ? "border-primary ring-2 ring-primary/30"
+                            : "border-gray-300 dark:border-gray-600 hover:border-primary/50"
+                        }`}
+                      >
+                        <span
+                          className={`w-4 h-4 rounded-md border border-black/10 shrink-0 ${
+                            preset.color === "transparent"
+                              ? "bg-[repeating-conic-gradient(#ccc_0%_25%,transparent_0%_50%)] bg-[length:8px_8px]"
+                              : ""
+                          }`}
+                          style={
+                            preset.color !== "transparent"
+                              ? { backgroundColor: preset.color }
+                              : undefined
+                          }
+                        />
+                        <span className="text-dark dark:text-white">{preset.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Custom hex / color picker */}
+                <div className="flex items-center gap-3 pt-1">
+                  <label className="text-[11px] font-semibold text-gray-500 shrink-0">
+                    Custom Color:
+                  </label>
+                  <input
+                    type="color"
+                    value={
+                      formData.logoBgColor && formData.logoBgColor !== "transparent"
+                        ? formData.logoBgColor
+                        : "#ffffff"
+                    }
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, logoBgColor: e.target.value }))
+                    }
+                    className="w-9 h-9 rounded-lg border border-border cursor-pointer p-0.5 bg-white"
+                    title="Pick custom background color"
+                  />
+                  <input
+                    type="text"
+                    value={formData.logoBgColor || "transparent"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, logoBgColor: e.target.value }))
+                    }
+                    placeholder="#hex or transparent"
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-border dark:border-dark_border bg-white dark:bg-darklight text-xs font-mono text-dark dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, logoBgColor: "transparent" }))
+                    }
+                    className="text-[11px] text-gray-500 hover:text-red-500 transition font-semibold cursor-pointer shrink-0"
+                  >
+                    Reset
+                  </button>
+                </div>
+                {/* Live logo preview with background */}
+                {formData.issuerLogo && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="text-[11px] text-gray-500 font-semibold">Preview:</span>
+                    <div
+                      className={`w-12 h-12 flex items-center justify-center p-1.5 border rounded-xl ${
+                        !formData.logoBgColor || formData.logoBgColor === "transparent"
+                          ? "bg-transparent border-border"
+                          : formData.logoBgColor.toLowerCase() === "#ffffff" ||
+                            formData.logoBgColor.toLowerCase() === "white"
+                          ? "bg-white border-gray-200"
+                          : "border-black/10"
+                      }`}
+                      style={
+                        formData.logoBgColor &&
+                        formData.logoBgColor !== "transparent" &&
+                        formData.logoBgColor.toLowerCase() !== "#ffffff" &&
+                        formData.logoBgColor.toLowerCase() !== "white"
+                          ? { backgroundColor: formData.logoBgColor }
+                          : undefined
+                      }
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={formData.issuerLogo}
+                        alt="Logo preview"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Dates & Credential ID */}
               <div className="grid sm:grid-cols-3 gap-4">
                 <div>
@@ -757,48 +1125,121 @@ export const CertificationsManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Skills Tags */}
-              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-2">
-                <label className={labelCls}>Verified Skills & Competencies</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addSkill();
-                      }
-                    }}
-                    placeholder="Type skill and press Enter or click Add (e.g. Threat Detection)..."
-                    className={inputCls}
-                  />
-                  <button
-                    type="button"
-                    onClick={addSkill}
-                    className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold cursor-pointer"
-                  >
-                    + Add
-                  </button>
+              {/* Skills Tags — with 5,500+ Auto-Suggest */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-3">
+                <div>
+                  <label className={labelCls}>Verified Skills &amp; Competencies</label>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Search from 5,500+ skills — case-insensitive. Press Enter or click a suggestion.
+                  </p>
                 </div>
-                <div className="flex flex-wrap gap-1.5 pt-2">
-                  {formData.skills?.map((s) => (
-                    <span
-                      key={s}
-                      className="px-2.5 py-1 rounded-lg text-xs bg-white dark:bg-darklight border border-border text-gray-700 dark:text-gray-300 flex items-center gap-1.5"
-                    >
-                      {s}
+
+                {/* Popular quick-add chips */}
+                <div className="flex flex-wrap gap-1.5">
+                  {POPULAR_CERT_SKILLS.map((skill) => {
+                    const alreadyAdded = (formData.skills || []).some(
+                      (s) => s.toLowerCase() === skill.toLowerCase()
+                    );
+                    return (
                       <button
+                        key={skill}
                         type="button"
-                        onClick={() => removeSkill(s)}
-                        className="text-red-400 hover:text-red-600 font-bold"
+                        disabled={alreadyAdded}
+                        onClick={() => addSkill(skill)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
+                          alreadyAdded
+                            ? "bg-primary/10 text-primary border-primary/30 opacity-60 cursor-not-allowed"
+                            : "bg-white dark:bg-darklight border-border text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary"
+                        }`}
                       >
-                        ×
+                        {alreadyAdded ? "✓ " : "+ "}
+                        {skill}
                       </button>
-                    </span>
-                  ))}
+                    );
+                  })}
                 </div>
+
+                {/* Input + suggestions dropdown */}
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSkill}
+                      onChange={(e) => handleSkillInputChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addSkill(skillSuggestions[0] || undefined);
+                        }
+                        if (e.key === "Escape") {
+                          setShowSkillSuggestions(false);
+                        }
+                      }}
+                      onBlur={() => setTimeout(() => setShowSkillSuggestions(false), 150)}
+                      onFocus={() => {
+                        if (skillSuggestions.length > 0) setShowSkillSuggestions(true);
+                      }}
+                      placeholder="Type to search 5,500+ skills (e.g. Packet Tracer, SIEM, Python)..."
+                      className={inputCls}
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addSkill()}
+                      className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold cursor-pointer shrink-0"
+                    >
+                      + Add
+                    </button>
+                  </div>
+
+                  {/* Auto-suggest dropdown */}
+                  {showSkillSuggestions && skillSuggestions.length > 0 && (
+                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-darklight border border-border dark:border-dark_border rounded-xl shadow-lg overflow-hidden">
+                      <div className="max-h-52 overflow-y-auto">
+                        {skillSuggestions.map((suggestion, i) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => addSkill(suggestion)}
+                            className={`w-full text-left px-3.5 py-2 text-xs hover:bg-primary/10 hover:text-primary transition flex items-center justify-between gap-2 ${
+                              i === 0 ? "bg-primary/5 font-semibold text-primary" : "text-dark dark:text-white"
+                            }`}
+                          >
+                            <span>{suggestion}</span>
+                            {i === 0 && (
+                              <span className="text-[10px] text-primary/60 shrink-0">↵ Enter</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="px-3 py-1.5 bg-gray-50 dark:bg-darkmode border-t border-border text-[10px] text-gray-400">
+                        {skillSuggestions.length} result{skillSuggestions.length !== 1 ? "s" : ""} — case-insensitive search
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Added skill tags */}
+                {(formData.skills || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {formData.skills?.map((s) => (
+                      <span
+                        key={s}
+                        className="px-2.5 py-1 rounded-lg text-xs bg-white dark:bg-darklight border border-border text-gray-700 dark:text-gray-300 flex items-center gap-1.5"
+                      >
+                        {s}
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(s)}
+                          className="text-red-400 hover:text-red-600 font-bold leading-none"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Description */}
