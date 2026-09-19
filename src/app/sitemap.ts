@@ -1,94 +1,129 @@
-import { MetadataRoute } from "next";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { MetadataRoute } from 'next';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://malithatishamal.vercel.app';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://malithatishamal.com";
-  const now = new Date();
-
-  // Core high-authority static routes
-  const staticRoutes: MetadataRoute.Sitemap = [
+  const baseUrl = siteUrl;
+  
+  // Static pages with their priorities and update frequencies
+  const staticPages = [
     {
       url: baseUrl,
-      lastModified: now,
-      changeFrequency: "daily",
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/services`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.95,
-    },
-    {
-      url: `${baseUrl}/projects`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.95,
-    },
-    {
-      url: `${baseUrl}/portfolio`,
-      lastModified: now,
-      changeFrequency: "weekly",
+      url: `${baseUrl}/#about`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/certifications`,
-      lastModified: now,
-      changeFrequency: "weekly",
+      url: `${baseUrl}/#services`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/testimonials`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.85,
+      url: `${baseUrl}/#portfolio`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
     },
     {
-      url: `${baseUrl}/blog`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.95,
+      url: `${baseUrl}/#testimonials`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
     },
     {
-      url: `${baseUrl}/about`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.85,
+      url: `${baseUrl}/#contact`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
     },
     {
-      url: `${baseUrl}/contact`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.9,
+      url: `${baseUrl}/#blog`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
     },
   ];
 
-  // Dynamic Blog routes (auto-synced with Firestore)
-  let dynamicBlogRoutes: MetadataRoute.Sitemap = [];
+  // Dynamic content from Firestore
+  const dynamicPages: MetadataRoute.Sitemap = [];
+
   try {
-    const blogSnap = await getDocs(collection(db, "blogs"));
-    if (!blogSnap.empty) {
-      dynamicBlogRoutes = blogSnap.docs
-        .filter((d) => d.data().published !== false)
-        .map((d) => {
-          const data = d.data();
-          const routeSlug = data.slug || d.id;
-          return {
-            url: `${baseUrl}/blog/${routeSlug}`,
-            lastModified: data.updatedAt
-              ? new Date(data.updatedAt)
-              : data.date
-              ? new Date(data.date)
-              : now,
-            changeFrequency: "weekly" as const,
-            priority: 0.85,
-          };
-        });
-    }
-  } catch (err) {
-    console.warn("[Sitemap] Notice fetching dynamic blogs:", err);
+    // Fetch blog posts
+    const blogsQuery = query(
+      collection(db, 'blogs'),
+      orderBy('publishedAt', 'desc'),
+      limit(50)
+    );
+    const blogsSnapshot = await getDocs(blogsQuery);
+    
+    blogsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      const publishedAt = data.publishedAt?.toDate?.() || new Date();
+      const slug = data.slug || doc.id;
+      
+      dynamicPages.push({
+        url: `${baseUrl}/blog/${slug}`,
+        lastModified: data.updatedAt?.toDate?.() || publishedAt,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      });
+    });
+
+    // Fetch projects
+    const projectsQuery = query(
+      collection(db, 'projects'),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    const projectsSnapshot = await getDocs(projectsQuery);
+    
+    projectsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      const createdAt = data.createdAt?.toDate?.() || new Date();
+      const slug = data.slug || doc.id;
+      
+      dynamicPages.push({
+        url: `${baseUrl}/projects/${slug}`,
+        lastModified: data.updatedAt?.toDate?.() || createdAt,
+        changeFrequency: 'monthly' as const,
+        priority: 0.9,
+      });
+    });
+
+    // Fetch portfolio items
+    const portfolioQuery = query(
+      collection(db, 'portfolio'),
+      orderBy('updatedAt', 'desc'),
+      limit(50)
+    );
+    const portfolioSnapshot = await getDocs(portfolioQuery);
+    
+    portfolioSnapshot.forEach((doc) => {
+      const data = doc.data();
+      const updatedAt = data.updatedAt?.toDate?.() || new Date();
+      const slug = data.slug || doc.id;
+      
+      dynamicPages.push({
+        url: `${baseUrl}/portfolio/${slug}`,
+        lastModified: updatedAt,
+        changeFrequency: 'monthly' as const,
+        priority: 0.9,
+      });
+    });
+
+  } catch (error) {
+    console.error('Error generating dynamic sitemap:', error);
+    // Return static pages only if dynamic content fails
   }
 
-  return [...staticRoutes, ...dynamicBlogRoutes];
+  return [...staticPages, ...dynamicPages];
 }

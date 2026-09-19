@@ -183,7 +183,7 @@ const Hero = () => {
             <div className='shrink-0 bg-transparent flex items-center'>
               <Image
                 src={getImgPath(heroData.signatureImageUrl || '/images/hero/signature.png')}
-                alt='Malitha Tishan Signature'
+                alt='Malitha Tishamal signature - Software Developer and Network Engineer'
                 width={170}
                 height={55}
                 quality={100}
@@ -233,7 +233,7 @@ const Hero = () => {
           <div className="overflow-hidden rounded-3xl max-w-[460px] w-full aspect-square shadow-2xl border-4 border-white/10 dark:border-white/5 relative">
             <Image
               src={getImgPath(heroData.heroImageUrl || '/images/hero/malitha-hero.png')}
-              alt='Malitha Tishamal'
+              alt='Malitha Tishamal - Expert Software Developer, DevOps Engineer and Network Specialist from Sri Lanka'
               width={460}
               height={460}
               quality={100}

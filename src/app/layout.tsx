@@ -18,7 +18,7 @@ const inter = Inter({
   fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://malithatishamal.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://malithatishamal.vercel.app";
 
 export const viewport: Viewport = {
   themeColor: [
@@ -32,42 +32,81 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Malitha Tishamal – Full Stack Software Developer, DevOps & Network Engineer",
+    default: "Malitha Tishamal – Expert Software Developer, DevOps Engineer & Network Specialist",
     template: "%s | Malitha Tishamal",
   },
   description:
-    "Official portfolio of Malitha Tishamal. Full Stack Software Developer, DevOps Engineer, Computer Network Specialist, and Cybersecurity Practitioner. Explore software architecture, cloud platforms, and engineering achievements.",
+    "Industry-leading software development and network engineering by Malitha Tishamal. Expert in full-stack development, DevOps, AI, cybersecurity, cloud infrastructure, and enterprise software solutions. Transform your business with cutting-edge technology.",
   keywords: [
     "Malitha Tishamal",
     "Malitha",
     "Tishamal",
-    "Malitha Tishamal Portfolio",
     "Software Developer",
     "Software Engineer",
     "Software Engineering",
+    "Full Stack Developer",
+    "Full Stack Developer Sri Lanka",
+    "Web Developer",
+    "Web Development",
+    "Software Development Company",
+    "Software Development Services",
     "Computer Networking",
     "Network Engineer",
     "Network Specialist",
-    "Networking",
+    "Networking Solutions",
+    "Network Architecture",
     "DevOps Engineer",
+    "DevOps Services",
+    "CI/CD Pipeline",
+    "Cloud Infrastructure",
+    "Cloud Computing",
+    "AWS Developer",
+    "Azure Developer",
+    "Google Cloud Developer",
+    "Docker Kubernetes",
+    "Container Orchestration",
+    "AI Developer",
+    "Artificial Intelligence",
+    "Machine Learning",
+    "AI Solutions",
     "Cybersecurity Specialist",
-    "Full Stack Developer",
-    "Full Stack Developer Sri Lanka",
+    "Network Security",
+    "Penetration Testing",
+    "Security Audits",
     "Linux Systems Administrator",
-    "Cloud Architecture",
-    "Docker Kubernetes DevOps",
+    "Server Administration",
+    "System Architecture",
+    "Enterprise Software",
+    "Custom Software Development",
     "Python Developer",
-    "React Next.js Developer",
+    "React Developer",
+    "Next.js Developer",
     "TypeScript Developer",
+    "JavaScript Developer",
+    "Node.js Developer",
     "Database Engineer",
-    "Penetration Testing Cybersecurity"
+    "PostgreSQL Developer",
+    "MongoDB Developer",
+    "API Development",
+    "RESTful APIs",
+    "GraphQL",
+    "Microservices Architecture",
+    "Software Consultant",
+    "Technology Consultant",
+    "IT Solutions",
+    "Digital Transformation",
+    "Software Project Management",
+    "Agile Development",
+    "Scrum Master",
+    "Technical Lead",
+    "Solutions Architect"
   ],
   authors: [{ name: "Malitha Tishamal", url: siteUrl }],
   creator: "Malitha Tishamal",
   publisher: "Malitha Tishamal",
   applicationName: "Malitha Tishamal Portfolio",
   alternates: {
-    canonical: "/",
+    canonical: siteUrl,
   },
   robots: {
     index: true,
@@ -85,24 +124,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: siteUrl,
-    title: "Malitha Tishamal – Full Stack Developer, DevOps & Network Engineer",
+    title: "Malitha Tishamal – Expert Software Developer, DevOps Engineer & Network Specialist",
     description:
-      "Explore software systems, computer networking topologies, cloud infrastructure, and technical writing by Malitha Tishamal.",
+      "Industry-leading software development and network engineering services. Expert in full-stack development, DevOps, AI, cybersecurity, and cloud infrastructure solutions for businesses.",
     siteName: "Malitha Tishamal Portfolio",
     images: [
       {
         url: "/images/hero/hero-image.png",
         width: 1200,
         height: 630,
-        alt: "Malitha Tishamal – Full Stack Developer & Network Engineer",
+        alt: "Malitha Tishamal – Expert Software Developer & Network Engineer",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Malitha Tishamal – Full Stack Developer, DevOps & Network Engineer",
+    title: "Malitha Tishamal – Expert Software Developer, DevOps Engineer & Network Specialist",
     description:
-      "Explore software systems, computer networking topologies, and cloud infrastructure by Malitha Tishamal.",
+      "Industry-leading software development and network engineering. Expert in full-stack development, DevOps, AI, cybersecurity, and cloud infrastructure.",
     creator: "@malithatishamal",
     images: ["/images/hero/hero-image.png"],
   },
@@ -115,6 +154,9 @@ export const metadata: Metadata = {
     apple: "/apple-icon.png",
   },
   category: "technology",
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
 };
 
 export default function RootLayout({

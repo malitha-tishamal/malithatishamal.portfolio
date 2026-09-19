@@ -5,7 +5,7 @@ interface StructuredDataProps {
 }
 
 export const StructuredData: React.FC<StructuredDataProps> = ({
-  siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://malithatishamal.com",
+  siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://malithatishamal.vercel.app",
 }) => {
   // Person Schema (Malitha Tishamal)
   const personSchema = {
@@ -13,10 +13,10 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
     "@type": "Person",
     "@id": `${siteUrl}/#person`,
     name: "Malitha Tishamal",
-    alternateName: ["Malitha", "Malitha Tishamal Portfolio", "Tishamal"],
-    jobTitle: "Full Stack Developer, DevOps & Network Engineer, AI & Cybersecurity Specialist",
+    alternateName: ["Malitha", "Malitha Tishamal Portfolio", "Tishamal", "Software Developer Sri Lanka"],
+    jobTitle: "Full Stack Developer, DevOps Engineer, Network Specialist, AI & Cybersecurity Expert",
     description:
-      "Malitha Tishamal is a Full Stack Software Developer, DevOps Engineer, Network Specialist, and Cybersecurity Practitioner with expertise in scalable web systems, Linux server infrastructure, cloud automation, and software development.",
+      "Malitha Tishamal is an industry-leading Full Stack Software Developer, DevOps Engineer, Network Specialist, and Cybersecurity Expert with extensive experience in scalable web systems, enterprise software development, Linux server infrastructure, cloud automation, AI solutions, and network security.",
     url: siteUrl,
     image: `${siteUrl}/images/hero/hero-image.png`,
     email: "mailto:malithatishamal@gmail.com",
@@ -24,6 +24,10 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
     nationality: {
       "@type": "Country",
       name: "Sri Lanka",
+    },
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: "LK",
     },
     alumniOf: {
       "@type": "EducationalOrganization",
@@ -35,9 +39,14 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
       "Computer Networking",
       "Network Engineering",
       "DevOps",
+      "DevOps Engineering",
       "Cybersecurity",
+      "Network Security",
       "Cloud Infrastructure",
+      "Cloud Computing",
       "Full Stack Development",
+      "Web Development",
+      "Enterprise Software",
       "Next.js",
       "React",
       "TypeScript",
@@ -45,15 +54,27 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
       "Python",
       "Go",
       "Docker",
+      "Kubernetes",
       "Linux Server Administration",
       "Nginx",
       "PostgreSQL",
       "MongoDB",
       "Firebase",
       "RESTful APIs",
+      "GraphQL",
+      "Microservices",
       "System Architecture",
       "Network Security",
-      "Penetration Testing"
+      "Penetration Testing",
+      "AI Development",
+      "Machine Learning",
+      "Artificial Intelligence",
+      "AWS",
+      "Azure",
+      "Google Cloud",
+      "CI/CD",
+      "Software Architecture",
+      "Technical Consulting"
     ],
     sameAs: [
       "https://github.com/malitha-tishamal",
@@ -70,10 +91,10 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
     "@type": "WebSite",
     "@id": `${siteUrl}/#website`,
     url: siteUrl,
-    name: "Malitha Tishamal – Full Stack Software Developer & Network Engineer",
+    name: "Malitha Tishamal – Expert Software Developer, DevOps Engineer & Network Specialist",
     alternateName: "Malitha Tishamal Official Portfolio",
     description:
-      "Explore software systems, networking topologies, cloud architectures, licenses, certifications, and technical blogs by Malitha Tishamal.",
+      "Industry-leading software development and network engineering services. Expert in full-stack development, DevOps, AI, cybersecurity, cloud infrastructure, and enterprise software solutions.",
     publisher: {
       "@id": `${siteUrl}/#person`,
     },
@@ -93,7 +114,7 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
     "@id": `${siteUrl}/#service`,
-    name: "Malitha Tishamal – Software Development & Network Engineering Services",
+    name: "Malitha Tishamal – Expert Software Development & Network Engineering Services",
     url: siteUrl,
     image: `${siteUrl}/images/hero/hero-image.png`,
     priceRange: "$$",
@@ -106,14 +127,14 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
     },
     hasOfferCatalog: {
       "@type": "OfferCatalog",
-      name: "Engineering & Development Services",
+      name: "Industry Engineering & Development Services",
       itemListElement: [
         {
           "@type": "Offer",
           itemOffered: {
             "@type": "Service",
             name: "Full Stack Software Engineering",
-            description: "End-to-end web and software application development using Next.js, React, Node.js, Python, and modern architectures.",
+            description: "Enterprise-grade web and software application development using Next.js, React, Node.js, Python, and modern microservices architectures for scalable business solutions.",
           },
         },
         {
@@ -121,7 +142,7 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
           itemOffered: {
             "@type": "Service",
             name: "DevOps & Cloud Infrastructure",
-            description: "CI/CD pipelines, Docker containerization, cloud deployment, and automated systems management.",
+            description: "Professional CI/CD pipelines, Docker containerization, Kubernetes orchestration, AWS/Azure/GCP cloud deployment, and automated systems management for enterprise operations.",
           },
         },
         {
@@ -129,7 +150,7 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
           itemOffered: {
             "@type": "Service",
             name: "Computer Networking & Server Architecture",
-            description: "Network configuration, Linux server administration, reverse proxies, DNS routing, and resilient infrastructure.",
+            description: "Advanced network configuration, Linux server administration, reverse proxies, DNS routing, load balancing, and resilient infrastructure design for high-availability systems.",
           },
         },
         {
@@ -137,11 +158,79 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
           itemOffered: {
             "@type": "Service",
             name: "Cybersecurity & Systems Hardening",
-            description: "Security audits, vulnerability assessments, server hardening, and secure software development practices.",
+            description: "Comprehensive security audits, vulnerability assessments, penetration testing, server hardening, secure software development practices, and enterprise security solutions.",
+          },
+        },
+        {
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "AI & Machine Learning Solutions",
+            description: "Custom AI development, machine learning model implementation, data processing pipelines, and intelligent automation solutions for business optimization.",
+          },
+        },
+        {
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "Technical Consulting & Architecture",
+            description: "Enterprise software architecture consulting, technology stack optimization, digital transformation strategy, and technical leadership for complex software projects.",
           },
         },
       ],
     },
+  };
+
+  // Organization Schema
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${siteUrl}/#organization`,
+    name: "Malitha Tishamal – Software Development & Network Engineering",
+    url: siteUrl,
+    logo: `${siteUrl}/images/logo/malitha-logo-white.png`,
+    description: "Industry-leading software development and network engineering services specializing in full-stack development, DevOps, AI, cybersecurity, and cloud infrastructure solutions.",
+    founder: {
+      "@id": `${siteUrl}/#person`,
+    },
+    foundingDate: "2020",
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: "LK",
+    },
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+94-XX-XXX-XXXX",
+      contactType: "customer service",
+      email: "malithatishamal@gmail.com",
+    },
+    sameAs: [
+      "https://github.com/malitha-tishamal",
+      "https://www.linkedin.com/in/malithatishamal",
+      "https://twitter.com/malithatishamal",
+      "https://facebook.com/malithatishamal",
+      "https://instagram.com/malithatishamal"
+    ],
+  };
+
+  // BreadcrumbList Schema
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Portfolio",
+        item: `${siteUrl}/#portfolio`,
+      },
+    ],
   };
 
   return (
@@ -157,6 +246,14 @@ export const StructuredData: React.FC<StructuredDataProps> = ({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
     </>
   );

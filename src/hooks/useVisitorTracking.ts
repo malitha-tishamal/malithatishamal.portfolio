@@ -68,7 +68,7 @@ export const useVisitorTracking = () => {
         });
 
         // Add visitor to Firestore
-        await addDoc(collection(db, 'visitors'), visitorData);
+        await addDoc(collection(db, 'visitors'), cleanVisitorData);
 
         // Update daily stats
         await updateDailyStats(today, location.country);
