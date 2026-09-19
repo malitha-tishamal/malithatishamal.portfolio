@@ -31,6 +31,7 @@ import { TestimonialsManager } from "@/components/Admin/TestimonialsManager";
 import { BlogManager } from "@/components/Admin/BlogManager";
 import { ContactManager } from "@/components/Admin/ContactManager";
 import { FooterManager } from "@/components/Admin/FooterManager";
+import { VisitorAnalytics } from "@/components/Admin/VisitorAnalytics";
 
 export default function AdminDashboardPage() {
   const { user, userProfile, logout } = useAuth();
@@ -319,6 +320,11 @@ export default function AdminDashboardPage() {
           {/* Tab 10: Footer Manager */}
           {activeTab === "footer" && (
             <FooterManager />
+          )}
+
+          {/* Tab 11: Visitor Analytics */}
+          {activeTab === "visitors" && (
+            <VisitorAnalytics />
           )}
         </main>
       </div>

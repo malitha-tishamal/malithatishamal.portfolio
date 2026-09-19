@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import toast from "react-hot-toast";
 
@@ -13,9 +13,11 @@ interface CounterConfig {
   testimonialsLabel: string;
   projectsThisYearLabel: string;
   totalProjectsLabel: string;
+  visitorsLabel: string;
   testimonialsOverride: number;
   projectsThisYearOverride: number;
   totalProjectsOverride: number;
+  visitorsOverride: number;
 }
 
 const defaultConfig: CounterConfig = {
@@ -26,9 +28,11 @@ const defaultConfig: CounterConfig = {
   testimonialsLabel: "Total Client testimonials",
   projectsThisYearLabel: "Projects completed in",
   totalProjectsLabel: "Total projects completed",
+  visitorsLabel: "Total website visitors",
   testimonialsOverride: 0,
   projectsThisYearOverride: 0,
   totalProjectsOverride: 0,
+  visitorsOverride: 0,
 };
 
 export function CounterManager() {
@@ -41,6 +45,7 @@ export function CounterManager() {
   const [liveAvgRating, setLiveAvgRating] = useState(0);
   const [liveProjectsThisYear, setLiveProjectsThisYear] = useState(0);
   const [liveTotalProjects, setLiveTotalProjects] = useState(0);
+  const [liveVisitors, setLiveVisitors] = useState(0);
 
   const currentYear = new Date().getFullYear();
 
@@ -91,6 +96,32 @@ export function CounterManager() {
     return () => unsub();
   }, [currentYear]);
 
+  // Live visitor count
+  useEffect(() => {
+    const fetchVisitorCount = async () => {
+      try {
+        const counterRef = doc(db, "siteContent", "visitorCounter");
+        const counterDoc = await getDoc(counterRef);
+        if (counterDoc.exists()) {
+          setLiveVisitors(counterDoc.data()?.totalVisitors || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching visitor count:", error);
+      }
+    };
+
+    fetchVisitorCount();
+
+    // Set up real-time listener for visitor count
+    const unsub = onSnapshot(doc(db, "siteContent", "visitorCounter"), (snap) => {
+      if (snap.exists()) {
+        setLiveVisitors(snap.data()?.totalVisitors || 0);
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
   const update = (patch: Partial<CounterConfig>) => {
     setConfig((prev) => ({ ...prev, ...patch }));
     setDirty(true);
@@ -114,6 +145,7 @@ export function CounterManager() {
   const displayTestimonials = config.testimonialsOverride > 0 ? config.testimonialsOverride : liveTestimonials;
   const displayThisYear = config.projectsThisYearOverride > 0 ? config.projectsThisYearOverride : liveProjectsThisYear;
   const displayTotal = config.totalProjectsOverride > 0 ? config.totalProjectsOverride : liveTotalProjects;
+  const displayVisitors = config.visitorsOverride > 0 ? config.visitorsOverride : liveVisitors;
 
   return (
     <div className="space-y-6">
@@ -160,10 +192,10 @@ export function CounterManager() {
               color: "text-green-500",
             },
             {
-              icon: "🏆",
-              value: displayTotal > 0 ? `${displayTotal}+` : "—",
-              label: config.totalProjectsLabel,
-              color: "text-violet-500",
+              icon: "👁️",
+              value: displayVisitors > 0 ? `${displayVisitors.toLocaleString()}+` : "—",
+              label: config.visitorsLabel,
+              color: "text-indigo-500",
             },
           ].map((s, i) => (
             <div key={i} className="flex flex-col items-center gap-1 text-center">
@@ -354,6 +386,40 @@ export function CounterManager() {
               min="0"
               value={config.totalProjectsOverride}
               onChange={(e) => update({ totalProjectsOverride: parseInt(e.target.value) || 0 })}
+              className="w-full px-4 py-2.5 rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-sm text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Stat 5: Website Visitors ──────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">👁️</span>
+          <h2 className="text-base font-bold text-dark dark:text-white">Stat 5 — Website Visitors</h2>
+          <span className="ml-auto text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-600 font-semibold">
+            Auto-count: {liveVisitors.toLocaleString()} total
+          </span>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Label text</label>
+            <input
+              type="text"
+              value={config.visitorsLabel}
+              onChange={(e) => update({ visitorsLabel: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-sm text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+              Override value <span className="normal-case">(0 = auto from Firestore)</span>
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={config.visitorsOverride}
+              onChange={(e) => update({ visitorsOverride: parseInt(e.target.value) || 0 })}
               className="w-full px-4 py-2.5 rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-sm text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>

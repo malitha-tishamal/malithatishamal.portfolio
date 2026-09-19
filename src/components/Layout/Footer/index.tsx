@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase'
 import { getImgPath } from '@/utils/image'
 import { FooterContent, defaultFooterContent } from '@/types/footer'
 import toast from 'react-hot-toast'
+import { useVisitorTracking } from '@/hooks/useVisitorTracking'
 
 const SOCIAL_COLORS: Record<string, string> = {
   LinkedIn: 'bg-[#0A66C2]',
@@ -38,6 +39,7 @@ const Footer: FC = () => {
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
+  const { totalVisitors } = useVisitorTracking()
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -270,9 +272,17 @@ const Footer: FC = () => {
             ))}
           </ul>
         )}
-        <p className="text-base font-medium" style={{ color: subTextColor }}>
-          {copyrightText}
-        </p>
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4">
+          <p className="text-base font-medium" style={{ color: subTextColor }}>
+            {copyrightText}
+          </p>
+          <span className="hidden sm:inline" style={{ color: subTextColor }}>
+            |
+          </span>
+          <p className="text-sm font-medium" style={{ color: subTextColor }}>
+            <span className="font-bold" style={{ color: textColor }}>{totalVisitors.toLocaleString()}</span> Total Visitors
+          </p>
+        </div>
       </div>
     </footer>
   )

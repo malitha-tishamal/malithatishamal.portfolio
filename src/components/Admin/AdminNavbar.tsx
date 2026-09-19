@@ -69,6 +69,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
               {activeTab === "testimonials" && "Testimonials Manager"}
               {activeTab === "blogs" && "Blog & News Manager"}
               {activeTab === "footer" && "Footer Manager"}
+              {activeTab === "visitors" && "Visitor Analytics"}
             </span>
           </div>
         </div>
@@ -180,6 +181,17 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
             }`}
           >
             <span>Footer</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("visitors")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center gap-1 ${
+              activeTab === "visitors"
+                ? "bg-white dark:bg-darklight text-primary shadow-xs font-semibold"
+                : "text-gray-600 dark:text-gray-400 hover:text-dark dark:hover:text-white"
+            }`}
+          >
+            <span>Analytics</span>
+            <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400">📊</span>
           </button>
         </div>
 

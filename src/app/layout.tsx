@@ -10,6 +10,7 @@ import NextTopLoader from "nextjs-toploader";
 import { AuthDialogProvider } from "./context/AuthDialogContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { StructuredData } from "@/components/SEO/StructuredData";
+import VisitorTracker from "@/components/VisitorTracker";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -142,6 +143,7 @@ export default function RootLayout({
               defaultTheme="system"
             >
               <Aoscompo>
+                <VisitorTracker />
                 <Header />
                 {children}
                 <Footer />
