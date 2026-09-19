@@ -24,9 +24,11 @@ const ContactForm = () => {
                        formData.email.trim() !== '' &&
                        formData.email.includes('@') &&
                        formData.specialist !== '' &&
+                       formData.specialist !== 'Choose a specialist' &&
                        formData.date !== '' &&
                        formData.time !== '' &&
-                       formData.message.trim() !== ''
+                       formData.message.trim() !== '' &&
+                       formData.message.trim().length > 10
 
   // Check if can submit (checkbox checked + form valid)
   const canSubmit = isFormFilled && agreedToTerms
@@ -39,8 +41,19 @@ const ContactForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!isFormFilled || !agreedToTerms) {
-      toast.error('Please fill in all required fields and agree to the terms.')
+    console.log('Submit button clicked')
+    console.log('Form data:', formData)
+    console.log('Form filled:', isFormFilled)
+    console.log('Terms agreed:', agreedToTerms)
+    console.log('Can submit:', canSubmit)
+    
+    if (!isFormFilled) {
+      toast.error('Please fill in all required fields first.')
+      return
+    }
+    
+    if (!agreedToTerms) {
+      toast.error('Please agree to the Terms and Conditions to submit.')
       return
     }
 
@@ -49,12 +62,13 @@ const ContactForm = () => {
     try {
       // Here you would typically send the form data to your backend
       // For now, we'll simulate the submission
-      console.log('Form submitted:', formData)
+      console.log('Starting form submission...')
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500))
       
-      toast.success('Inquiry submitted successfully! We will contact you soon.')
+      console.log('Form submission complete')
+      toast.success('✅ Inquiry submitted successfully! We will contact you soon.')
       
       // Reset form
       setFormData({
@@ -71,7 +85,7 @@ const ContactForm = () => {
       
     } catch (error) {
       console.error('Form submission error:', error)
-      toast.error('Failed to submit inquiry. Please try again.')
+      toast.error('❌ Failed to submit inquiry. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -261,7 +275,7 @@ const ContactForm = () => {
                   </label>
                   {!isFormFilled && (
                     <p className='text-xs text-gray-400 mt-1 ml-8'>
-                      Please fill in all required fields to enable this checkbox
+                      Please fill in all required fields (First Name, Last Name, Email, Specialist, Date, Time, Message) to enable this checkbox
                     </p>
                   )}
                 </div>
