@@ -411,8 +411,11 @@ export const FooterManager: React.FC = () => {
                       href="https://myaccount.google.com/apppasswords"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-2 bg-gray-100 dark:bg-darkmode text-xs font-medium text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-darklight transition cursor-pointer"
-                      disabled={!formData.gmailSmtpEnabled}
+                      className={`px-3 py-2 bg-gray-100 dark:bg-darkmode text-xs font-medium rounded-lg transition ${
+                        !formData.gmailSmtpEnabled 
+                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50' 
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-darklight cursor-pointer'
+                      }`}
                     >
                       Get App Password ↗
                     </a>
