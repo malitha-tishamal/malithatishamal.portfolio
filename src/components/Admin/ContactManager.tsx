@@ -91,6 +91,19 @@ export const ContactManager: React.FC = () => {
     else setSavingSmtp(true);
 
     try {
+      // First, save to Firestore
+      await setDoc(
+        doc(db, "siteContent", "contact"),
+        {
+          gmailSmtpUser: smtpUser.trim(),
+          gmailNotificationRecipient: receiverEmail.trim(),
+          gmailSmtpAppPassword: smtpPass.trim(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // Then call the API for SMTP configuration/testing
       const res = await fetch("/api/contact/smtp-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,7 +124,7 @@ export const ContactManager: React.FC = () => {
       setSmtpConfigured(true);
       setSmtpPass(""); // Clear password field from UI once saved
       setPasswordSaved(true);
-      setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
+      setPasswordFetchResult({ success: true, message: "✅ Key saved to Firestore successfully!" });
       toast.success(data.message || "SMTP configured successfully!");
       // Reset password saved indicator after 5 seconds
       setTimeout(() => setPasswordSaved(false), 5000);
