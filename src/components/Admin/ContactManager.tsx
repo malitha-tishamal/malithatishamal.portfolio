@@ -57,6 +57,8 @@ export const ContactManager: React.FC = () => {
   const [testingSmtp, setTestingSmtp] = useState<boolean>(false);
   const [savingSmtp, setSavingSmtp] = useState<boolean>(false);
   const [showSmtpPass, setShowSmtpPass] = useState<boolean>(false);
+  const [passwordFetchResult, setPasswordFetchResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [passwordSaved, setPasswordSaved] = useState(false);
 
   // Check SMTP configuration status on load
   useEffect(() => {
@@ -108,12 +110,58 @@ export const ContactManager: React.FC = () => {
 
       setSmtpConfigured(true);
       setSmtpPass(""); // Clear password field from UI once saved
+      setPasswordSaved(true);
+      setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
       toast.success(data.message || "SMTP configured successfully!");
+      // Reset password saved indicator after 5 seconds
+      setTimeout(() => setPasswordSaved(false), 5000);
     } catch (err: any) {
       toast.error(err.message || "Failed to update SMTP settings");
+      setPasswordSaved(false);
+      setPasswordFetchResult({ success: false, message: "❌ Failed to save password to Firestore" });
     } finally {
       setTestingSmtp(false);
       setSavingSmtp(false);
+    }
+  };
+
+  // Copy password to clipboard
+  const copyPassword = async () => {
+    const password = smtpPass.trim();
+    if (!password) {
+      toast.error('No password to copy');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(password);
+      toast.success('Password copied to clipboard!');
+    } catch (error) {
+      toast.error('Failed to copy password');
+    }
+  };
+
+  // Fetch password from Firestore
+  const fetchPasswordFromFirestore = async () => {
+    try {
+      const snap = await getDoc(doc(db, "siteContent", "contact"));
+      if (snap.exists()) {
+        const data = snap.data() as any;
+        if (data.gmailSmtpAppPassword) {
+          setSmtpPass(data.gmailSmtpAppPassword);
+          setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
+          toast.success("Password fetched from Firestore!");
+        } else {
+          setPasswordFetchResult({ success: false, message: "❌ No password found in Firestore" });
+          toast.error("No password found in Firestore");
+        }
+      } else {
+        setPasswordFetchResult({ success: false, message: "❌ No contact configuration found in Firestore" });
+        toast.error("No contact configuration found");
+      }
+    } catch (error) {
+      console.error('Error fetching password:', error);
+      setPasswordFetchResult({ success: false, message: "❌ Failed to fetch password from Firestore" });
+      toast.error("Failed to fetch password from Firestore");
     }
   };
 
@@ -177,6 +225,13 @@ export const ContactManager: React.FC = () => {
             ...data,
             partners: data.partners?.length ? data.partners : defaultContactPartners,
           });
+          // Load SMTP settings if available
+          if (data.gmailSmtpUser) setSmtpUser(data.gmailSmtpUser);
+          if (data.gmailNotificationRecipient) setReceiverEmail(data.gmailNotificationRecipient);
+          if (data.gmailSmtpAppPassword) {
+            setSmtpPass(data.gmailSmtpAppPassword);
+            setSmtpConfigured(true);
+          }
         }
       } catch (e) {
         console.error("Error fetching contact settings:", e);
@@ -196,14 +251,23 @@ export const ContactManager: React.FC = () => {
         doc(db, "siteContent", "contact"),
         {
           ...formData,
+          gmailSmtpUser: smtpUser,
+          gmailNotificationRecipient: receiverEmail,
+          gmailSmtpAppPassword: smtpPass || undefined,
           updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
       toast.success("Contact section settings saved successfully!");
+      if (smtpPass) {
+        setPasswordSaved(true);
+        setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
+        setTimeout(() => setPasswordSaved(false), 5000);
+      }
     } catch (err: any) {
       console.error("Error saving contact settings:", err);
       toast.error(err.message || "Failed to save settings.");
+      setPasswordSaved(false);
     } finally {
       setSavingSettings(false);
     }
@@ -984,38 +1048,80 @@ export const ContactManager: React.FC = () => {
 
               {/* 16-Char Google App Password */}
               <div className="md:col-span-2">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300">
-                    Google App Password (16 Characters)
-                  </label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-1.5">
+                  Google App Password (16 Characters)
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showSmtpPass ? "text" : "password"}
+                      value={smtpPass}
+                      onChange={(e) => {
+                        setSmtpPass(e.target.value.replace(/\s/g, ''));
+                        setPasswordSaved(false);
+                      }}
+                      placeholder={smtpConfigured ? "•••••••••••••••• (Configured. Enter new to update)" : "e.g. abcd efgh ijkl mnop"}
+                      className="w-full text-xs sm:text-sm font-mono tracking-wider px-4 py-2.5 pr-20 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border text-midnight_text dark:text-white focus:border-primary focus:outline-none"
+                      maxLength={16}
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowSmtpPass((p) => !p)}
+                        className="p-1.5 rounded transition text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-darklight cursor-pointer"
+                        title={showSmtpPass ? "Hide password" : "Show password"}
+                      >
+                        {showSmtpPass ? "👁️" : "👁️‍🗨️"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={copyPassword}
+                        disabled={!smtpPass}
+                        className={`p-1.5 rounded transition ${
+                          !smtpPass
+                            ? 'text-gray-400 cursor-not-allowed opacity-50'
+                            : 'text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-darklight cursor-pointer'
+                        }`}
+                        title="Copy password"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fetchPasswordFromFirestore}
+                    className="px-3 py-2 text-xs font-medium rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition cursor-pointer"
+                    title="Fetch password from Firestore"
+                  >
+                    🔄 Fetch from Firestore
+                  </button>
                   <a
                     href="https://myaccount.google.com/apppasswords"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] text-primary hover:underline font-semibold"
+                    className="px-3 py-2 bg-gray-100 dark:bg-darkmode text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-darklight transition cursor-pointer"
                   >
-                    Get App Password from Google ↗
+                    Get App Password ↗
                   </a>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showSmtpPass ? "text" : "password"}
-                    value={smtpPass}
-                    onChange={(e) => setSmtpPass(e.target.value)}
-                    placeholder={smtpConfigured ? "•••••••••••••••• (Configured. Enter new to update)" : "e.g. abcd efgh ijkl mnop"}
-                    className="w-full text-xs sm:text-sm font-mono tracking-wider px-4 py-2.5 pr-24 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border text-midnight_text dark:text-white focus:border-primary focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSmtpPass((p) => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-dark dark:hover:text-white font-medium cursor-pointer"
-                  >
-                    {showSmtpPass ? "Hide" : "Show"}
-                  </button>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-1">
                   Spaces are automatically removed. This is your 16-character Google App Password (not your regular Google password).
                 </p>
+                {passwordSaved && (
+                  <div className="mt-2 p-2 rounded-lg text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800">
+                    ✅ Key fetched from Firestore successfully!
+                  </div>
+                )}
+                {passwordFetchResult && (
+                  <div className={`mt-2 p-2 rounded-lg text-xs ${
+                    passwordFetchResult.success
+                      ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800'
+                      : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
+                  }`}>
+                    {passwordFetchResult.message}
+                  </div>
+                )}
               </div>
             </div>
 
