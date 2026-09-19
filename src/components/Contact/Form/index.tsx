@@ -41,19 +41,15 @@ const ContactForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('Submit button clicked')
-    console.log('Form data:', formData)
-    console.log('Form filled:', isFormFilled)
-    console.log('Terms agreed:', agreedToTerms)
-    console.log('Can submit:', canSubmit)
-    
+    // Check if form is filled
     if (!isFormFilled) {
-      toast.error('Please fill in all required fields first.')
+      toast.error('Please fill in all required fields first.', { duration: 3000 })
       return
     }
     
+    // Check if terms are agreed
     if (!agreedToTerms) {
-      toast.error('Please agree to the Terms and Conditions to submit.')
+      toast.error('Please agree to the Terms and Conditions to submit.', { duration: 3000 })
       return
     }
 
@@ -62,13 +58,12 @@ const ContactForm = () => {
     try {
       // Here you would typically send the form data to your backend
       // For now, we'll simulate the submission
-      console.log('Starting form submission...')
+      console.log('Form submitted:', formData)
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500))
       
-      console.log('Form submission complete')
-      toast.success('✅ Inquiry submitted successfully! We will contact you soon.')
+      toast.success('✅ Inquiry submitted successfully! We will contact you soon.', { duration: 5000 })
       
       // Reset form
       setFormData({
@@ -85,7 +80,7 @@ const ContactForm = () => {
       
     } catch (error) {
       console.error('Form submission error:', error)
-      toast.error('❌ Failed to submit inquiry. Please try again.')
+      toast.error('❌ Failed to submit inquiry. Please try again.', { duration: 3000 })
     } finally {
       setIsSubmitting(false)
     }

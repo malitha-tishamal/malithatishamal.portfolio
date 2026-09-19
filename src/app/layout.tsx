@@ -11,6 +11,7 @@ import { AuthDialogProvider } from "./context/AuthDialogContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { StructuredData } from "@/components/SEO/StructuredData";
 import VisitorTracker from "@/components/VisitorTracker";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -191,6 +192,7 @@ export default function RootLayout({
                 <Footer />
               </Aoscompo>
               <ScrollToTop />
+              <Toaster position="top-center" reverseOrder={false} />
             </ThemeProvider>
           </AuthDialogProvider>
         </AuthProvider>
