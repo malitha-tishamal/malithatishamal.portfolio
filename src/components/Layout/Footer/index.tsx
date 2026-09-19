@@ -4,7 +4,7 @@ import React, { FC, useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { doc, onSnapshot, collection, addDoc, serverTimestamp, setDoc, increment } from 'firebase/firestore'
+import { doc, onSnapshot, collection, serverTimestamp, setDoc, increment } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getImgPath } from '@/utils/image'
 import { FooterContent, defaultFooterContent } from '@/types/footer'
@@ -68,10 +68,24 @@ const Footer: FC = () => {
     if (!email || !email.includes('@')) { toast.error('Please enter a valid email address.'); return }
     setSubmitting(true)
     try {
-      await addDoc(collection(db, 'newsletterSubscribers'), { email, subscribedAt: serverTimestamp() })
-      setSubscribed(true)
-      setEmail('')
-      toast.success('Successfully subscribed!')
+      // Use the new API endpoint that handles email notifications
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSubscribed(true)
+        setEmail('')
+        toast.success(data.message || 'Successfully subscribed!')
+      } else {
+        toast.error(data.error || 'Something went wrong. Please try again.')
+      }
     } catch (err) {
       console.error(err)
       toast.error('Something went wrong. Please try again.')

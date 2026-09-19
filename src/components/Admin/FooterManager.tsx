@@ -28,6 +28,8 @@ export const FooterManager: React.FC = () => {
   const [newPlatform, setNewPlatform] = useState("");
   const [newNavLabel, setNewNavLabel] = useState("");
   const [newNavHref, setNewNavHref] = useState("");
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // ── Fetch footer content ──────────────────────────────────────────────────
   useEffect(() => {
@@ -282,7 +284,7 @@ export const FooterManager: React.FC = () => {
             <h3 className="text-sm font-bold text-dark dark:text-white mb-4 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-orange-500 inline-block" /> Newsletter (Right Column)
             </h3>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className={labelCls}>Title</label>
                 <input className={inputCls} value={formData.newsletterTitle} onChange={e => setField("newsletterTitle", e.target.value)} placeholder="Subscribe newsletter" />
@@ -290,6 +292,220 @@ export const FooterManager: React.FC = () => {
               <div>
                 <label className={labelCls}>Subtitle</label>
                 <input className={inputCls} value={formData.newsletterSubtitle} onChange={e => setField("newsletterSubtitle", e.target.value)} placeholder="Stay updated..." />
+              </div>
+            </div>
+            
+            {/* Email Notification Settings */}
+            <div className="border-t border-border dark:border-dark_border pt-4 mt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="enableNotifications"
+                  checked={formData.enableNewsletterNotifications ?? true}
+                  onChange={e => setField("enableNewsletterNotifications", e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                />
+                <label htmlFor="enableNotifications" className="text-sm font-medium text-dark dark:text-white cursor-pointer">
+                  Enable Email Notifications
+                </label>
+              </div>
+              <div>
+                <label className={labelCls}>Notification Email Address</label>
+                <input
+                  className={inputCls}
+                  type="email"
+                  value={formData.newsletterNotificationEmail || ''}
+                  onChange={e => setField("newsletterNotificationEmail", e.target.value)}
+                  placeholder="your-email@example.com"
+                  disabled={!formData.enableNewsletterNotifications}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  When someone subscribes, you'll receive an email notification at this address.
+                </p>
+              </div>
+            </div>
+
+            {/* Gmail SMTP Configuration */}
+            <div className="border-t border-border dark:border-dark_border pt-4 mt-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">📧</span>
+                  <div>
+                    <h4 className="font-bold text-dark dark:text-white text-sm">Email Notifications (Gmail SMTP)</h4>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Send an automatic email copy of every new newsletter subscription directly to your personal inbox.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-lg">⚠️</span>
+                  <div>
+                    <h4 className="font-bold text-dark dark:text-white text-sm">App Password Required</h4>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Newsletter subscriptions are currently being saved safely into the database, but Google Gmail requires a 16-character Google App Password to authorize your website to send notification emails.
+                    </p>
+                    <ol className="text-xs text-gray-600 dark:text-gray-400 mt-2 list-decimal list-inside space-y-1">
+                      <li>Make sure 2-Step Verification is ON in your Google Account.</li>
+                      <li>Visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google App Passwords</a> ↗</li>
+                      <li>Type an App Name (e.g. Portfolio) and click Create.</li>
+                      <li>Copy the 16-letter code and paste it below.</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <input
+                  type="checkbox"
+                  id="enableGmailSmtp"
+                  checked={formData.gmailSmtpEnabled ?? false}
+                  onChange={e => setField("gmailSmtpEnabled", e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                />
+                <label htmlFor="enableGmailSmtp" className="text-sm font-medium text-dark dark:text-white cursor-pointer">
+                  Enable Gmail SMTP
+                </label>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={labelCls}>Sender Gmail Account (SMTP User)</label>
+                  <input
+                    className={inputCls}
+                    type="email"
+                    value={formData.gmailSmtpUser || ''}
+                    onChange={e => setField("gmailSmtpUser", e.target.value)}
+                    placeholder="malithatishamal@gmail.com"
+                    disabled={!formData.gmailSmtpEnabled}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelCls}>Notification Recipient Email</label>
+                  <input
+                    className={inputCls}
+                    type="email"
+                    value={formData.gmailNotificationRecipient || ''}
+                    onChange={e => setField("gmailNotificationRecipient", e.target.value)}
+                    placeholder="malithatishamal@gmail.com"
+                    disabled={!formData.gmailSmtpEnabled}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelCls}>Google App Password (16 Characters)</label>
+                  <div className="flex gap-2">
+                    <input
+                      className={`${inputCls} flex-1`}
+                      type="password"
+                      value={formData.gmailSmtpAppPassword || ''}
+                      onChange={e => setField("gmailSmtpAppPassword", e.target.value.replace(/\s/g, ''))}
+                      placeholder="e.g. abcd efgh ijkl mnop"
+                      disabled={!formData.gmailSmtpEnabled}
+                      maxLength={16}
+                    />
+                    <a
+                      href="https://myaccount.google.com/apppasswords"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 bg-gray-100 dark:bg-darkmode text-xs font-medium text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-darklight transition cursor-pointer"
+                      disabled={!formData.gmailSmtpEnabled}
+                    >
+                      Get App Password ↗
+                    </a>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Spaces are automatically removed. This is your 16-character Google App Password (not your regular Google password).
+                  </p>
+                </div>
+              </div>
+
+              {/* Test Email Button */}
+              <div className="mt-4">
+                <button
+                  onClick={async () => {
+                    const smtpUser = formData.gmailSmtpUser || '';
+                    const appPassword = formData.gmailSmtpAppPassword || '';
+                    const recipientEmail = formData.gmailNotificationRecipient || '';
+
+                    if (!smtpUser || !appPassword || !recipientEmail) {
+                      toast.error('Please fill in all Gmail SMTP fields first.');
+                      return;
+                    }
+
+                    setTestingEmail(true);
+                    setTestEmailResult(null);
+
+                    try {
+                      const response = await fetch('/api/newsletter/test-email', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          smtpUser,
+                          appPassword,
+                          recipientEmail,
+                        }),
+                      });
+
+                      const data = await response.json();
+                      setTestEmailResult(data);
+
+                      if (response.ok) {
+                        toast.success(data.message);
+                        // Refresh the form data to get the saved configuration
+                        const fetch = async () => {
+                          const snap = await getDoc(doc(db, "siteContent", "footer"));
+                          if (snap.exists()) {
+                            const d = snap.data() as FooterContent;
+                            setFormData({
+                              ...defaultFooterContent,
+                              ...(d),
+                              socialLinks: d.socialLinks?.length ? d.socialLinks : DEFAULT_SOCIAL_LINKS,
+                              navLinks: d.navLinks?.length ? d.navLinks : DEFAULT_NAV_LINKS,
+                            });
+                          }
+                        };
+                        fetch();
+                      } else {
+                        toast.error(data.error);
+                      }
+                    } catch (error) {
+                      console.error('Test email error:', error);
+                      toast.error('Failed to send test email. Please try again.');
+                    } finally {
+                      setTestingEmail(false);
+                    }
+                  }}
+                  disabled={testingEmail || !formData.gmailSmtpEnabled}
+                  className="w-full py-3 px-4 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {testingEmail ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Sending Test Email...
+                    </>
+                  ) : (
+                    <>
+                      <span>🚀</span>
+                      Save & Send Test Email
+                    </>
+                  )}
+                </button>
+
+                {testEmailResult && (
+                  <div className={`mt-3 p-3 rounded-lg text-sm ${
+                    testEmailResult.success 
+                      ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' 
+                      : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
+                  }`}>
+                    {testEmailResult.message}
+                  </div>
+                )}
               </div>
             </div>
           </div>

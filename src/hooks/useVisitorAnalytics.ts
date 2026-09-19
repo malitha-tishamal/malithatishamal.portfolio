@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { VisitorAnalytics, DailyStats } from '@/types/visitor';
+import { VisitorAnalytics, DailyStats, Visitor } from '@/types/visitor';
 import { getTodayDate, getYesterdayDate } from '@/utils/visitorTracking';
 
 export const useVisitorAnalytics = () => {

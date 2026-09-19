@@ -43,6 +43,16 @@ export interface FooterContent {
   showVisitorCount?: boolean;
   visitorCountLabel?: string;
   visitorCountBase?: number;
+
+  // Newsletter Email Notification Settings
+  newsletterNotificationEmail?: string; // Email to receive subscription notifications
+  enableNewsletterNotifications?: boolean; // Enable/disable email notifications
+  
+  // Gmail SMTP Configuration for Email Notifications
+  gmailSmtpEnabled?: boolean; // Enable Gmail SMTP for email sending
+  gmailSmtpUser?: string; // Gmail address for SMTP (sender)
+  gmailSmtpAppPassword?: string; // 16-character Google App Password
+  gmailNotificationRecipient?: string; // Email to receive notifications
 }
 
 export const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
@@ -99,4 +109,14 @@ export const defaultFooterContent: FooterContent = {
   showVisitorCount: true,
   visitorCountLabel: "Total Visitors",
   visitorCountBase: 1250,
+
+  // Newsletter Email Notification
+  newsletterNotificationEmail: 'malithatishamal@gmail.com',
+  enableNewsletterNotifications: true,
+
+  // Gmail SMTP Configuration
+  gmailSmtpEnabled: false,
+  gmailSmtpUser: 'malithatishamal@gmail.com',
+  gmailSmtpAppPassword: '',
+  gmailNotificationRecipient: 'malithatishamal@gmail.com',
 };

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, increment, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Visitor, VisitorData } from '@/types/visitor';
+import { Visitor } from '@/types/visitor';
 import {
   getClientIP,
   getLocationFromIP,
@@ -36,39 +36,25 @@ export const useVisitorTracking = () => {
         const today = getTodayDate();
 
         // Create visitor document
-        const visitorData: VisitorData = {
+        const visitorData: Omit<Visitor, 'id'> = {
           ip,
-          location,
+          location: {
+            country: location.country,
+            city: location.city,
+            countryCode: location.countryCode,
+            ...(location.region && { region: location.region }),
+          },
           visitDate: {
             date: today,
             timestamp: Date.now(),
           },
-          userAgent,
-          referrer,
-          page,
+          ...(userAgent && { userAgent }),
+          ...(referrer && { referrer }),
+          ...(page && { page }),
         };
 
-        // Remove undefined values to avoid Firestore errors
-        const cleanVisitorData: any = {};
-        Object.keys(visitorData).forEach(key => {
-          const value = visitorData[key as keyof VisitorData];
-          if (value !== undefined) {
-            if (typeof value === 'object' && value !== null) {
-              cleanVisitorData[key] = {};
-              Object.keys(value).forEach(subKey => {
-                const subValue = value[subKey as keyof typeof value];
-                if (subValue !== undefined) {
-                  cleanVisitorData[key][subKey] = subValue;
-                }
-              });
-            } else {
-              cleanVisitorData[key] = value;
-            }
-          }
-        });
-
         // Add visitor to Firestore
-        await addDoc(collection(db, 'visitors'), cleanVisitorData);
+        await addDoc(collection(db, 'visitors'), visitorData);
 
         // Update daily stats
         await updateDailyStats(today, location.country);

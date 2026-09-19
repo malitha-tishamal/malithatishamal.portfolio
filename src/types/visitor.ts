@@ -16,23 +16,6 @@ export interface Visitor {
   page?: string;
 }
 
-export interface VisitorData {
-  ip: string;
-  location: {
-    country: string;
-    city: string;
-    countryCode: string;
-    region?: string;
-  };
-  visitDate: {
-    date: string;
-    timestamp: number;
-  };
-  userAgent?: string;
-  referrer?: string;
-  page?: string;
-}
-
 export interface DailyStats {
   date: string; // YYYY-MM-DD
   totalVisitors: number;
