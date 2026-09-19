@@ -27,12 +27,14 @@ export interface GeneratedSEO {
     image: string;
     url: string;
     type: string;
+    locale: string;
   };
   twitter: {
     card: string;
     title: string;
     description: string;
     image: string;
+    creator: string;
   };
   structuredData: any;
   canonicalUrl: string;
@@ -184,7 +186,6 @@ export const generateOpenGraph = (content: SEOContent) => {
     image: imageUrl || `${SITE_URL}/images/hero/hero-image.png`,
     url: `${SITE_URL}${url}`,
     type: type === 'blog' ? 'article' : 'website',
-    siteName: `${AUTHOR_NAME} Portfolio`,
     locale: 'en_US',
   };
 };
@@ -201,7 +202,6 @@ export const generateTwitterCard = (content: SEOContent) => {
     description: generateOptimizedDescription(content),
     image: imageUrl || `${SITE_URL}/images/hero/hero-image.png`,
     creator: '@malithatishamal',
-    site: '@malithatisham',
   };
 };
 

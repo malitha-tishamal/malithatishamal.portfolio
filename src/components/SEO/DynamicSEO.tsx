@@ -41,16 +41,16 @@ export const DynamicSEO: React.FC<DynamicSEOProps> = ({
       <meta property="og:description" content={seo.openGraph.description} />
       <meta property="og:image" content={seo.openGraph.image} />
       <meta property="og:url" content={seo.openGraph.url} />
-      <meta property="og:site_name" content={seo.openGraph.siteName} />
-      <meta property="og:locale" content={seo.openGraph.locale} />
+      <meta property="og:site_name" content="Malitha Tishamal Portfolio" />
+      <meta property="og:locale" content="en_US" />
       
       {/* Twitter Card */}
       <meta name="twitter:card" content={seo.twitter.card} />
       <meta name="twitter:title" content={seo.twitter.title} />
       <meta name="twitter:description" content={seo.twitter.description} />
       <meta name="twitter:image" content={seo.twitter.image} />
-      <meta name="twitter:creator" content={seo.twitter.creator} />
-      <meta name="twitter:site" content={seo.twitter.site} />
+      <meta name="twitter:creator" content="@malithatishamal" />
+      <meta name="twitter:site" content="@malithatisham" />
       
       {/* Additional Meta Tags */}
       {additionalMetaTags.map((tag, index) => (
