@@ -18,23 +18,18 @@ const ContactForm = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Check if form is valid
-  const isFormValid = () => {
-    return formData.firstName.trim() !== '' &&
-           formData.lastName.trim() !== '' &&
-           formData.email.trim() !== '' &&
-           formData.email.includes('@') &&
-           formData.specialist !== '' &&
-           formData.date !== '' &&
-           formData.time !== '' &&
-           formData.message.trim() !== ''
-  }
-
   // Check if form is filled (for enabling checkbox)
-  const isFormFilled = isFormValid()
+  const isFormFilled = formData.firstName.trim() !== '' &&
+                       formData.lastName.trim() !== '' &&
+                       formData.email.trim() !== '' &&
+                       formData.email.includes('@') &&
+                       formData.specialist !== '' &&
+                       formData.date !== '' &&
+                       formData.time !== '' &&
+                       formData.message.trim() !== ''
 
   // Check if can submit (checkbox checked + form valid)
-  const canSubmit = isFormValid && agreedToTerms
+  const canSubmit = isFormFilled && agreedToTerms
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -44,7 +39,7 @@ const ContactForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!canSubmit) {
+    if (!isFormFilled || !agreedToTerms) {
       toast.error('Please fill in all required fields and agree to the terms.')
       return
     }
