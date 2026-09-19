@@ -30,6 +30,9 @@ export const FooterManager: React.FC = () => {
   const [newNavHref, setNewNavHref] = useState("");
   const [testingEmail, setTestingEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordFetchResult, setPasswordFetchResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [passwordSaved, setPasswordSaved] = useState(false);
 
   // ── Fetch footer content ──────────────────────────────────────────────────
   useEffect(() => {
@@ -128,9 +131,13 @@ export const FooterManager: React.FC = () => {
     try {
       await setDoc(doc(db, "siteContent", "footer"), { ...formData, updatedAt: serverTimestamp() });
       toast.success("Footer saved successfully!");
+      setPasswordSaved(true);
+      // Reset password saved indicator after 5 seconds
+      setTimeout(() => setPasswordSaved(false), 5000);
     } catch (e) {
       console.error(e);
       toast.error("Failed to save. Please try again.");
+      setPasswordSaved(false);
     } finally { setSaving(false); }
   };
 
@@ -142,6 +149,51 @@ export const FooterManager: React.FC = () => {
       setSubscribers(prev => prev.filter(s => s.id !== id));
       toast.success("Subscriber removed.");
     } catch (e) { toast.error("Error removing subscriber."); }
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  // Copy password to clipboard
+  const copyPassword = async () => {
+    const password = formData.gmailSmtpAppPassword || '';
+    if (!password) {
+      toast.error('No password to copy');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(password);
+      toast.success('Password copied to clipboard!');
+    } catch (error) {
+      toast.error('Failed to copy password');
+    }
+  };
+
+  // Fetch password from Firestore
+  const fetchPasswordFromFirestore = async () => {
+    try {
+      const snap = await getDoc(doc(db, "siteContent", "footer"));
+      if (snap.exists()) {
+        const d = snap.data() as FooterContent;
+        if (d.gmailSmtpAppPassword) {
+          setField("gmailSmtpAppPassword", d.gmailSmtpAppPassword);
+          setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
+          toast.success("Password fetched from Firestore!");
+        } else {
+          setPasswordFetchResult({ success: false, message: "❌ No password found in Firestore" });
+          toast.error("No password found in Firestore");
+        }
+      } else {
+        setPasswordFetchResult({ success: false, message: "❌ No footer configuration found in Firestore" });
+        toast.error("No footer configuration found");
+      }
+    } catch (error) {
+      console.error('Error fetching password:', error);
+      setPasswordFetchResult({ success: false, message: "❌ Failed to fetch password from Firestore" });
+      toast.error("Failed to fetch password from Firestore");
+    }
   };
 
   if (loading) return (
@@ -398,22 +450,68 @@ export const FooterManager: React.FC = () => {
                 <div>
                   <label className={labelCls}>Google App Password (16 Characters)</label>
                   <div className="flex gap-2">
-                    <input
-                      className={`${inputCls} flex-1`}
-                      type="password"
-                      value={formData.gmailSmtpAppPassword || ''}
-                      onChange={e => setField("gmailSmtpAppPassword", e.target.value.replace(/\s/g, ''))}
-                      placeholder="e.g. abcd efgh ijkl mnop"
+                    <div className="relative flex-1">
+                      <input
+                        className={`${inputCls} pr-20`}
+                        type={showPassword ? "text" : "password"}
+                        value={formData.gmailSmtpAppPassword || ''}
+                        onChange={e => {
+                          setField("gmailSmtpAppPassword", e.target.value.replace(/\s/g, ''));
+                          setPasswordSaved(false);
+                        }}
+                        placeholder="e.g. abcd efgh ijkl mnop"
+                        disabled={!formData.gmailSmtpEnabled}
+                        maxLength={16}
+                      />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                        <button
+                          type="button"
+                          onClick={togglePasswordVisibility}
+                          disabled={!formData.gmailSmtpEnabled}
+                          className={`p-1.5 rounded transition ${
+                            !formData.gmailSmtpEnabled
+                              ? 'text-gray-400 cursor-not-allowed opacity-50'
+                              : 'text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-darklight cursor-pointer'
+                          }`}
+                          title={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? "👁️" : "👁️‍🗨️"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={copyPassword}
+                          disabled={!formData.gmailSmtpEnabled || !formData.gmailSmtpAppPassword}
+                          className={`p-1.5 rounded transition ${
+                            !formData.gmailSmtpEnabled || !formData.gmailSmtpAppPassword
+                              ? 'text-gray-400 cursor-not-allowed opacity-50'
+                              : 'text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-darklight cursor-pointer'
+                          }`}
+                          title="Copy password"
+                        >
+                          📋
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchPasswordFromFirestore}
                       disabled={!formData.gmailSmtpEnabled}
-                      maxLength={16}
-                    />
+                      className={`px-3 py-2 text-xs font-medium rounded-lg transition ${
+                        !formData.gmailSmtpEnabled
+                          ? 'bg-gray-100 dark:bg-darkmode text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                          : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 cursor-pointer'
+                      }`}
+                      title="Fetch password from Firestore"
+                    >
+                      🔄 Fetch from Firestore
+                    </button>
                     <a
                       href="https://myaccount.google.com/apppasswords"
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`px-3 py-2 bg-gray-100 dark:bg-darkmode text-xs font-medium rounded-lg transition ${
-                        !formData.gmailSmtpEnabled 
-                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50' 
+                        !formData.gmailSmtpEnabled
+                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
                           : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-darklight cursor-pointer'
                       }`}
                     >
@@ -423,6 +521,20 @@ export const FooterManager: React.FC = () => {
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Spaces are automatically removed. This is your 16-character Google App Password (not your regular Google password).
                   </p>
+                  {passwordSaved && (
+                    <div className="mt-2 p-2 rounded-lg text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800">
+                      ✅ Key fetched from Firestore successfully!
+                    </div>
+                  )}
+                  {passwordFetchResult && (
+                    <div className={`mt-2 p-2 rounded-lg text-xs ${
+                      passwordFetchResult.success
+                        ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800'
+                        : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
+                    }`}>
+                      {passwordFetchResult.message}
+                    </div>
+                  )}
                 </div>
               </div>
 
