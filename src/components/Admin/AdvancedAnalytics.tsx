@@ -107,7 +107,9 @@ export const AdvancedAnalytics: React.FC = () => {
     }
 
     try {
-      const promises = analyticsData.map((data) => deleteDoc(doc(db, "advancedAnalytics", data.id)));
+      const promises = analyticsData
+        .filter((data) => data.id)
+        .map((data) => deleteDoc(doc(db, "advancedAnalytics", data.id!)));
       await Promise.all(promises);
       toast.success("All analytics records deleted successfully");
       setAnalyticsData([]);
