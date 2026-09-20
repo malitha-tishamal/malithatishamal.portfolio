@@ -777,6 +777,7 @@ export const updateActivityData = (type: 'click' | 'scroll' | 'search' | 'downlo
     mouseMovements: 0,
     keyboardEvents: 0,
     touchEvents: 0,
+    sectionViews: [],
   }));
 
   switch (type) {
@@ -875,4 +876,94 @@ export const endSession = async () => {
   localStorage.removeItem('analytics_session_id');
 
   return session;
+};
+
+/**
+ * Track section view entry
+ */
+export const trackSectionEnter = (sectionName: string) => {
+  const activityKey = 'analytics_activity';
+  const activity = JSON.parse(localStorage.getItem(activityKey) || JSON.stringify({
+    clicks: 0,
+    scrollDepth: 0,
+    scrollDirection: 'none',
+    scrollEvents: 0,
+    searchQueries: [],
+    downloads: 0,
+    downloadsList: [],
+    formsStarted: 0,
+    formsSubmitted: 0,
+    formsAbandoned: 0,
+    formFieldsInteracted: 0,
+    timeOnPage: Date.now(),
+    activeTime: 0,
+    inactiveTime: 0,
+    mouseMovements: 0,
+    keyboardEvents: 0,
+    touchEvents: 0,
+    sectionViews: [],
+  }));
+
+  if (!activity.sectionViews) {
+    activity.sectionViews = [];
+  }
+
+  // Check if this section is already being tracked
+  const existingSection = activity.sectionViews.find((s: any) => s.section === sectionName && !s.exitTime);
+  
+  if (!existingSection) {
+    activity.sectionViews.push({
+      section: sectionName,
+      enterTime: new Date(),
+      exitTime: null,
+      duration: null,
+      scrollPercentage: 0,
+    });
+  }
+
+  localStorage.setItem(activityKey, JSON.stringify(activity));
+};
+
+/**
+ * Track section view exit
+ */
+export const trackSectionExit = (sectionName: string, scrollPercentage: number = 0) => {
+  const activityKey = 'analytics_activity';
+  const activity = JSON.parse(localStorage.getItem(activityKey) || JSON.stringify({
+    clicks: 0,
+    scrollDepth: 0,
+    scrollDirection: 'none',
+    scrollEvents: 0,
+    searchQueries: [],
+    downloads: 0,
+    downloadsList: [],
+    formsStarted: 0,
+    formsSubmitted: 0,
+    formsAbandoned: 0,
+    formFieldsInteracted: 0,
+    timeOnPage: Date.now(),
+    activeTime: 0,
+    inactiveTime: 0,
+    mouseMovements: 0,
+    keyboardEvents: 0,
+    touchEvents: 0,
+    sectionViews: [],
+  }));
+
+  if (!activity.sectionViews) {
+    activity.sectionViews = [];
+  }
+
+  // Find the open section view
+  const sectionIndex = activity.sectionViews.findIndex((s: any) => s.section === sectionName && !s.exitTime);
+  
+  if (sectionIndex !== -1) {
+    const section = activity.sectionViews[sectionIndex];
+    section.exitTime = new Date();
+    section.duration = Math.floor((new Date().getTime() - new Date(section.enterTime).getTime()) / 1000);
+    section.scrollPercentage = scrollPercentage;
+    activity.sectionViews[sectionIndex] = section;
+  }
+
+  localStorage.setItem(activityKey, JSON.stringify(activity));
 };

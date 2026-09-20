@@ -19,7 +19,7 @@ export const AdvancedAnalytics: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<AdvancedAnalyticsData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedData, setSelectedData] = useState<AdvancedAnalyticsData | null>(null);
-  const [filterType, setFilterType] = useState<"all" | "device" | "network" | "location" | "browser" | "activity" | "session" | "performance" | "security" | "errors" | "battery" | "uiPreferences" | "pwa" | "storage" | "engagement" | "lifecycle" | "clientHints" | "navigation">("all");
+  const [filterType, setFilterType] = useState<"all" | "device" | "network" | "location" | "browser" | "activity" | "session" | "performance" | "security" | "errors" | "battery" | "uiPreferences" | "pwa" | "storage" | "engagement" | "lifecycle" | "clientHints" | "navigation" | "sections">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -153,6 +153,8 @@ export const AdvancedAnalytics: React.FC = () => {
         return renderClientHintsInfo(data);
       case "navigation":
         return renderNavigationInfo(data);
+      case "sections":
+        return renderSectionViews(data);
       default:
         return renderAllInfo(data);
     }
@@ -588,6 +590,35 @@ export const AdvancedAnalytics: React.FC = () => {
           <p className="font-semibold text-sm">{data.activity.touchEvents}</p>
         </div>
       </div>
+      {data.activity.sectionViews && data.activity.sectionViews.length > 0 && (
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg border border-purple-300 dark:border-purple-700">
+          <p className="text-xs text-gray-500 mb-3 font-bold">Section Views Timeline</p>
+          <div className="space-y-2">
+            {data.activity.sectionViews.map((section, idx) => (
+              <div key={idx} className="flex items-center gap-3 bg-white dark:bg-darkmode p-2 rounded-lg">
+                <div className={`w-3 h-3 rounded-full ${
+                  section.duration ? 'bg-green-500' : 'bg-yellow-500'
+                }`} />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-midnight_text dark:text-white">{section.section}</p>
+                  <p className="text-[10px] text-gray-500">
+                    {section.enterTime ? new Date(section.enterTime.seconds ? section.enterTime.seconds * 1000 : section.enterTime).toLocaleTimeString() : 'Unknown'}
+                    {section.exitTime && ' → ' + new Date(section.exitTime.seconds ? section.exitTime.seconds * 1000 : section.exitTime).toLocaleTimeString()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                    {section.duration ? `${Math.floor(section.duration / 60)}m ${section.duration % 60}s` : 'Active'}
+                  </p>
+                  {section.scrollPercentage !== undefined && (
+                    <p className="text-[10px] text-gray-500">{section.scrollPercentage}% scroll</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {data.activity.searchQueries.length > 0 && (
         <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg">
           <p className="text-xs text-gray-500 mb-2">Search Queries</p>
@@ -1144,6 +1175,44 @@ export const AdvancedAnalytics: React.FC = () => {
     </div>
   );
 
+  const renderSectionViews = (data: AdvancedAnalyticsData) => (
+    <div className="space-y-3">
+      {data.activity.sectionViews && data.activity.sectionViews.length > 0 ? (
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg border border-purple-300 dark:border-purple-700">
+          <p className="text-xs text-gray-500 mb-3 font-bold">Section Views Timeline</p>
+          <div className="space-y-2">
+            {data.activity.sectionViews.map((section, idx) => (
+              <div key={idx} className="flex items-center gap-3 bg-white dark:bg-darkmode p-2 rounded-lg">
+                <div className={`w-3 h-3 rounded-full ${
+                  section.duration ? 'bg-green-500' : 'bg-yellow-500'
+                }`} />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-midnight_text dark:text-white">{section.section}</p>
+                  <p className="text-[10px] text-gray-500">
+                    {section.enterTime ? new Date(section.enterTime.seconds ? section.enterTime.seconds * 1000 : section.enterTime).toLocaleTimeString() : 'Unknown'}
+                    {section.exitTime && ' → ' + new Date(section.exitTime.seconds ? section.exitTime.seconds * 1000 : section.exitTime).toLocaleTimeString()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                    {section.duration ? `${Math.floor(section.duration / 60)}m ${section.duration % 60}s` : 'Active'}
+                  </p>
+                  {section.scrollPercentage !== undefined && (
+                    <p className="text-[10px] text-gray-500">{section.scrollPercentage}% scroll</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 dark:bg-darkmode p-4 rounded-lg">
+          <p className="text-xs text-gray-500">No section views recorded</p>
+        </div>
+      )}
+    </div>
+  );
+
   const renderAllInfo = (data: AdvancedAnalyticsData) => (
     <div className="space-y-4">
       {renderDeviceInfo(data)}
@@ -1163,6 +1232,7 @@ export const AdvancedAnalytics: React.FC = () => {
       {renderEngagementInfo(data)}
       {renderLifecycleInfo(data)}
       {data.clientHints && renderClientHintsInfo(data)}
+      {data.activity.sectionViews && data.activity.sectionViews.length > 0 && renderSectionViews(data)}
     </div>
   );
 
@@ -1217,7 +1287,7 @@ export const AdvancedAnalytics: React.FC = () => {
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-border dark:border-dark_border pb-2">
-        {(["all", "device", "network", "location", "browser", "activity", "session", "performance", "security", "errors", "battery", "uiPreferences", "pwa", "storage", "engagement", "lifecycle", "clientHints", "navigation"] as const).map((type) => (
+        {(["all", "device", "network", "location", "browser", "activity", "session", "performance", "security", "errors", "battery", "uiPreferences", "pwa", "storage", "engagement", "lifecycle", "clientHints", "navigation", "sections"] as const).map((type) => (
           <button
             key={type}
             onClick={() => setFilterType(type)}

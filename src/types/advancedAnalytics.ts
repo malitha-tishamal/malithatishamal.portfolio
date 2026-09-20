@@ -164,6 +164,13 @@ export interface AdvancedAnalyticsData {
     touchEvents: number;
     touchPoints?: number;
     gestureInteractions?: number;
+    sectionViews?: Array<{
+      section: string;
+      enterTime: any;
+      exitTime?: any;
+      duration?: number;
+      scrollPercentage?: number;
+    }>;
   };
   
   // Navigation
