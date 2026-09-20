@@ -163,128 +163,128 @@ export const AdvancedAnalytics: React.FC = () => {
   const renderDeviceInfo = (data: AdvancedAnalyticsData) => (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <div className={`p-3 rounded-lg border-2 ${
+        <div className={`p-4 rounded-xl border-2 shadow-sm ${
           data.device.type === 'mobile' 
-            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' 
+            ? 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-300 dark:border-blue-700' 
             : data.device.type === 'tablet'
-            ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700'
-            : 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+            ? 'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-300 dark:border-purple-700'
+            : 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-300 dark:border-green-700'
         }`}>
-          <p className="text-xs text-gray-500">Device Type</p>
-          <p className="font-semibold text-sm capitalize">{data.device.type}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Device Type</p>
+          <p className="font-bold text-sm capitalize text-midnight_text dark:text-white">{data.device.type}</p>
         </div>
         {data.device.manufacturer && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Manufacturer</p>
-            <p className="font-semibold text-sm">{data.device.manufacturer}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Manufacturer</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.manufacturer}</p>
           </div>
         )}
         {data.device.model && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Model</p>
-            <p className="font-semibold text-sm">{data.device.model}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Model</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.model}</p>
           </div>
         )}
-        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-300 dark:border-orange-700">
-          <p className="text-xs text-gray-500">OS</p>
-          <p className="font-semibold text-sm">{data.device.os} {data.device.osVersion}</p>
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-4 rounded-xl border border-orange-300 dark:border-orange-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">OS</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.os} {data.device.osVersion}</p>
         </div>
-        <div className="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-lg border border-pink-300 dark:border-pink-700">
-          <p className="text-xs text-gray-500">Browser</p>
-          <p className="font-semibold text-sm">{data.device.browser} {data.device.browserVersion}</p>
+        <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 p-4 rounded-xl border border-pink-300 dark:border-pink-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Browser</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.browser} {data.device.browserVersion}</p>
         </div>
         {data.device.browserEngine && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Browser Engine</p>
-            <p className="font-semibold text-sm">{data.device.browserEngine}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Browser Engine</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.browserEngine}</p>
           </div>
         )}
-        <div className="bg-cyan-50 dark:bg-cyan-900/20 p-3 rounded-lg border border-cyan-300 dark:border-cyan-700">
-          <p className="text-xs text-gray-500">Screen Resolution</p>
-          <p className="font-semibold text-sm">{data.device.screenResolution}</p>
+        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 p-4 rounded-xl border border-cyan-300 dark:border-cyan-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Screen Resolution</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.screenResolution}</p>
         </div>
         {data.device.availableScreenSize && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Available Screen</p>
-            <p className="font-semibold text-sm">{data.device.availableScreenSize}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Available Screen</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.availableScreenSize}</p>
           </div>
         )}
-        <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded-lg border border-teal-300 dark:border-teal-700">
-          <p className="text-xs text-gray-500">Viewport</p>
-          <p className="font-semibold text-sm">{data.device.viewport}</p>
+        <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20 p-4 rounded-xl border border-teal-300 dark:border-teal-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Viewport</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.viewport}</p>
         </div>
         {data.device.visualViewport && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Visual Viewport</p>
-            <p className="font-semibold text-sm">{data.device.visualViewport}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Visual Viewport</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.visualViewport}</p>
           </div>
         )}
-        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-300 dark:border-amber-700">
-          <p className="text-xs text-gray-500">Pixel Ratio</p>
-          <p className="font-semibold text-sm">{data.device.pixelRatio}</p>
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 p-4 rounded-xl border border-amber-300 dark:border-amber-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Pixel Ratio</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.pixelRatio}</p>
         </div>
         {data.device.colorDepth && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Color Depth</p>
-            <p className="font-semibold text-sm">{data.device.colorDepth} bits</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Color Depth</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.colorDepth} bits</p>
           </div>
         )}
         {data.device.pixelDepth && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Pixel Depth</p>
-            <p className="font-semibold text-sm">{data.device.pixelDepth} bits</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Pixel Depth</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.pixelDepth} bits</p>
           </div>
         )}
-        <div className={`p-3 rounded-lg border-2 ${
+        <div className={`p-4 rounded-xl border-2 shadow-sm ${
           data.device.orientation === 'landscape'
-            ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700'
-            : 'bg-rose-50 dark:bg-rose-900/20 border-rose-300 dark:border-rose-700'
+            ? 'bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 border-indigo-300 dark:border-indigo-700'
+            : 'bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-900/20 dark:to-rose-800/20 border-rose-300 dark:border-rose-700'
         }`}>
-          <p className="text-xs text-gray-500">Orientation</p>
-          <p className="font-semibold text-sm capitalize">{data.device.orientation}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Orientation</p>
+          <p className="font-bold text-sm capitalize text-midnight_text dark:text-white">{data.device.orientation}</p>
         </div>
         {data.device.orientationAngle !== undefined && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Orientation Angle</p>
-            <p className="font-semibold text-sm">{data.device.orientationAngle}°</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Orientation Angle</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.orientationAngle}°</p>
           </div>
         )}
-        <div className={`p-3 rounded-lg border-2 ${
+        <div className={`p-4 rounded-xl border-2 shadow-sm ${
           data.device.touchSupport
-            ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
-            : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+            ? 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-300 dark:border-green-700'
+            : 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-300 dark:border-red-700'
         }`}>
-          <p className="text-xs text-gray-500">Touch Support</p>
-          <p className="font-semibold text-sm">{data.device.touchSupport ? "Yes" : "No"}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Touch Support</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.touchSupport ? "Yes" : "No"}</p>
         </div>
         {data.device.touchPoints !== undefined && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Touch Points</p>
-            <p className="font-semibold text-sm">{data.device.touchPoints}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Touch Points</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.touchPoints}</p>
           </div>
         )}
         {data.device.pointerType !== 'unknown' && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Pointer Type</p>
-            <p className="font-semibold text-sm capitalize">{data.device.pointerType}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Pointer Type</p>
+            <p className="font-bold text-sm capitalize text-midnight_text dark:text-white">{data.device.pointerType}</p>
           </div>
         )}
         {data.device.cpuCores && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
-            <p className="text-xs text-gray-500">CPU Cores</p>
-            <p className="font-semibold text-sm">{data.device.cpuCores}</p>
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-300 dark:border-yellow-700 shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">CPU Cores</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.cpuCores}</p>
           </div>
         )}
         {data.device.hardwareConcurrency && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Hardware Concurrency</p>
-            <p className="font-semibold text-sm">{data.device.hardwareConcurrency}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Hardware Concurrency</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.hardwareConcurrency}</p>
           </div>
         )}
         {data.device.deviceMemory && (
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-300 dark:border-purple-700">
-            <p className="text-xs text-gray-500">Device Memory</p>
-            <p className="font-semibold text-sm">{data.device.deviceMemory} GB</p>
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-300 dark:border-purple-700 shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Device Memory</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.device.deviceMemory} GB</p>
           </div>
         )}
       </div>
@@ -294,74 +294,74 @@ export const AdvancedAnalytics: React.FC = () => {
   const renderNetworkInfo = (data: AdvancedAnalyticsData) => (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-300 dark:border-red-700">
-          <p className="text-xs text-gray-500">IP Address</p>
-          <p className="font-semibold text-sm">{data.network.ip || "N/A"}</p>
+        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-xl border border-red-300 dark:border-red-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">IP Address</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.ip || "N/A"}</p>
         </div>
-        <div className={`p-3 rounded-lg border-2 ${
+        <div className={`p-4 rounded-xl border-2 shadow-sm ${
           data.network.onlineStatus
-            ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
-            : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+            ? 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-300 dark:border-green-700'
+            : 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-300 dark:border-red-700'
         }`}>
-          <p className="text-xs text-gray-500">Online Status</p>
-          <p className="font-semibold text-sm">{data.network.onlineStatus ? "Online" : "Offline"}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Online Status</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.onlineStatus ? "Online" : "Offline"}</p>
         </div>
         {data.network.connectionType && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-300 dark:border-blue-700">
-            <p className="text-xs text-gray-500">Connection Type</p>
-            <p className="font-semibold text-sm">{data.network.connectionType}</p>
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-300 dark:border-blue-700 shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Connection Type</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.connectionType}</p>
           </div>
         )}
         {data.network.effectiveType && (
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-300 dark:border-purple-700">
-            <p className="text-xs text-gray-500">Effective Type</p>
-            <p className="font-semibold text-sm capitalize">{data.network.effectiveType}</p>
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-300 dark:border-purple-700 shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Effective Type</p>
+            <p className="font-bold text-sm capitalize text-midnight_text dark:text-white">{data.network.effectiveType}</p>
           </div>
         )}
         {data.network.downloadSpeed && (
-          <div className="bg-cyan-50 dark:bg-cyan-900/20 p-3 rounded-lg border border-cyan-300 dark:border-cyan-700">
-            <p className="text-xs text-gray-500">Download Speed</p>
-          <p className="font-semibold text-sm">{data.network.downloadSpeed} Mbps</p>
+          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 p-4 rounded-xl border border-cyan-300 dark:border-cyan-700 shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Download Speed</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.downloadSpeed} Mbps</p>
           </div>
         )}
         {data.network.rtt && (
-          <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-300 dark:border-orange-700">
-            <p className="text-xs text-gray-500">RTT (Latency)</p>
-          <p className="font-semibold text-sm">{data.network.rtt} ms</p>
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-4 rounded-xl border border-orange-300 dark:border-orange-700 shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">RTT (Latency)</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.rtt} ms</p>
           </div>
         )}
         {data.network.saveData !== undefined && (
-          <div className={`p-3 rounded-lg border-2 ${
+          <div className={`p-4 rounded-xl border-2 shadow-sm ${
             data.network.saveData
-              ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
-              : 'bg-gray-50 dark:bg-darkmode border border-gray-200 dark:border-dark_border'
+              ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-yellow-300 dark:border-yellow-700'
+              : 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode border-gray-200 dark:border-dark_border'
           }`}>
-            <p className="text-xs text-gray-500">Save Data</p>
-            <p className="font-semibold text-sm">{data.network.saveData ? "Enabled" : "Disabled"}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Save Data</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.saveData ? "Enabled" : "Disabled"}</p>
           </div>
         )}
         {data.network.connectionChanges > 0 && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Connection Changes</p>
-            <p className="font-semibold text-sm">{data.network.connectionChanges}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Connection Changes</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.connectionChanges}</p>
           </div>
         )}
         {data.network.offlineDuration > 0 && (
-          <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-300 dark:border-red-700">
-            <p className="text-xs text-gray-500">Offline Duration</p>
-            <p className="font-semibold text-sm">{Math.floor(data.network.offlineDuration / 60)}m</p>
+          <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-xl border border-red-300 dark:border-red-700 shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Offline Duration</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{Math.floor(data.network.offlineDuration / 60)}m</p>
           </div>
         )}
         {data.network.networkLatency && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Network Latency</p>
-            <p className="font-semibold text-sm">{data.network.networkLatency} ms</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Network Latency</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.networkLatency} ms</p>
           </div>
         )}
         {data.network.downlink && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Downlink</p>
-          <p className="font-semibold text-sm">{data.network.downlink} Mbps</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Downlink</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.network.downlink} Mbps</p>
           </div>
         )}
       </div>
@@ -371,72 +371,72 @@ export const AdvancedAnalytics: React.FC = () => {
   const renderLocationInfo = (data: AdvancedAnalyticsData) => (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-300 dark:border-emerald-700">
-          <p className="text-xs text-gray-500">Country</p>
-          <p className="font-semibold text-sm">{data.location.country || "N/A"}</p>
+        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 p-4 rounded-xl border border-emerald-300 dark:border-emerald-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Country</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.country || "N/A"}</p>
         </div>
-        <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded-lg border border-teal-300 dark:border-teal-700">
-          <p className="text-xs text-gray-500">Region</p>
-          <p className="font-semibold text-sm">{data.location.region || "N/A"}</p>
+        <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20 p-4 rounded-xl border border-teal-300 dark:border-teal-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Region</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.region || "N/A"}</p>
         </div>
-        <div className="bg-cyan-50 dark:bg-cyan-900/20 p-3 rounded-lg border border-cyan-300 dark:border-cyan-700">
-          <p className="text-xs text-gray-500">City</p>
-          <p className="font-semibold text-sm">{data.location.city || "N/A"}</p>
+        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 p-4 rounded-xl border border-cyan-300 dark:border-cyan-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">City</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.city || "N/A"}</p>
         </div>
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-300 dark:border-indigo-700">
-          <p className="text-xs text-gray-500">Timezone</p>
-          <p className="font-semibold text-sm">{data.location.timezone}</p>
+        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 p-4 rounded-xl border border-indigo-300 dark:border-indigo-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Timezone</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.timezone}</p>
         </div>
         {data.location.timezoneOffset !== undefined && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-            <p className="text-xs text-gray-500">Timezone Offset</p>
-            <p className="font-semibold text-sm">{data.location.timezoneOffset} min</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Timezone Offset</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.timezoneOffset} min</p>
           </div>
         )}
         {data.location.gpsPermission && (
-          <div className={`p-3 rounded-lg border-2 ${
+          <div className={`p-4 rounded-xl border-2 shadow-sm ${
             data.location.gpsPermission === 'granted'
-              ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+              ? 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-300 dark:border-green-700'
               : data.location.gpsPermission === 'denied'
-              ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-              : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
+              ? 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-300 dark:border-red-700'
+              : 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-yellow-300 dark:border-yellow-700'
           }`}>
-            <p className="text-xs text-gray-500">GPS Permission</p>
-            <p className="font-semibold text-sm capitalize">{data.location.gpsPermission}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">GPS Permission</p>
+            <p className="font-bold text-sm capitalize text-midnight_text dark:text-white">{data.location.gpsPermission}</p>
           </div>
         )}
         {data.location.gpsCoordinates && (
           <>
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-300 dark:border-blue-700">
-              <p className="text-xs text-gray-500">Latitude</p>
-              <p className="font-semibold text-sm">{data.location.gpsCoordinates.latitude}</p>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-300 dark:border-blue-700 shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Latitude</p>
+              <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.gpsCoordinates.latitude}</p>
             </div>
-            <div className="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-lg border border-pink-300 dark:border-pink-700">
-              <p className="text-xs text-gray-500">Longitude</p>
-              <p className="font-semibold text-sm">{data.location.gpsCoordinates.longitude}</p>
+            <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 p-4 rounded-xl border border-pink-300 dark:border-pink-700 shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Longitude</p>
+              <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.gpsCoordinates.longitude}</p>
             </div>
             {data.location.gpsCoordinates.accuracy && (
-              <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-                <p className="text-xs text-gray-500">Accuracy</p>
-                <p className="font-semibold text-sm">{data.location.gpsCoordinates.accuracy}m</p>
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Accuracy</p>
+                <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.gpsCoordinates.accuracy}m</p>
               </div>
             )}
             {data.location.gpsCoordinates.altitude && (
-              <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-                <p className="text-xs text-gray-500">Altitude</p>
-                <p className="font-semibold text-sm">{data.location.gpsCoordinates.altitude}m</p>
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Altitude</p>
+                <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.gpsCoordinates.altitude}m</p>
               </div>
             )}
             {data.location.gpsCoordinates.heading && (
-              <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-                <p className="text-xs text-gray-500">Heading</p>
-                <p className="font-semibold text-sm">{data.location.gpsCoordinates.heading}°</p>
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Heading</p>
+                <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.gpsCoordinates.heading}°</p>
               </div>
             )}
             {data.location.gpsCoordinates.speed && (
-              <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-                <p className="text-xs text-gray-500">Speed</p>
-                <p className="font-semibold text-sm">{data.location.gpsCoordinates.speed} m/s</p>
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Speed</p>
+                <p className="font-bold text-sm text-midnight_text dark:text-white">{data.location.gpsCoordinates.speed} m/s</p>
               </div>
             )}
           </>
@@ -519,99 +519,106 @@ export const AdvancedAnalytics: React.FC = () => {
   const renderActivityInfo = (data: AdvancedAnalyticsData) => (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-300 dark:border-blue-700">
-          <p className="text-xs text-gray-500">Page Views</p>
-          <p className="font-semibold text-sm">{data.activity.pageViews}</p>
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-300 dark:border-blue-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Page Views</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.pageViews}</p>
         </div>
-        <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-300 dark:border-purple-700">
-          <p className="text-xs text-gray-500">Clicks</p>
-          <p className="font-semibold text-sm">{data.activity.clicks}</p>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-300 dark:border-purple-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Clicks</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.clicks}</p>
         </div>
-        <div className="bg-cyan-50 dark:bg-cyan-900/20 p-3 rounded-lg border border-cyan-300 dark:border-cyan-700">
-          <p className="text-xs text-gray-500">Scroll Depth</p>
-          <p className="font-semibold text-sm">{data.activity.scrollDepth}%</p>
+        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 p-4 rounded-xl border border-cyan-300 dark:border-cyan-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Scroll Depth</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.scrollDepth}%</p>
         </div>
         {data.activity.scrollDirection && data.activity.scrollDirection !== 'none' && (
-          <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded-lg border border-teal-300 dark:border-teal-700">
-            <p className="text-xs text-gray-500">Scroll Direction</p>
-            <p className="font-semibold text-sm capitalize">{data.activity.scrollDirection}</p>
+          <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20 p-4 rounded-xl border border-teal-300 dark:border-teal-700 shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Scroll Direction</p>
+            <p className="font-bold text-sm capitalize text-midnight_text dark:text-white">{data.activity.scrollDirection}</p>
           </div>
         )}
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-300 dark:border-indigo-700">
-          <p className="text-xs text-gray-500">Scroll Events</p>
-          <p className="font-semibold text-sm">{data.activity.scrollEvents}</p>
+        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 p-4 rounded-xl border border-indigo-300 dark:border-indigo-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Scroll Events</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.scrollEvents}</p>
         </div>
-        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-300 dark:border-green-700">
-          <p className="text-xs text-gray-500">Downloads</p>
-          <p className="font-semibold text-sm">{data.activity.downloads}</p>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-300 dark:border-green-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Downloads</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.downloads}</p>
         </div>
-        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-300 dark:border-orange-700">
-          <p className="text-xs text-gray-500">Forms Started</p>
-          <p className="font-semibold text-sm">{data.activity.formsStarted}</p>
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-4 rounded-xl border border-orange-300 dark:border-orange-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Forms Started</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.formsStarted}</p>
         </div>
-        <div className="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-lg border border-pink-300 dark:border-pink-700">
-          <p className="text-xs text-gray-500">Forms Submitted</p>
-          <p className="font-semibold text-sm">{data.activity.formsSubmitted}</p>
+        <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 p-4 rounded-xl border border-pink-300 dark:border-pink-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Forms Submitted</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.formsSubmitted}</p>
         </div>
         {data.activity.formsAbandoned > 0 && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg">
-            <p className="text-xs text-gray-500">Forms Abandoned</p>
-            <p className="font-semibold text-sm">{data.activity.formsAbandoned}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Forms Abandoned</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.formsAbandoned}</p>
           </div>
         )}
         {data.activity.formFieldsInteracted > 0 && (
-          <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg">
-            <p className="text-xs text-gray-500">Fields Interacted</p>
-            <p className="font-semibold text-sm">{data.activity.formFieldsInteracted}</p>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Fields Interacted</p>
+            <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.formFieldsInteracted}</p>
           </div>
         )}
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
-          <p className="text-xs text-gray-500">Time on Page</p>
-          <p className="font-semibold text-sm">{Math.floor(data.activity.timeOnPage / 60)}m {data.activity.timeOnPage % 60}s</p>
+        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-300 dark:border-yellow-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Time on Page</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{Math.floor(data.activity.timeOnPage / 60)}m {data.activity.timeOnPage % 60}s</p>
         </div>
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-300 dark:border-emerald-700">
-          <p className="text-xs text-gray-500">Active Time</p>
-          <p className="font-semibold text-sm">{Math.floor(data.activity.activeTime / 60)}m {data.activity.activeTime % 60}s</p>
+        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 p-4 rounded-xl border border-emerald-300 dark:border-emerald-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Active Time</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{Math.floor(data.activity.activeTime / 60)}m {data.activity.activeTime % 60}s</p>
         </div>
-        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-300 dark:border-red-700">
-          <p className="text-xs text-gray-500">Inactive Time</p>
-          <p className="font-semibold text-sm">{Math.floor(data.activity.inactiveTime / 60)}m {data.activity.inactiveTime % 60}s</p>
+        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-xl border border-red-300 dark:border-red-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Inactive Time</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{Math.floor(data.activity.inactiveTime / 60)}m {data.activity.inactiveTime % 60}s</p>
         </div>
-        <div className="bg-violet-50 dark:bg-violet-900/20 p-3 rounded-lg border border-violet-300 dark:border-violet-700">
-          <p className="text-xs text-gray-500">Mouse Movements</p>
-          <p className="font-semibold text-sm">{data.activity.mouseMovements}</p>
+        <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20 p-4 rounded-xl border border-violet-300 dark:border-violet-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Mouse Movements</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.mouseMovements}</p>
         </div>
-        <div className="bg-rose-50 dark:bg-rose-900/20 p-3 rounded-lg border border-rose-300 dark:border-rose-700">
-          <p className="text-xs text-gray-500">Keyboard Events</p>
-          <p className="font-semibold text-sm">{data.activity.keyboardEvents}</p>
+        <div className="bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-900/20 dark:to-rose-800/20 p-4 rounded-xl border border-rose-300 dark:border-rose-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Keyboard Events</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.keyboardEvents}</p>
         </div>
-        <div className="bg-fuchsia-50 dark:bg-fuchsia-900/20 p-3 rounded-lg border border-fuchsia-300 dark:border-fuchsia-700">
-          <p className="text-xs text-gray-500">Touch Events</p>
-          <p className="font-semibold text-sm">{data.activity.touchEvents}</p>
+        <div className="bg-gradient-to-br from-fuchsia-50 to-fuchsia-100 dark:from-fuchsia-900/20 dark:to-fuchsia-800/20 p-4 rounded-xl border border-fuchsia-300 dark:border-fuchsia-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Touch Events</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.activity.touchEvents}</p>
         </div>
       </div>
       {data.activity.sectionViews && data.activity.sectionViews.length > 0 && (
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg border border-purple-300 dark:border-purple-700">
-          <p className="text-xs text-gray-500 mb-3 font-bold">Section Views Timeline</p>
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-5 rounded-xl border border-purple-200 dark:border-purple-700 shadow-lg">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin='round' strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-sm font-bold text-midnight_text dark:text-white">Section Views Timeline</p>
+          </div>
           <div className="space-y-2">
             {data.activity.sectionViews.map((section, idx) => (
-              <div key={idx} className="flex items-center gap-3 bg-white dark:bg-darkmode p-2 rounded-lg">
-                <div className={`w-3 h-3 rounded-full ${
-                  section.duration ? 'bg-green-500' : 'bg-yellow-500'
+              <div key={idx} className="flex items-center gap-3 bg-white dark:bg-darkmode p-3 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className={`w-4 h-4 rounded-full shadow-sm ${
+                  section.duration ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-yellow-400 to-orange-500'
                 }`} />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-midnight_text dark:text-white">{section.section}</p>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-xs font-bold text-midnight_text dark:text-white">{section.section}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
                     {section.enterTime ? new Date(section.enterTime.seconds ? section.enterTime.seconds * 1000 : section.enterTime).toLocaleTimeString() : 'Unknown'}
                     {section.exitTime && ' → ' + new Date(section.exitTime.seconds ? section.exitTime.seconds * 1000 : section.exitTime).toLocaleTimeString()}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                  <p className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
                     {section.duration ? `${Math.floor(section.duration / 60)}m ${section.duration % 60}s` : 'Active'}
                   </p>
                   {section.scrollPercentage !== undefined && (
-                    <p className="text-[10px] text-gray-500">{section.scrollPercentage}% scroll</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">{section.scrollPercentage}% scroll</p>
                   )}
                 </div>
               </div>
@@ -620,21 +627,21 @@ export const AdvancedAnalytics: React.FC = () => {
         </div>
       )}
       {data.activity.searchQueries.length > 0 && (
-        <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg">
-          <p className="text-xs text-gray-500 mb-2">Search Queries</p>
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Search Queries</p>
           <div className="space-y-1">
             {data.activity.searchQueries.map((query, idx) => (
-              <p key={idx} className="text-sm font-semibold">{query}</p>
+              <p key={idx} className="text-sm font-bold text-midnight_text dark:text-white">{query}</p>
             ))}
           </div>
         </div>
       )}
       {data.activity.downloadsList.length > 0 && (
-        <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg">
-          <p className="text-xs text-gray-500 mb-2">Downloads List</p>
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Downloads List</p>
           <div className="space-y-1">
             {data.activity.downloadsList.map((download, idx) => (
-              <p key={idx} className="text-xs font-semibold">{download.filename} ({download.type})</p>
+              <p key={idx} className="text-xs font-bold text-midnight_text dark:text-white">{download.filename} ({download.type})</p>
             ))}
           </div>
         </div>
@@ -644,62 +651,62 @@ export const AdvancedAnalytics: React.FC = () => {
 
   const renderSessionInfo = (data: AdvancedAnalyticsData) => (
     <div className="space-y-3">
-      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-300 dark:border-indigo-700">
-        <p className="text-xs text-gray-500">Session ID</p>
-        <p className="font-semibold text-xs break-all">{data.session.sessionId}</p>
+      <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 p-4 rounded-xl border border-indigo-300 dark:border-indigo-700 shadow-sm">
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Session ID</p>
+        <p className="font-bold text-xs break-all text-midnight_text dark:text-white">{data.session.sessionId}</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-300 dark:border-green-700">
-          <p className="text-xs text-gray-500">Start Time</p>
-          <p className="font-semibold text-xs">{data.session.startTime?.seconds ? new Date(data.session.startTime.seconds * 1000).toLocaleString() : "N/A"}</p>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-300 dark:border-green-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Start Time</p>
+          <p className="font-bold text-xs text-midnight_text dark:text-white">{data.session.startTime?.seconds ? new Date(data.session.startTime.seconds * 1000).toLocaleString() : "N/A"}</p>
         </div>
-        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-300 dark:border-red-700">
-          <p className="text-xs text-gray-500">End Time</p>
-          <p className="font-semibold text-xs">{data.session.endTime?.seconds ? new Date(data.session.endTime.seconds * 1000).toLocaleString() : "Active"}</p>
+        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-xl border border-red-300 dark:border-red-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">End Time</p>
+          <p className="font-bold text-xs text-midnight_text dark:text-white">{data.session.endTime?.seconds ? new Date(data.session.endTime.seconds * 1000).toLocaleString() : "Active"}</p>
         </div>
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
-          <p className="text-xs text-gray-500">Duration</p>
-          <p className="font-semibold text-sm">{data.session.duration ? `${Math.floor(data.session.duration / 60)}m ${data.session.duration % 60}s` : "Active"}</p>
+        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-300 dark:border-yellow-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Duration</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.session.duration ? `${Math.floor(data.session.duration / 60)}m ${data.session.duration % 60}s` : "Active"}</p>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-300 dark:border-blue-700">
-          <p className="text-xs text-gray-500">Entry Page</p>
-          <p className="font-semibold text-sm">{data.session.entryPage}</p>
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-300 dark:border-blue-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Entry Page</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.session.entryPage}</p>
         </div>
-        <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-300 dark:border-purple-700">
-          <p className="text-xs text-gray-500">Exit Page</p>
-          <p className="font-semibold text-sm">{data.session.exitPage || "Active"}</p>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-300 dark:border-purple-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Exit Page</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.session.exitPage || "Active"}</p>
         </div>
-        <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded-lg border border-teal-300 dark:border-teal-700">
-          <p className="text-xs text-gray-500">Session Count</p>
-          <p className="font-semibold text-sm">{data.session.sessionCount}</p>
+        <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20 p-4 rounded-xl border border-teal-300 dark:border-teal-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Session Count</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.session.sessionCount}</p>
         </div>
-        <div className={`p-3 rounded-lg border-2 ${
+        <div className={`p-4 rounded-xl border-2 shadow-sm ${
           data.session.isNewVisitor
-            ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
-            : 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700'
+            ? 'bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 border-emerald-300 dark:border-emerald-700'
+            : 'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-300 dark:border-orange-700'
         }`}>
-          <p className="text-xs text-gray-500">Visitor Type</p>
-          <p className="font-semibold text-sm">{data.session.isNewVisitor ? "New" : "Returning"}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Visitor Type</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.session.isNewVisitor ? "New" : "Returning"}</p>
         </div>
-        <div className={`p-3 rounded-lg border-2 ${
+        <div className={`p-4 rounded-xl border-2 shadow-sm ${
           data.session.tabVisibility === 'visible'
-            ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
-            : 'bg-gray-50 dark:bg-darkmode border border-gray-200 dark:border-dark_border'
+            ? 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-300 dark:border-green-700'
+            : 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode border-gray-200 dark:border-dark_border'
         }`}>
-          <p className="text-xs text-gray-500">Tab Visibility</p>
-          <p className="font-semibold text-sm capitalize">{data.session.tabVisibility}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Tab Visibility</p>
+          <p className="font-bold text-sm capitalize text-midnight_text dark:text-white">{data.session.tabVisibility}</p>
         </div>
-        <div className="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-lg border border-pink-300 dark:border-pink-700">
-          <p className="text-xs text-gray-500">Tab Switches</p>
-          <p className="font-semibold text-sm">{data.session.tabSwitches}</p>
+        <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 p-4 rounded-xl border border-pink-300 dark:border-pink-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Tab Switches</p>
+          <p className="font-bold text-sm text-midnight_text dark:text-white">{data.session.tabSwitches}</p>
         </div>
-        <div className="bg-cyan-50 dark:bg-cyan-900/20 p-3 rounded-lg border border-cyan-300 dark:border-cyan-700">
-          <p className="text-xs text-gray-500">Last Activity</p>
-          <p className="font-semibold text-xs">{data.session.lastActivity?.seconds ? new Date(data.session.lastActivity.seconds * 1000).toLocaleString() : "N/A"}</p>
+        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 p-4 rounded-xl border border-cyan-300 dark:border-cyan-700 shadow-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Last Activity</p>
+          <p className="font-bold text-xs text-midnight_text dark:text-white">{data.session.lastActivity?.seconds ? new Date(data.session.lastActivity.seconds * 1000).toLocaleString() : "N/A"}</p>
         </div>
       </div>
-      <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg border border-gray-200 dark:border-dark_border">
-        <p className="text-xs text-gray-500 mb-2">Pages Visited</p>
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-4 rounded-xl border border-gray-200 dark:border-dark_border shadow-sm">
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Pages Visited</p>
         <div className="flex flex-wrap gap-2">
           {data.session.pagesVisited.map((page, idx) => (
             <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs">{page}</span>
@@ -1178,27 +1185,34 @@ export const AdvancedAnalytics: React.FC = () => {
   const renderSectionViews = (data: AdvancedAnalyticsData) => (
     <div className="space-y-3">
       {data.activity.sectionViews && data.activity.sectionViews.length > 0 ? (
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg border border-purple-300 dark:border-purple-700">
-          <p className="text-xs text-gray-500 mb-3 font-bold">Section Views Timeline</p>
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-5 rounded-xl border border-purple-200 dark:border-purple-700 shadow-lg">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-sm font-bold text-midnight_text dark:text-white">Section Views Timeline</p>
+          </div>
           <div className="space-y-2">
             {data.activity.sectionViews.map((section, idx) => (
-              <div key={idx} className="flex items-center gap-3 bg-white dark:bg-darkmode p-2 rounded-lg">
-                <div className={`w-3 h-3 rounded-full ${
-                  section.duration ? 'bg-green-500' : 'bg-yellow-500'
+              <div key={idx} className="flex items-center gap-3 bg-white dark:bg-darkmode p-3 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className={`w-4 h-4 rounded-full shadow-sm ${
+                  section.duration ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-yellow-400 to-orange-500'
                 }`} />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-midnight_text dark:text-white">{section.section}</p>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-xs font-bold text-midnight_text dark:text-white">{section.section}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
                     {section.enterTime ? new Date(section.enterTime.seconds ? section.enterTime.seconds * 1000 : section.enterTime).toLocaleTimeString() : 'Unknown'}
                     {section.exitTime && ' → ' + new Date(section.exitTime.seconds ? section.exitTime.seconds * 1000 : section.exitTime).toLocaleTimeString()}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                  <p className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
                     {section.duration ? `${Math.floor(section.duration / 60)}m ${section.duration % 60}s` : 'Active'}
                   </p>
                   {section.scrollPercentage !== undefined && (
-                    <p className="text-[10px] text-gray-500">{section.scrollPercentage}% scroll</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">{section.scrollPercentage}% scroll</p>
                   )}
                 </div>
               </div>
@@ -1206,8 +1220,8 @@ export const AdvancedAnalytics: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-gray-50 dark:bg-darkmode p-4 rounded-lg">
-          <p className="text-xs text-gray-500">No section views recorded</p>
+        <div className="bg-gray-50 dark:bg-darkmode p-5 rounded-xl border border-gray-200 dark:border-dark_border">
+          <p className="text-xs text-gray-500 dark:text-gray-400">No section views recorded</p>
         </div>
       )}
     </div>
@@ -1262,56 +1276,78 @@ export const AdvancedAnalytics: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-midnight_text dark:text-white">Advanced Analytics</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Comprehensive user/device data collection and analysis
-          </p>
+      {/* Modern Header */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl p-6 shadow-xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-white">Advanced Analytics</h2>
+              </div>
+              <p className="text-sm text-white/80 mt-1">
+                Comprehensive user/device data collection and analysis
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
+                <span className="text-white/80 text-xs">Total Records</span>
+                <p className="text-white text-xl font-bold">{analyticsData.length}</p>
+              </div>
+              {analyticsData.length > 0 && (
+                <button
+                  onClick={handleDeleteAll}
+                  className="bg-red-500/90 hover:bg-red-600 backdrop-blur-sm px-4 py-2 rounded-xl text-white text-xs font-bold transition cursor-pointer flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete All
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold">
-            {analyticsData.length} Records
-          </span>
-          {analyticsData.length > 0 && (
+      </div>
+
+      {/* Modern Filter Tabs */}
+      <div className="bg-white dark:bg-darklight rounded-2xl p-2 shadow-lg border border-gray-100 dark:border-dark_border">
+        <div className="flex flex-wrap gap-2">
+          {(["all", "device", "network", "location", "browser", "activity", "session", "performance", "security", "errors", "battery", "uiPreferences", "pwa", "storage", "engagement", "lifecycle", "clientHints", "navigation", "sections"] as const).map((type) => (
             <button
-              onClick={handleDeleteAll}
-              className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition cursor-pointer"
+              key={type}
+              onClick={() => setFilterType(type)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all duration-300 cursor-pointer ${
+                filterType === type
+                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-darkmode"
+              }`}
             >
-              Delete All
+              {type.replace(/([A-Z])/g, ' $1').trim()}
             </button>
-          )}
+          ))}
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-border dark:border-dark_border pb-2">
-        {(["all", "device", "network", "location", "browser", "activity", "session", "performance", "security", "errors", "battery", "uiPreferences", "pwa", "storage", "engagement", "lifecycle", "clientHints", "navigation", "sections"] as const).map((type) => (
-          <button
-            key={type}
-            onClick={() => setFilterType(type)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition cursor-pointer ${
-              filterType === type
-                ? "bg-primary text-white"
-                : "text-gray-500 hover:text-dark dark:hover:text-white"
-            }`}
-          >
-            {type.replace(/([A-Z])/g, ' $1').trim()}
-          </button>
-        ))}
-      </div>
-
-      {/* Search */}
+      {/* Modern Search */}
       <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
         <input
           type="text"
           placeholder="Search by OS, browser, country, IP, or session ID..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full text-sm pl-9 pr-4 py-2 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border focus:outline-none focus:border-primary text-midnight_text dark:text-white"
+          className="w-full text-sm pl-12 pr-4 py-3 rounded-xl bg-white dark:bg-darklight border border-gray-200 dark:border-dark_border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-midnight_text dark:text-white shadow-sm transition-all"
         />
-        <span className="absolute left-3 top-2.5 text-gray-400 text-sm">🔍</span>
       </div>
 
       {/* Data List */}
@@ -1334,30 +1370,32 @@ export const AdvancedAnalytics: React.FC = () => {
           filteredData.map((data) => (
             <div
               key={data.id}
-              className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border overflow-hidden"
+              className="bg-white dark:bg-darklight rounded-2xl border border-gray-100 dark:border-dark_border overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
             >
-              {/* Header */}
+              {/* Modern Header */}
               <div
-                className={`p-4 border-b border-border dark:border-dark_border cursor-pointer hover:bg-gray-100 dark:hover:bg-darklight transition ${
-                  selectedData?.id === data.id ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-50 dark:bg-darkmode'
+                className={`p-5 border-b border-gray-100 dark:border-dark_border cursor-pointer transition-all duration-300 ${
+                  selectedData?.id === data.id 
+                    ? 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20' 
+                    : 'bg-white dark:bg-darklight hover:bg-gray-50 dark:hover:bg-darkmode'
                 }`}
                 onClick={() => setSelectedData(selectedData?.id === data.id ? null : data)}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg text-white flex items-center justify-center text-lg ${
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl text-white flex items-center justify-center text-xl shadow-lg ${
                       data.session.isNewVisitor 
-                        ? 'bg-gradient-to-br from-green-500 to-emerald-500' 
-                        : 'bg-gradient-to-br from-purple-500 to-pink-500'
+                        ? 'bg-gradient-to-br from-green-400 to-emerald-500' 
+                        : 'bg-gradient-to-br from-purple-400 to-pink-500'
                     }`}>
-                      {data.session.isNewVisitor ? '🆕' : '�'}
+                      {data.session.isNewVisitor ? '🆕' : '🔄'}
                     </div>
                     <div>
                       <p className="font-bold text-sm text-midnight_text dark:text-white">
                         {data.device.os} {data.device.osVersion} - {data.device.browser} {data.device.browserVersion}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold shadow-sm ${
                           data.device.type === 'mobile' 
                             ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
                             : data.device.type === 'tablet'
@@ -1366,14 +1404,14 @@ export const AdvancedAnalytics: React.FC = () => {
                         }`}>
                           {data.device.type.toUpperCase()}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           {data.location.country || "Unknown"} • {data.location.city || "Unknown"}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           {data.network.ip || "Unknown IP"}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-2">
                         <span className={`text-[10px] font-semibold ${
                           data.session.isNewVisitor 
                             ? 'text-green-600 dark:text-green-400' 
@@ -1381,37 +1419,47 @@ export const AdvancedAnalytics: React.FC = () => {
                         }`}>
                           {data.session.isNewVisitor ? '🆕 New Visitor' : '🔄 Returning Visitor'}
                         </span>
-                        <span className="text-[10px] text-gray-400">
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">
                           • {data.session.sessionCount} visits
                         </span>
-                        <span className="text-[10px] text-gray-400">
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">
                           • {data.session.duration ? `${Math.floor(data.session.duration / 60)}m ${data.session.duration % 60}s` : 'Active'}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(data.id);
                       }}
-                      className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition cursor-pointer"
+                      className="p-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition cursor-pointer"
                       title="Delete this record"
                     >
-                      🗑️
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                     </button>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-darkmode px-3 py-1 rounded-lg">
                       {data.timestamp?.seconds ? new Date(data.timestamp.seconds * 1000).toLocaleString() : "Unknown"}
                     </span>
-                    <span className="text-lg">{selectedData?.id === data.id ? "▼" : "▶"}</span>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                      selectedData?.id === data.id 
+                        ? 'bg-blue-500 text-white rotate-180' 
+                        : 'bg-gray-100 dark:bg-darkmode text-gray-400 dark:text-gray-500'
+                    }`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Expanded Content */}
               {selectedData?.id === data.id && (
-                <div className="p-4">
+                <div className="p-5 bg-gray-50 dark:bg-darkmode">
                   {renderDataSection(data)}
                 </div>
               )}
