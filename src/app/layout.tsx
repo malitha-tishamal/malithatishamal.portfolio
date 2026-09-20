@@ -11,6 +11,7 @@ import { AuthDialogProvider } from "./context/AuthDialogContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { StructuredData } from "@/components/SEO/StructuredData";
 import VisitorTracker from "@/components/VisitorTracker";
+import { AdvancedAnalyticsTracker } from "@/components/AdvancedAnalyticsTracker";
 import { Toaster } from "react-hot-toast";
 
 const inter = Inter({
@@ -187,6 +188,7 @@ export default function RootLayout({
             >
               <Aoscompo>
                 <VisitorTracker />
+                <AdvancedAnalyticsTracker />
                 <Header />
                 {children}
                 <Footer />

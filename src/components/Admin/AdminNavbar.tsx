@@ -193,6 +193,17 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
             <span>Analytics</span>
             <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400">📊</span>
           </button>
+          <button
+            onClick={() => setActiveTab("advancedAnalytics")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center gap-1 ${
+              activeTab === "advancedAnalytics"
+                ? "bg-white dark:bg-darklight text-primary shadow-xs font-semibold"
+                : "text-gray-600 dark:text-gray-400 hover:text-dark dark:hover:text-white"
+            }`}
+          >
+            <span>Advanced</span>
+            <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400">📈</span>
+          </button>
         </div>
 
         {/* Right Side: Back to Website, Theme Toggle, User Chip, Sign Out */}

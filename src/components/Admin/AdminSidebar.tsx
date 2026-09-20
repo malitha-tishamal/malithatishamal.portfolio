@@ -5,7 +5,7 @@ import Link from "next/link";
 import Logo from "@/components/Layout/Header/Logo";
 import { UserProfile } from "@/context/AuthContext";
 
-export type AdminTab = "overview" | "accounts" | "roles" | "hero" | "counter" | "services" | "techstack" | "experience" | "certifications" | "portfolio" | "projects" | "testimonials" | "blogs" | "contact" | "footer" | "visitors";
+export type AdminTab = "overview" | "accounts" | "roles" | "hero" | "counter" | "services" | "techstack" | "experience" | "certifications" | "portfolio" | "projects" | "testimonials" | "blogs" | "contact" | "footer" | "visitors" | "advancedAnalytics";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -252,6 +252,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       badge: (
         <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
           ANALYTICS
+        </span>
+      ),
+    },
+    {
+      id: "advancedAnalytics" as AdminTab,
+      label: "Advanced Analytics",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      ),
+      badge: (
+        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+          DATA
         </span>
       ),
     },

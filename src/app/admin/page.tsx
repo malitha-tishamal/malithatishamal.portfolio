@@ -32,6 +32,7 @@ import { BlogManager } from "@/components/Admin/BlogManager";
 import { ContactManager } from "@/components/Admin/ContactManager";
 import { FooterManager } from "@/components/Admin/FooterManager";
 import { VisitorAnalytics } from "@/components/Admin/VisitorAnalytics";
+import { AdvancedAnalytics } from "@/components/Admin/AdvancedAnalytics";
 
 export default function AdminDashboardPage() {
   const { user, userProfile, logout } = useAuth();
@@ -325,6 +326,11 @@ export default function AdminDashboardPage() {
           {/* Tab 11: Visitor Analytics */}
           {activeTab === "visitors" && (
             <VisitorAnalytics />
+          )}
+
+          {/* Tab 12: Advanced Analytics */}
+          {activeTab === "advancedAnalytics" && (
+            <AdvancedAnalytics />
           )}
         </main>
       </div>
