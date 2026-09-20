@@ -342,13 +342,13 @@ export const AdvancedAnalytics: React.FC = () => {
             <p className="font-bold text-xs text-midnight_text dark:text-white">{data.network.saveData ? "Enabled" : "Disabled"}</p>
           </div>
         )}
-        {data.network.connectionChanges > 0 && (
+        {data.network.connectionChanges !== undefined && data.network.connectionChanges > 0 && (
           <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkmode dark:to-darkmode p-2 rounded-lg border border-gray-200 dark:border-dark_border shadow-sm">
             <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Connection Changes</p>
             <p className="font-bold text-xs text-midnight_text dark:text-white">{data.network.connectionChanges}</p>
           </div>
         )}
-        {data.network.offlineDuration > 0 && (
+        {data.network.offlineDuration !== undefined && data.network.offlineDuration > 0 && (
           <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-2 rounded-lg border border-red-300 dark:border-red-700 shadow-sm">
             <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Offline Duration</p>
             <p className="font-bold text-xs text-midnight_text dark:text-white">{Math.floor(data.network.offlineDuration / 60)}m</p>
