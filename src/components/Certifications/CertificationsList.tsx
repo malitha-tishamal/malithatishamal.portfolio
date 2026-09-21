@@ -10,6 +10,7 @@ import {
 } from "@/types/certification";
 import { CertificationCardItem } from "./CertificationCardItem";
 import { CertificationDetailModal } from "./CertificationDetailModal";
+import { trackCertificationSectionView } from "@/utils/certificationAnalytics";
 
 export const CertificationsList: React.FC = () => {
   const [items, setItems] = useState<CertificationItem[]>([]);

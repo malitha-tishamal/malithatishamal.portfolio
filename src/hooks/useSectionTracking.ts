@@ -5,10 +5,11 @@ interface SectionTrackingOptions {
   sectionId: string;
   sectionName: string;
   threshold?: number;
+  onEnter?: () => void;
 }
 
 export const useSectionTracking = (options: SectionTrackingOptions) => {
-  const { sectionId, sectionName, threshold = 0.5 } = options;
+  const { sectionId, sectionName, threshold = 0.5, onEnter } = options;
   const hasEntered = useRef(false);
   const entryTime = useRef<number | null>(null);
 
