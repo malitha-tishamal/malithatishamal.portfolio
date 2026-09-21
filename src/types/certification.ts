@@ -9,8 +9,11 @@ export interface CertificationItem {
   expirationDate?: string; // e.g. "No Expiration" or "Mar 2029"
   credentialId?: string; // e.g. "e4e1215f-35c6-4416-8d4c-83407362d262"
   credentialUrl?: string; // e.g. "https://www.credly.com/..."
-  certificateImage?: string; // Image URL or Cloudinary URL
+  certificateImage?: string; // Primary image URL (legacy / first image)
+  certificateImages?: string[]; // Multiple certificate images (1 or 2 side-by-side)
   certificatePdfUrl?: string; // Optional direct PDF URL
+  clickCount?: number;
+  hoverCount?: number;
   skills: string[]; // e.g. ["Threat Detection", "Privacy And Data Confidentiality"]
   category: string; // e.g. "Cybersecurity", "Networking", "IoT"
   description?: string;
@@ -24,6 +27,21 @@ export interface CertificationSettings {
   autoplaySpeed: number; // ms
   transitionSpeed: number; // ms
   pauseOnHover: boolean;
+}
+
+export interface CertificationAnalytics {
+  sectionViewCount?: number;
+}
+
+/** Returns certificate image URLs, supporting legacy single-image field. */
+export function getCertificateImages(item: CertificationItem): string[] {
+  if (item.certificateImages && item.certificateImages.length > 0) {
+    return item.certificateImages.filter(Boolean);
+  }
+  if (item.certificateImage) {
+    return [item.certificateImage];
+  }
+  return [];
 }
 
 export const defaultCertificationSettings: CertificationSettings = {

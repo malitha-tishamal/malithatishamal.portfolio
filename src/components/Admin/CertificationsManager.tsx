@@ -22,6 +22,8 @@ import {
 } from "@/types/certification";
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import { searchSkills } from "@/data/skillsDatabase";
+import { loadCustomSkillsFromFirestore, registerCustomSkills } from "@/utils/customSkills";
+import { getCertificateImages } from "@/types/certification";
 import toast from "react-hot-toast";
 
 const LOGO_BG_PRESETS = [
@@ -90,7 +92,10 @@ export const CertificationsManager: React.FC = () => {
 
   // Upload Progress
   const [certProgress, setCertProgress] = useState<number | null>(null);
+  const [certUploadSlot, setCertUploadSlot] = useState<number | null>(null);
   const [logoProgress, setLogoProgress] = useState<number | null>(null);
+  const [certificateImages, setCertificateImages] = useState<string[]>([""]);
+  const [sectionViewCount, setSectionViewCount] = useState<number>(0);
 
   // ── Fetch Certifications ───────────────────────────────────────────────────
   const fetchItems = async () => {
@@ -149,9 +154,22 @@ export const CertificationsManager: React.FC = () => {
     }
   };
 
+  const fetchAnalytics = async () => {
+    try {
+      const snap = await getDoc(doc(db, "siteContent", "certificationAnalytics"));
+      if (snap.exists()) {
+        setSectionViewCount(Number(snap.data().sectionViewCount) || 0);
+      }
+    } catch (err) {
+      console.warn("Could not load certification analytics", err);
+    }
+  };
+
   useEffect(() => {
     fetchItems();
     fetchSettings();
+    fetchAnalytics();
+    loadCustomSkillsFromFirestore();
   }, []);
 
   // ── Seed Default Cisco Certifications ──────────────────────────────────────
@@ -203,18 +221,21 @@ export const CertificationsManager: React.FC = () => {
     setNewSkill("");
     setSkillSuggestions([]);
     setShowSkillSuggestions(false);
+    setCertificateImages([""]);
     setIsModalOpen(true);
   };
 
   // ── Open Editor for Existing ───────────────────────────────────────────────
   const handleEdit = (item: CertificationItem) => {
     setEditingItem(item);
+    const imgs = getCertificateImages(item);
     setFormData({
       ...item,
       logoBgColor: item.logoBgColor || "transparent",
       logoShape: item.logoShape || "rounded",
       skills: item.skills || [],
     });
+    setCertificateImages(imgs.length > 0 ? imgs : [""]);
     setNewSkill("");
     setSkillSuggestions([]);
     setShowSkillSuggestions(false);
@@ -277,34 +298,56 @@ export const CertificationsManager: React.FC = () => {
     }
   };
 
+  const handleAddImageSlot = () => {
+    if (certificateImages.length >= 2) {
+      toast.error("Maximum 2 certificate images supported.");
+      return;
+    }
+    setCertificateImages((prev) => [...prev, ""]);
+  };
+
+  const handleRemoveImageSlot = (index: number) => {
+    if (certificateImages.length <= 1) return;
+    setCertificateImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCertImageUrlChange = (index: number, value: string) => {
+    setCertificateImages((prev) => prev.map((img, i) => (i === index ? value : img)));
+  };
+
   // ── Cloudinary Upload Handlers (Image or PDF) ──────────────────────────────
-  const handleCertUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCertUpload = async (e: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
+      setCertUploadSlot(slotIndex);
       setCertProgress(10);
       const res = await uploadToCloudinary(file, (p) => setCertProgress(p), "auto");
       const url = res.secure_url || res.url;
 
-      // If uploaded file is a PDF, Cloudinary renders first page image preview with .jpg format
       if (file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")) {
         const previewImageUrl = url.replace(/\.pdf$/i, ".jpg");
-        setFormData((prev) => ({
-          ...prev,
-          certificateImage: previewImageUrl,
-          certificatePdfUrl: url,
-        }));
+        setCertificateImages((prev) =>
+          prev.map((img, i) => (i === slotIndex ? previewImageUrl : img))
+        );
+        if (slotIndex === 0) {
+          setFormData((prev) => ({ ...prev, certificatePdfUrl: url }));
+        }
         toast.success("PDF uploaded & converted to image preview!");
       } else {
-        setFormData((prev) => ({ ...prev, certificateImage: url }));
-        toast.success("Certificate image uploaded!");
+        setCertificateImages((prev) =>
+          prev.map((img, i) => (i === slotIndex ? url : img))
+        );
+        toast.success(`Certificate image ${slotIndex + 1} uploaded!`);
       }
     } catch (err) {
       console.error(err);
       toast.error("Upload failed.");
     } finally {
       setCertProgress(null);
+      setCertUploadSlot(null);
+      e.target.value = "";
     }
   };
 
@@ -379,6 +422,7 @@ export const CertificationsManager: React.FC = () => {
     }
 
     const certId = editingItem ? editingItem.id : `cert-${Date.now()}`;
+    const cleanedImages = certificateImages.map((img) => img.trim()).filter(Boolean);
 
     const payload: CertificationItem = {
       id: certId,
@@ -391,9 +435,12 @@ export const CertificationsManager: React.FC = () => {
       expirationDate: formData.expirationDate || "No Expiration",
       credentialId: formData.credentialId?.trim() || "",
       credentialUrl: formData.credentialUrl?.trim() || "",
-      certificateImage: formData.certificateImage || "",
+      certificateImage: cleanedImages[0] || "",
+      certificateImages: cleanedImages,
       certificatePdfUrl: formData.certificatePdfUrl || "",
       skills: formData.skills || [],
+      clickCount: editingItem?.clickCount || 0,
+      hoverCount: editingItem?.hoverCount || 0,
       category: formData.category || "Cybersecurity",
       description: formData.description?.trim() || "",
       displayOrder: formData.displayOrder || items.length + 1,
@@ -403,8 +450,13 @@ export const CertificationsManager: React.FC = () => {
 
     try {
       setSaving(true);
+      const addedSkills = await registerCustomSkills(payload.skills);
       await setDoc(doc(db, "certifications", certId), payload);
-      toast.success(editingItem ? "Certification updated!" : "New certification created!");
+      if (addedSkills.length > 0) {
+        toast.success(`Saved! ${addedSkills.length} new skill(s) added to database.`);
+      } else {
+        toast.success(editingItem ? "Certification updated!" : "New certification created!");
+      }
       setIsModalOpen(false);
       fetchItems();
     } catch (err) {
@@ -477,6 +529,29 @@ export const CertificationsManager: React.FC = () => {
           >
             <span>+ Add Certification</span>
           </button>
+        </div>
+      </div>
+
+      {/* Analytics Summary */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-4 shadow-xs">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">Section Views</p>
+          <p className="text-2xl font-bold text-primary">{sectionViewCount.toLocaleString()}</p>
+          <p className="text-[11px] text-gray-400 mt-1">Total certifications section visits</p>
+        </div>
+        <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-4 shadow-xs">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">Total Clicks</p>
+          <p className="text-2xl font-bold text-dark dark:text-white">
+            {items.reduce((sum, it) => sum + (it.clickCount || 0), 0).toLocaleString()}
+          </p>
+          <p className="text-[11px] text-gray-400 mt-1">Certificate preview & credential clicks</p>
+        </div>
+        <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-4 shadow-xs">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">Total Hovers</p>
+          <p className="text-2xl font-bold text-dark dark:text-white">
+            {items.reduce((sum, it) => sum + (it.hoverCount || 0), 0).toLocaleString()}
+          </p>
+          <p className="text-[11px] text-gray-400 mt-1">Cursor hover on certificate cards</p>
         </div>
       </div>
 
@@ -643,6 +718,8 @@ export const CertificationsManager: React.FC = () => {
                   <th className="py-3.5 px-4 font-bold">Certification</th>
                   <th className="py-3.5 px-4 font-bold">Category</th>
                   <th className="py-3.5 px-4 font-bold">Issue Date</th>
+                  <th className="py-3.5 px-4 font-bold">Clicks</th>
+                  <th className="py-3.5 px-4 font-bold">Hovers</th>
                   <th className="py-3.5 px-4 font-bold">Status</th>
                   <th className="py-3.5 px-4 font-bold text-right">Actions</th>
                 </tr>
@@ -744,6 +821,13 @@ export const CertificationsManager: React.FC = () => {
                     {/* Issue Date */}
                     <td className="py-3.5 px-4 whitespace-nowrap text-xs text-gray-500">
                       {item.issueDate} ({item.expirationDate || "No Expiration"})
+                    </td>
+
+                    <td className="py-3.5 px-4 whitespace-nowrap text-xs font-semibold text-gray-600 dark:text-gray-300">
+                      {(item.clickCount || 0).toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap text-xs font-semibold text-gray-600 dark:text-gray-300">
+                      {(item.hoverCount || 0).toLocaleString()}
                     </td>
 
                     {/* Status */}
@@ -1080,50 +1164,89 @@ export const CertificationsManager: React.FC = () => {
                 />
               </div>
 
-              {/* Certificate Image / PDF Upload */}
+              {/* Certificate Images (1 or 2 side-by-side) */}
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-3">
-                <label className={labelCls}>Certificate Document (Image or PDF)</label>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Upload an image (.png, .jpg) or PDF document. If you upload a PDF, it will automatically generate a clean high-res preview image!
-                </p>
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  {formData.certificateImage && (
-                    <div className="relative w-32 h-24 rounded-xl overflow-hidden shrink-0 border border-border bg-white dark:bg-darklight">
-                      <Image
-                        src={formData.certificateImage}
-                        alt="Preview"
-                        fill
-                        className="object-contain p-1"
-                        unoptimized
-                      />
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className={labelCls}>Certificate Images ({certificateImages.length}/2)</label>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Add 1 image for full preview, or 2 images displayed side-by-side on the card.
+                    </p>
+                  </div>
+                  {certificateImages.length < 2 && (
+                    <button
+                      type="button"
+                      onClick={handleAddImageSlot}
+                      className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                    >
+                      + Add Image 2
+                    </button>
                   )}
-                  <div className="flex-1 w-full space-y-2">
-                    <input
-                      type="text"
-                      value={formData.certificateImage || ""}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, certificateImage: e.target.value }))}
-                      placeholder="Image URL or upload certificate file..."
-                      className={inputCls}
-                    />
-                    <div className="flex items-center gap-3">
-                      <label className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-blue-700 transition cursor-pointer shadow-xs">
-                        <span>Upload Certificate (PDF / Image)</span>
-                        <input
-                          type="file"
-                          accept="image/*,.pdf"
-                          onChange={handleCertUpload}
-                          className="hidden"
-                        />
-                      </label>
-                      {certProgress !== null && (
-                        <span className="text-xs text-primary font-bold">
-                          Uploading: {certProgress}%
-                        </span>
+                </div>
+
+                {certificateImages.map((imgUrl, slotIdx) => (
+                  <div
+                    key={slotIdx}
+                    className="p-3 rounded-xl bg-white dark:bg-darklight border border-border/60 dark:border-dark_border/60 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-dark dark:text-white">
+                        {slotIdx === 0 ? "Image 1 (Left / Full)" : "Image 2 (Right Half)"}
+                      </span>
+                      {certificateImages.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImageSlot(slotIdx)}
+                          className="text-xs text-red-500 hover:text-red-700 cursor-pointer"
+                        >
+                          Remove
+                        </button>
                       )}
                     </div>
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      {imgUrl ? (
+                        <div className="relative w-32 h-24 rounded-xl overflow-hidden shrink-0 border border-border bg-white dark:bg-darklight">
+                          <Image
+                            src={imgUrl}
+                            alt={`Preview ${slotIdx + 1}`}
+                            fill
+                            className="object-contain p-1"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-32 h-24 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-[10px] text-gray-400 shrink-0">
+                          Empty
+                        </div>
+                      )}
+                      <div className="flex-1 w-full space-y-2">
+                        <input
+                          type="text"
+                          value={imgUrl}
+                          onChange={(e) => handleCertImageUrlChange(slotIdx, e.target.value)}
+                          placeholder="Image URL or upload certificate file..."
+                          className={inputCls}
+                        />
+                        <div className="flex items-center gap-3">
+                          <label className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-blue-700 transition cursor-pointer shadow-xs">
+                            <span>Upload Image {slotIdx + 1}</span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => handleCertUpload(e, slotIdx)}
+                              className="hidden"
+                            />
+                          </label>
+                          {certProgress !== null && certUploadSlot === slotIdx && (
+                            <span className="text-xs text-primary font-bold">
+                              Uploading: {certProgress}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
 
               {/* Skills Tags — with 5,500+ Auto-Suggest */}

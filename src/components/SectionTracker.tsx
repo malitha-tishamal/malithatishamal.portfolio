@@ -1,6 +1,7 @@
 "use client";
 
 import { useSectionTracking } from '@/hooks/useSectionTracking';
+import { trackCertificationSectionView } from '@/utils/certificationAnalytics';
 
 export const SectionTracker = () => {
   // Track Hero section
@@ -15,6 +16,7 @@ export const SectionTracker = () => {
     sectionId: 'certifications',
     sectionName: 'Certificates',
     threshold: 0.3,
+    onEnter: trackCertificationSectionView,
   });
 
   // Track Portfolio section

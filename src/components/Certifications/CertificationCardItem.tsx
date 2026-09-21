@@ -2,7 +2,11 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { CertificationItem } from "@/types/certification";
+import { CertificationItem, getCertificateImages } from "@/types/certification";
+import {
+  trackCertificationClick,
+  trackCertificationHover,
+} from "@/utils/certificationAnalytics";
 import toast from "react-hot-toast";
 
 interface CertificationCardItemProps {
@@ -15,6 +19,9 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
   onPreview,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [imgFailed, setImgFailed] = useState<Record<number, boolean>>({});
+
+  const certificateImages = getCertificateImages(item);
 
   const handleCopyId = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -27,6 +34,15 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
     }
   };
 
+  const handlePreview = () => {
+    trackCertificationClick(item.id);
+    onPreview(item);
+  };
+
+  const handleCardHover = () => {
+    trackCertificationHover(item.id);
+  };
+
   const logoShapeClass =
     item.logoShape === "circle"
       ? "rounded-full"
@@ -34,9 +50,6 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
       ? "rounded-md"
       : "rounded-xl";
 
-  const [imgFailed, setImgFailed] = useState(false);
-
-  // Logo background styling
   const isTransparent = !item.logoBgColor || item.logoBgColor === "transparent";
   const isWhite =
     item.logoBgColor?.toLowerCase() === "#ffffff" ||
@@ -51,10 +64,79 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
       : "border border-black/15 dark:border-white/15"
   }`;
 
+  const renderCertificatePreview = () => {
+    if (certificateImages.length >= 2) {
+      return (
+        <div className="grid grid-cols-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60">
+          {certificateImages.slice(0, 2).map((img, idx) => (
+            <div key={idx} className="relative w-full h-full overflow-hidden">
+              {!imgFailed[idx] ? (
+                <Image
+                  src={img}
+                  alt={`${item.title} - Part ${idx + 1}`}
+                  fill
+                  className="object-contain p-0.5 group-hover/preview:scale-[1.02] transition duration-300"
+                  unoptimized
+                  onError={() => setImgFailed((prev) => ({ ...prev, [idx]: true }))}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
+                  Image {idx + 1}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (certificateImages.length === 1 && !imgFailed[0]) {
+      return (
+        <Image
+          src={certificateImages[0]}
+          alt={item.title}
+          fill
+          className="object-contain p-1 group-hover/preview:scale-[1.02] transition duration-300"
+          unoptimized
+          onError={() => setImgFailed((prev) => ({ ...prev, 0: true }))}
+        />
+      );
+    }
+
+    return (
+      <div className="w-full h-full rounded-lg bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/80 dark:from-slate-900 dark:via-darkmode dark:to-blue-950/30 p-2.5 flex flex-col justify-between border border-blue-100 dark:border-blue-900/30 text-center select-none">
+        <div className="flex items-center justify-between border-b border-blue-100 dark:border-slate-800 pb-1">
+          <span className="text-[9px] font-bold tracking-widest text-primary uppercase">
+            {item.issuer}
+          </span>
+          <span className="text-[9px] text-gray-400 font-mono">
+            {item.issueDate}
+          </span>
+        </div>
+        <div className="py-0.5">
+          <p className="text-[9px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-semibold">
+            Certificate of Achievement
+          </p>
+          <h4 className="text-[11px] font-bold text-dark dark:text-white line-clamp-1 mt-0.5">
+            {item.title}
+          </h4>
+          <p className="text-[10px] text-primary font-medium mt-0.5">
+            Malitha Tishamal
+          </p>
+        </div>
+        <div className="flex items-center justify-between pt-1 border-t border-blue-100 dark:border-slate-800 text-[8px] text-gray-400">
+          <span>Verified Credential</span>
+          <span className="text-emerald-500 font-semibold">✓ Official</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-white dark:bg-darklight rounded-2xl border border-border/80 dark:border-dark_border p-4 sm:p-5 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full group">
-      
-      {/* Top Section: Issuer Logo & Header */}
+    <div
+      onMouseEnter={handleCardHover}
+      className="bg-white dark:bg-darklight rounded-2xl border border-border/80 dark:border-dark_border p-4 sm:p-5 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full group"
+    >
       <div>
         <div className="flex items-start gap-3 mb-3">
           <div
@@ -77,7 +159,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
 
           <div className="flex-1 min-w-0">
             <h3
-              onClick={() => onPreview(item)}
+              onClick={handlePreview}
               className="font-bold text-dark dark:text-white group-hover:text-primary transition-colors text-sm sm:text-base leading-snug line-clamp-2 cursor-pointer"
             >
               {item.title}
@@ -88,7 +170,6 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           </div>
         </div>
 
-        {/* Issued Date & Expiration Badges */}
         <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-darkmode text-gray-700 dark:text-gray-300 border border-border/60">
             <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,7 +184,6 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           </span>
         </div>
 
-        {/* Credential ID Chip (If present) */}
         {item.credentialId && (
           <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-darkmode border border-border/60 text-[11px] text-gray-600 dark:text-gray-400">
             <span className="font-semibold text-gray-500 shrink-0">ID:</span>
@@ -118,7 +198,6 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           </div>
         )}
 
-        {/* Skills / Tags */}
         {item.skills && item.skills.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {item.skills.slice(0, 4).map((skill, idx) => (
@@ -137,47 +216,11 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           </div>
         )}
 
-        {/* Certificate Preview Card */}
         <div
-          onClick={() => onPreview(item)}
+          onClick={handlePreview}
           className="relative h-36 sm:h-40 w-full rounded-xl overflow-hidden border border-border/80 dark:border-dark_border mb-3.5 cursor-pointer group/preview bg-slate-900/5 dark:bg-slate-950/40 p-1.5 flex items-center justify-center"
         >
-          {item.certificateImage && !imgFailed ? (
-            <Image
-              src={item.certificateImage}
-              alt={item.title}
-              fill
-              className="object-contain p-1 group-hover/preview:scale-[1.02] transition duration-300"
-              unoptimized
-              onError={() => setImgFailed(true)}
-            />
-          ) : (
-            <div className="w-full h-full rounded-lg bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/80 dark:from-slate-900 dark:via-darkmode dark:to-blue-950/30 p-2.5 flex flex-col justify-between border border-blue-100 dark:border-blue-900/30 text-center select-none">
-              <div className="flex items-center justify-between border-b border-blue-100 dark:border-slate-800 pb-1">
-                <span className="text-[9px] font-bold tracking-widest text-primary uppercase">
-                  {item.issuer}
-                </span>
-                <span className="text-[9px] text-gray-400 font-mono">
-                  {item.issueDate}
-                </span>
-              </div>
-              <div className="py-0.5">
-                <p className="text-[9px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-semibold">
-                  Certificate of Achievement
-                </p>
-                <h4 className="text-[11px] font-bold text-dark dark:text-white line-clamp-1 mt-0.5">
-                  {item.title}
-                </h4>
-                <p className="text-[10px] text-primary font-medium mt-0.5">
-                  Malitha Tishamal
-                </p>
-              </div>
-              <div className="flex items-center justify-between pt-1 border-t border-blue-100 dark:border-slate-800 text-[8px] text-gray-400">
-                <span>Verified Credential</span>
-                <span className="text-emerald-500 font-semibold">✓ Official</span>
-              </div>
-            </div>
-          )}
+          {renderCertificatePreview()}
 
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
             <span className="px-3 py-1 rounded-full bg-white/90 dark:bg-darklight/90 text-dark dark:text-white text-[11px] font-bold shadow-md flex items-center gap-1.5">
@@ -191,13 +234,13 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         </div>
       </div>
 
-      {/* Bottom Actions Bar */}
       <div className="pt-1">
         {item.credentialUrl ? (
           <a
             href={item.credentialUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackCertificationClick(item.id)}
             className="w-full py-2 px-3 rounded-xl border-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary text-primary hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-all duration-200 shadow-xs cursor-pointer"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,14 +253,13 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           </a>
         ) : (
           <button
-            onClick={() => onPreview(item)}
+            onClick={handlePreview}
             className="w-full py-2 px-3 rounded-xl border border-border bg-gray-50 dark:bg-darkmode text-dark dark:text-white font-bold text-xs hover:bg-primary hover:text-white hover:border-primary transition cursor-pointer"
           >
             View Certificate Details
           </button>
         )}
       </div>
-
     </div>
   );
 };

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { CertificationItem } from "@/types/certification";
+import { CertificationItem, getCertificateImages } from "@/types/certification";
 
 interface CertificationDetailModalProps {
   item: CertificationItem | null;
@@ -15,6 +15,8 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
 }) => {
   if (!item) return null;
 
+  const certificateImages = getCertificateImages(item);
+
   return (
     <div
       onClick={onClose}
@@ -24,7 +26,6 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
         onClick={(e) => e.stopPropagation()}
         className="bg-white dark:bg-darklight rounded-3xl border border-border dark:border-dark_border shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 my-auto"
       >
-        {/* Header */}
         <div className="flex items-start justify-between gap-4 pb-5 border-b border-border dark:border-dark_border mb-6">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-gray-900 text-white flex items-center justify-center p-2 shrink-0 border border-gray-800">
@@ -59,21 +60,30 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
           </button>
         </div>
 
-        {/* Certificate Image Preview Display */}
-        {item.certificateImage && (
-          <div className="relative w-full h-80 sm:h-[420px] rounded-2xl overflow-hidden mb-6 border border-border dark:border-dark_border bg-gray-100 dark:bg-darkmode shadow-inner">
-            <Image
-              src={item.certificateImage}
-              alt={item.title}
-              fill
-              className="object-contain p-2"
-              priority
-              unoptimized
-            />
+        {certificateImages.length > 0 && (
+          <div
+            className={`grid gap-3 mb-6 ${
+              certificateImages.length >= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
+            }`}
+          >
+            {certificateImages.map((img, idx) => (
+              <div
+                key={idx}
+                className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border border-border dark:border-dark_border bg-gray-100 dark:bg-darkmode shadow-inner"
+              >
+                <Image
+                  src={img}
+                  alt={`${item.title} - Image ${idx + 1}`}
+                  fill
+                  className="object-contain p-2"
+                  priority={idx === 0}
+                  unoptimized
+                />
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Info Grid */}
         <div className="grid sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border mb-6">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 block mb-1">
@@ -103,7 +113,6 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
           )}
         </div>
 
-        {/* Description */}
         {item.description && (
           <div className="mb-6">
             <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
@@ -115,7 +124,6 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
           </div>
         )}
 
-        {/* Skills */}
         {item.skills && item.skills.length > 0 && (
           <div className="mb-8">
             <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2.5">
@@ -134,7 +142,6 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
           </div>
         )}
 
-        {/* Modal Actions */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-border dark:border-dark_border">
           <button
             onClick={onClose}
