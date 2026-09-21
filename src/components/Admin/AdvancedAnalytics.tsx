@@ -1165,7 +1165,7 @@ export const AdvancedAnalytics: React.FC = () => {
         <div className="bg-gray-50 dark:bg-darkmode p-3 rounded-lg">
           <p className="text-xs text-gray-500 mb-2">Query Parameters</p>
           <div className="space-y-1">
-            {Object.entries(data.navigation.queryParams).map(([key, value]) => (
+            {Object.entries(data.navigation.queryParams || {}).map(([key, value]) => (
               <p key={key} className="text-xs font-semibold">{key}: {value}</p>
             ))}
           </div>
@@ -1175,7 +1175,7 @@ export const AdvancedAnalytics: React.FC = () => {
         <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
           <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">UTM Parameters</p>
           <div className="space-y-1">
-            {Object.entries(data.navigation.utm).map(([key, value]) => (
+            {Object.entries(data.navigation.utm || {}).map(([key, value]) => (
               <p key={key} className="text-xs font-semibold text-blue-700 dark:text-blue-300">{key}: {value}</p>
             ))}
           </div>

@@ -5544,6 +5544,54 @@ export const SKILLS_DATABASE: string[] = [
 // Deduplicated & case-normalized sorted array
 export const SORTED_SKILLS_DATABASE: string[] = SKILLS_DATABASE;
 
+let customSkillsCache: string[] = [];
+
+export function setCustomSkills(skills: string[]): void {
+  customSkillsCache = skills.filter(Boolean);
+}
+
+export function getCustomSkills(): string[] {
+  return customSkillsCache;
+}
+
+export function skillExistsInDatabase(skill: string): boolean {
+  const q = skill.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    SORTED_SKILLS_DATABASE.some((s) => s.toLowerCase() === q) ||
+    customSkillsCache.some((s) => s.toLowerCase() === q)
+  );
+}
+
+function collectSkillMatches(
+  source: string[],
+  q: string,
+  exactMatches: string[],
+  startsWithMatches: string[],
+  wordBoundaryMatches: string[],
+  containsMatches: string[],
+  maxResults: number
+): void {
+  for (let i = 0; i < source.length; i++) {
+    const skill = source[i];
+    const sLower = skill.toLowerCase();
+
+    if (sLower === q) {
+      exactMatches.push(skill);
+    } else if (sLower.startsWith(q)) {
+      startsWithMatches.push(skill);
+    } else if (sLower.includes(" " + q) || sLower.includes("/" + q) || sLower.includes("(" + q) || sLower.includes("-" + q)) {
+      wordBoundaryMatches.push(skill);
+    } else if (sLower.includes(q)) {
+      containsMatches.push(skill);
+    }
+
+    if (exactMatches.length + startsWithMatches.length + wordBoundaryMatches.length + containsMatches.length >= maxResults * 4) {
+      break;
+    }
+  }
+}
+
 /**
  * High-performance, 100% case-insensitive search helper that returns matching skills based on user input.
  * Prioritizes exact matches first, then prefix/startsWith matches, then word boundary matches, then substring matches.
@@ -5558,25 +5606,8 @@ export function searchSkills(query: string, maxResults: number = 25): string[] {
   const wordBoundaryMatches: string[] = [];
   const containsMatches: string[] = [];
 
-  for (let i = 0; i < SORTED_SKILLS_DATABASE.length; i++) {
-    const skill = SORTED_SKILLS_DATABASE[i];
-    const sLower = skill.toLowerCase();
-
-    if (sLower === q) {
-      exactMatches.push(skill);
-    } else if (sLower.startsWith(q)) {
-      startsWithMatches.push(skill);
-    } else if (sLower.includes(" " + q) || sLower.includes("/" + q) || sLower.includes("(" + q) || sLower.includes("-" + q)) {
-      wordBoundaryMatches.push(skill);
-    } else if (sLower.includes(q)) {
-      containsMatches.push(skill);
-    }
-
-    // Early termination optimization when we have plenty of matches
-    if (exactMatches.length + startsWithMatches.length + wordBoundaryMatches.length + containsMatches.length >= maxResults * 4) {
-      break;
-    }
-  }
+  collectSkillMatches(SORTED_SKILLS_DATABASE, q, exactMatches, startsWithMatches, wordBoundaryMatches, containsMatches, maxResults);
+  collectSkillMatches(customSkillsCache, q, exactMatches, startsWithMatches, wordBoundaryMatches, containsMatches, maxResults);
 
   const combined = [
     ...exactMatches,
@@ -5585,7 +5616,6 @@ export function searchSkills(query: string, maxResults: number = 25): string[] {
     ...containsMatches,
   ];
 
-  // Return unique slice
   const result: string[] = [];
   const seen = new Set<string>();
   for (const item of combined) {
