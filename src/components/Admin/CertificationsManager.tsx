@@ -518,7 +518,6 @@ export const CertificationsManager: React.FC = () => {
         toast.success(editingItem ? "Certification updated!" : "New certification created!");
       }
       setIsModalOpen(false);
-      fetchItems();
     } catch (err) {
       console.error("Error saving certification:", err);
       toast.error("Failed to save certification.");
@@ -811,7 +810,7 @@ export const CertificationsManager: React.FC = () => {
                             min={1}
                             value={item.displayOrder || index + 1}
                             onChange={(e) => handleQuickOrderChange(item.id, parseInt(e.target.value) || 1)}
-                            className="w-12 px-1.5 py-1 text-center font-bold text-xs rounded-lg border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white"
+                            className="w-16 px-2 py-1 text-center font-bold text-xs rounded-lg border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white"
                           />
                           <div className="flex flex-col">
                             <button
@@ -1636,6 +1635,10 @@ export const CertificationsManager: React.FC = () => {
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
       {/* ═══════════ PDF & MULTI-PAGE DOCUMENT SETTINGS MODAL ═══════════ */}
       {isPdfSettingsModalOpen && (
         <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
