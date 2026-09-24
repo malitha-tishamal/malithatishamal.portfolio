@@ -1,3 +1,5 @@
+export type CertificateImageLayout = "side-by-side" | "stacked" | "single" | "tabs";
+
 export interface CertificationItem {
   id: string;
   title: string;
@@ -10,8 +12,10 @@ export interface CertificationItem {
   credentialId?: string; // e.g. "e4e1215f-35c6-4416-8d4c-83407362d262"
   credentialUrl?: string; // e.g. "https://www.credly.com/..."
   certificateImage?: string; // Primary image URL (legacy / first image)
-  certificateImages?: string[]; // Multiple certificate images (1 or 2 side-by-side)
+  certificateImages?: string[]; // Multiple certificate images
+  certificateImageLayout?: CertificateImageLayout; // "side-by-side" (image 1) | "stacked" (image 2) | "single" | "tabs"
   certificatePdfUrl?: string; // Optional direct PDF URL
+  pdfPagesCount?: number; // Total pages in PDF if applicable
   clickCount?: number;
   hoverCount?: number;
   skills: string[]; // e.g. ["Threat Detection", "Privacy And Data Confidentiality"]
@@ -31,6 +35,17 @@ export interface CertificationSettings {
 
 export interface CertificationAnalytics {
   sectionViewCount?: number;
+}
+
+/** Generates a Cloudinary page JPG URL from a PDF URL if Cloudinary, or fallback JPG */
+export function getPdfPageImageUrl(pdfUrl: string, pageNumber: number = 1): string {
+  if (!pdfUrl) return "";
+  if (!pdfUrl.toLowerCase().includes(".pdf")) return pdfUrl;
+  if (pdfUrl.includes("res.cloudinary.com") && pdfUrl.includes("/upload/")) {
+    const transformed = pdfUrl.replace("/upload/", `/upload/pg_${pageNumber}/`);
+    return transformed.replace(/\.pdf$/i, ".jpg");
+  }
+  return pdfUrl.replace(/\.pdf$/i, ".jpg");
 }
 
 /** Returns certificate image URLs, supporting legacy single-image field. */
