@@ -30,10 +30,10 @@ const cleanObject = (obj: any): any => {
  * Collect comprehensive user/device analytics data
  */
 export const collectAdvancedAnalytics = async (): Promise<AdvancedAnalyticsData> => {
-  const data: AdvancedAnalyticsData = {
+  const data = {
     ...defaultAdvancedAnalytics,
     timestamp: new Date(),
-  };
+  } as AdvancedAnalyticsData;
 
   // Device Information
   data.device = await collectDeviceInfo();
