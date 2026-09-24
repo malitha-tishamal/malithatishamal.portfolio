@@ -64,16 +64,21 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
       : "border border-black/15 dark:border-white/15"
   }`;
 
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const layout = item.certificateImageLayout || (certificateImages.length >= 2 ? "side-by-side" : "single");
+
   const renderCertificatePreview = () => {
-    if (certificateImages.length >= 2) {
+    // 1. Stacked Layout (Top & Bottom / 2 Rows as requested in image 2)
+    if (layout === "stacked" && certificateImages.length >= 2) {
       return (
-        <div className="grid grid-cols-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60">
+        <div className="grid grid-rows-2 w-full h-full gap-1 bg-border/30 dark:bg-dark_border/50 rounded-lg overflow-hidden p-0.5">
           {certificateImages.slice(0, 2).map((img, idx) => (
-            <div key={idx} className="relative w-full h-full overflow-hidden">
+            <div key={idx} className="relative w-full h-full overflow-hidden bg-white/50 dark:bg-darkmode/50 rounded border border-border/40 dark:border-dark_border/40">
               {!imgFailed[idx] ? (
                 <Image
                   src={img}
-                  alt={`${item.title} - Part ${idx + 1}`}
+                  alt={`${item.title} - Page ${idx + 1}`}
                   fill
                   className="object-contain p-0.5 group-hover/preview:scale-[1.02] transition duration-300"
                   unoptimized
@@ -81,7 +86,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
-                  Image {idx + 1}
+                  Page {idx + 1}
                 </div>
               )}
             </div>
@@ -90,6 +95,78 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
       );
     }
 
+    // 2. Side-by-Side Layout (Left & Right / 2 Columns as requested in image 1)
+    if (layout === "side-by-side" && certificateImages.length >= 2) {
+      return (
+        <div className="grid grid-cols-2 w-full h-full gap-1 bg-border/30 dark:bg-dark_border/50 rounded-lg overflow-hidden p-0.5">
+          {certificateImages.slice(0, 2).map((img, idx) => (
+            <div key={idx} className="relative w-full h-full overflow-hidden bg-white/50 dark:bg-darkmode/50 rounded border border-border/40 dark:border-dark_border/40">
+              {!imgFailed[idx] ? (
+                <Image
+                  src={img}
+                  alt={`${item.title} - Page ${idx + 1}`}
+                  fill
+                  className="object-contain p-0.5 group-hover/preview:scale-[1.02] transition duration-300"
+                  unoptimized
+                  onError={() => setImgFailed((prev) => ({ ...prev, [idx]: true }))}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
+                  Page {idx + 1}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // 3. Tabbed / Paged Layout (or multiple images with active switcher)
+    if ((layout === "tabs" || layout === "single") && certificateImages.length > 1) {
+      const currentImg = certificateImages[activeImageIndex] || certificateImages[0];
+      return (
+        <div className="relative w-full h-full">
+          {!imgFailed[activeImageIndex] ? (
+            <Image
+              src={currentImg}
+              alt={`${item.title} - Image ${activeImageIndex + 1}`}
+              fill
+              className="object-contain p-1 group-hover/preview:scale-[1.02] transition duration-300"
+              unoptimized
+              onError={() => setImgFailed((prev) => ({ ...prev, [activeImageIndex]: true }))}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
+              Image {activeImageIndex + 1}
+            </div>
+          )}
+
+          {/* Quick Page Selector Pills */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-1 right-1 z-10 flex items-center gap-1 bg-black/60 backdrop-blur-xs px-1.5 py-0.5 rounded-full"
+          >
+            {certificateImages.map((_, pIdx) => (
+              <button
+                key={pIdx}
+                type="button"
+                onClick={() => setActiveImageIndex(pIdx)}
+                className={`w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center transition ${
+                  activeImageIndex === pIdx
+                    ? "bg-primary text-white"
+                    : "bg-white/40 text-white hover:bg-white/70"
+                }`}
+                title={`Page ${pIdx + 1}`}
+              >
+                {pIdx + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 4. Single Image Layout
     if (certificateImages.length === 1 && !imgFailed[0]) {
       return (
         <Image
