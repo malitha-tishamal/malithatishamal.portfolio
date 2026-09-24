@@ -20,6 +20,7 @@ export const CertificationsList: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    trackCertificationSectionView();
     try {
       const unsubscribe = onSnapshot(
         collection(db, "certifications"),
