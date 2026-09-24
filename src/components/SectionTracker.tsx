@@ -2,6 +2,7 @@
 
 import { useSectionTracking } from '@/hooks/useSectionTracking';
 import { trackCertificationSectionView } from '@/utils/certificationAnalytics';
+import { trackExperienceSectionView } from '@/utils/experienceAnalytics';
 
 export const SectionTracker = () => {
   // Track Hero section
@@ -9,6 +10,14 @@ export const SectionTracker = () => {
     sectionId: 'hero',
     sectionName: 'Hero',
     threshold: 0.5,
+  });
+
+  // Track Experience & Education section
+  useSectionTracking({
+    sectionId: 'experience-education',
+    sectionName: 'Experience & Education',
+    threshold: 0.3,
+    onEnter: trackExperienceSectionView,
   });
 
   // Track Certificates section
