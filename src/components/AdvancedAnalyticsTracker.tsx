@@ -40,7 +40,7 @@ export const AdvancedAnalyticsTracker = () => {
     };
 
     // Track mouse movements (sampled to avoid performance issues)
-    let mouseMoveThrottle: NodeJS.Timeout;
+    let mouseMoveThrottle: NodeJS.Timeout | null = null;
     const handleMouseMove = () => {
       if (!mouseMoveThrottle) {
         mouseMoveThrottle = setTimeout(() => {
