@@ -1434,7 +1434,7 @@ export const AdvancedAnalytics: React.FC = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(data.id);
+                        if (data.id) handleDelete(data.id);
                       }}
                       className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition cursor-pointer"
                       title="Delete this record"
