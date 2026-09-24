@@ -11,19 +11,22 @@ import {
   deleteDoc,
   serverTimestamp,
   query,
+  onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   CertificationItem,
   CertificationSettings,
+  CertificateImageLayout,
   CERTIFICATION_CATEGORIES,
   defaultCertifications,
   defaultCertificationSettings,
+  getCertificateImages,
+  getPdfPageImageUrl,
 } from "@/types/certification";
 import { uploadToCloudinary } from "@/utils/cloudinary";
-import { searchSkills } from "@/data/skillsDatabase";
+import { searchSkills, skillExistsInDatabase, setCustomSkills } from "@/data/skillsDatabase";
 import { loadCustomSkillsFromFirestore, registerCustomSkills } from "@/utils/customSkills";
-import { getCertificateImages } from "@/types/certification";
 import toast from "react-hot-toast";
 
 const LOGO_BG_PRESETS = [
@@ -76,6 +79,9 @@ export const CertificationsManager: React.FC = () => {
     credentialId: "",
     credentialUrl: "https://www.credly.com/org/cisco",
     certificateImage: "/images/portfolio/portfolio_1.jpg",
+    certificateImages: ["/images/portfolio/portfolio_1.jpg"],
+    certificateImageLayout: "side-by-side",
+    certificatePdfUrl: "",
     skills: ["Cybersecurity", "Networking"],
     category: "Cybersecurity",
     description: "",
@@ -90,39 +96,81 @@ export const CertificationsManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
 
-  // Upload Progress
+  // Upload Progress & Image slots
   const [certProgress, setCertProgress] = useState<number | null>(null);
   const [certUploadSlot, setCertUploadSlot] = useState<number | null>(null);
   const [logoProgress, setLogoProgress] = useState<number | null>(null);
   const [certificateImages, setCertificateImages] = useState<string[]>([""]);
   const [sectionViewCount, setSectionViewCount] = useState<number>(0);
 
-  // ── Fetch Certifications ───────────────────────────────────────────────────
-  const fetchItems = async () => {
-    try {
-      setLoading(true);
-      const ref = collection(db, "certifications");
-      const q = query(ref);
-      const snapshot = await getDocs(q);
+  // PDF & Multi-Page Settings Modal State
+  const [isPdfSettingsModalOpen, setIsPdfSettingsModalOpen] = useState<boolean>(false);
+  const [pdfSettingsTargetUrl, setPdfSettingsTargetUrl] = useState<string>("");
+  const [pdfPageCount, setPdfPageCount] = useState<number>(2);
+  const [pdfSelectedPages, setPdfSelectedPages] = useState<number[]>([1, 2]);
+  const [pdfChosenLayout, setPdfChosenLayout] = useState<CertificateImageLayout>("side-by-side");
 
-      if (!snapshot.empty) {
-        const list: CertificationItem[] = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<CertificationItem, "id">),
-        }));
+  // ── Real-time Firestore Listeners ──────────────────────────────────────────
+  useEffect(() => {
+    setLoading(true);
 
-        list.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-        setItems(list);
-      } else {
+    // 1. Real-time certifications collection listener
+    const unsubCerts = onSnapshot(
+      collection(db, "certifications"),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: CertificationItem[] = snapshot.docs.map((d) => ({
+            id: d.id,
+            ...(d.data() as Omit<CertificationItem, "id">),
+          }));
+          list.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+          setItems(list);
+        } else {
+          setItems(defaultCertifications);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn("Certifications listener notice:", err);
         setItems(defaultCertifications);
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Error fetching certifications:", err);
-      toast.error("Failed to load certifications.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    );
+
+    // 2. Real-time section view analytics listener
+    const unsubAnalytics = onSnapshot(
+      doc(db, "siteContent", "certificationAnalytics"),
+      (snap) => {
+        if (snap.exists()) {
+          setSectionViewCount(Number(snap.data()?.sectionViewCount) || 0);
+        }
+      },
+      (err) => console.warn("Analytics listener notice:", err)
+    );
+
+    // 3. Real-time custom skills listener
+    const unsubCustomSkills = onSnapshot(
+      doc(db, "siteContent", "customSkills"),
+      (snap) => {
+        if (snap.exists() && Array.isArray(snap.data()?.skills)) {
+          setCustomSkills(snap.data().skills);
+        }
+      },
+      (err) => console.warn("Custom skills listener notice:", err)
+    );
+
+    // Initial load of custom skills
+    loadCustomSkillsFromFirestore();
+
+    // 4. Slider settings fetch
+    fetchSettings();
+
+    return () => {
+      unsubCerts();
+      unsubAnalytics();
+      unsubCustomSkills();
+    };
+  }, []);
 
   const fetchSettings = async () => {
     try {
@@ -154,24 +202,6 @@ export const CertificationsManager: React.FC = () => {
     }
   };
 
-  const fetchAnalytics = async () => {
-    try {
-      const snap = await getDoc(doc(db, "siteContent", "certificationAnalytics"));
-      if (snap.exists()) {
-        setSectionViewCount(Number(snap.data().sectionViewCount) || 0);
-      }
-    } catch (err) {
-      console.warn("Could not load certification analytics", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchItems();
-    fetchSettings();
-    fetchAnalytics();
-    loadCustomSkillsFromFirestore();
-  }, []);
-
   // ── Seed Default Cisco Certifications ──────────────────────────────────────
   const handleSeedDefaults = async () => {
     if (!confirm("This will seed default Cisco Certifications into Firestore. Continue?")) {
@@ -188,7 +218,6 @@ export const CertificationsManager: React.FC = () => {
         });
       }
       toast.success("Default certifications seeded!");
-      fetchItems();
     } catch (err) {
       console.error("Error seeding certifications:", err);
       toast.error("Failed to seed certifications.");
@@ -211,6 +240,9 @@ export const CertificationsManager: React.FC = () => {
       credentialId: "",
       credentialUrl: "https://www.credly.com/org/cisco",
       certificateImage: "/images/portfolio/portfolio_1.jpg",
+      certificateImages: ["/images/portfolio/portfolio_1.jpg"],
+      certificateImageLayout: "side-by-side",
+      certificatePdfUrl: "",
       skills: ["Cybersecurity", "Networking"],
       category: "Cybersecurity",
       description: "",
@@ -234,6 +266,8 @@ export const CertificationsManager: React.FC = () => {
       logoBgColor: item.logoBgColor || "transparent",
       logoShape: item.logoShape || "rounded",
       skills: item.skills || [],
+      certificateImageLayout: item.certificateImageLayout || (imgs.length >= 2 ? "side-by-side" : "single"),
+      certificatePdfUrl: item.certificatePdfUrl || "",
     });
     setCertificateImages(imgs.length > 0 ? imgs : [""]);
     setNewSkill("");
@@ -299,8 +333,8 @@ export const CertificationsManager: React.FC = () => {
   };
 
   const handleAddImageSlot = () => {
-    if (certificateImages.length >= 2) {
-      toast.error("Maximum 2 certificate images supported.");
+    if (certificateImages.length >= 4) {
+      toast.error("Maximum 4 certificate images supported.");
       return;
     }
     setCertificateImages((prev) => [...prev, ""]);
@@ -313,6 +347,10 @@ export const CertificationsManager: React.FC = () => {
 
   const handleCertImageUrlChange = (index: number, value: string) => {
     setCertificateImages((prev) => prev.map((img, i) => (i === index ? value : img)));
+    if (value.toLowerCase().includes(".pdf")) {
+      setFormData((prev) => ({ ...prev, certificatePdfUrl: value }));
+      setPdfSettingsTargetUrl(value);
+    }
   };
 
   // ── Cloudinary Upload Handlers (Image or PDF) ──────────────────────────────
@@ -327,14 +365,23 @@ export const CertificationsManager: React.FC = () => {
       const url = res.secure_url || res.url;
 
       if (file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")) {
-        const previewImageUrl = url.replace(/\.pdf$/i, ".jpg");
-        setCertificateImages((prev) =>
-          prev.map((img, i) => (i === slotIndex ? previewImageUrl : img))
-        );
-        if (slotIndex === 0) {
-          setFormData((prev) => ({ ...prev, certificatePdfUrl: url }));
-        }
-        toast.success("PDF uploaded & converted to image preview!");
+        const previewPage1 = getPdfPageImageUrl(url, 1);
+        const previewPage2 = getPdfPageImageUrl(url, 2);
+
+        setCertificateImages([previewPage1, previewPage2]);
+        setFormData((prev) => ({
+          ...prev,
+          certificatePdfUrl: url,
+          certificateImageLayout: "side-by-side",
+        }));
+
+        setPdfSettingsTargetUrl(url);
+        setPdfPageCount(2);
+        setPdfSelectedPages([1, 2]);
+        setPdfChosenLayout("side-by-side");
+        setIsPdfSettingsModalOpen(true);
+
+        toast.success("PDF uploaded! Multi-page layout settings opened to adjust pages.");
       } else {
         setCertificateImages((prev) =>
           prev.map((img, i) => (i === slotIndex ? url : img))
@@ -369,7 +416,7 @@ export const CertificationsManager: React.FC = () => {
     }
   };
 
-  // ── Skill Tag Management with 5,500+ Auto-Suggest (Case-Insensitive) ────────
+  // ── Skill Tag Management with 5,500+ Auto-Suggest & Auto-Save ──────────────
   const handleSkillInputChange = (value: string) => {
     setNewSkill(value);
     if (value.trim().length > 0) {
@@ -382,7 +429,7 @@ export const CertificationsManager: React.FC = () => {
     }
   };
 
-  const addSkill = (skillToAdd?: string) => {
+  const addSkill = async (skillToAdd?: string) => {
     const raw = (skillToAdd || newSkill).trim();
     if (!raw) return;
 
@@ -397,6 +444,18 @@ export const CertificationsManager: React.FC = () => {
         ...prev,
         skills: [...(prev.skills || []), raw],
       }));
+
+      // If new skill not in database, save to Firestore database immediately!
+      if (!skillExistsInDatabase(raw)) {
+        try {
+          const added = await registerCustomSkills([raw]);
+          if (added.length > 0) {
+            toast.success(`New skill "${raw}" saved to database for future use! ✨`);
+          }
+        } catch (err) {
+          console.warn("Could not save new custom skill:", err);
+        }
+      }
     } else {
       toast("Skill already added", { icon: "ℹ️" });
     }
@@ -437,6 +496,7 @@ export const CertificationsManager: React.FC = () => {
       credentialUrl: formData.credentialUrl?.trim() || "",
       certificateImage: cleanedImages[0] || "",
       certificateImages: cleanedImages,
+      certificateImageLayout: formData.certificateImageLayout || (cleanedImages.length >= 2 ? "side-by-side" : "single"),
       certificatePdfUrl: formData.certificatePdfUrl || "",
       skills: formData.skills || [],
       clickCount: editingItem?.clickCount || 0,
@@ -823,11 +883,19 @@ export const CertificationsManager: React.FC = () => {
                       {item.issueDate} ({item.expirationDate || "No Expiration"})
                     </td>
 
-                    <td className="py-3.5 px-4 whitespace-nowrap text-xs font-semibold text-gray-600 dark:text-gray-300">
-                      {(item.clickCount || 0).toLocaleString()}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-primary border border-blue-200/60 dark:border-blue-900/40 font-bold text-xs" title="Clicks / details viewed">
+                        <span>👆</span>
+                        <span>{(item.clickCount || 0).toLocaleString()}</span>
+                        <span className="text-[10px] font-normal text-gray-400">clicks</span>
+                      </span>
                     </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap text-xs font-semibold text-gray-600 dark:text-gray-300">
-                      {(item.hoverCount || 0).toLocaleString()}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200/60 dark:border-purple-900/40 font-bold text-xs" title="Cursor hover views">
+                        <span>🖱️</span>
+                        <span>{(item.hoverCount || 0).toLocaleString()}</span>
+                        <span className="text-[10px] font-normal text-gray-400">hovers</span>
+                      </span>
                     </td>
 
                     {/* Status */}
@@ -1164,48 +1232,192 @@ export const CertificationsManager: React.FC = () => {
                 />
               </div>
 
-              {/* Certificate Images (1 or 2 side-by-side) */}
-              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-3">
-                <div className="flex items-center justify-between">
+              {/* Certificate Images & Multi-Page / PDF Layout Manager */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border/60 dark:border-dark_border/60">
                   <div>
-                    <label className={labelCls}>Certificate Images ({certificateImages.length}/2)</label>
+                    <label className={labelCls}>
+                      Certificate Images &amp; Layout ({certificateImages.length}/4)
+                    </label>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                      Add 1 image for full preview, or 2 images displayed side-by-side on the card.
+                      Add 1 or multiple images. Choose how multiple pages / images are arranged on the card.
                     </p>
                   </div>
-                  {certificateImages.length < 2 && (
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
                       type="button"
-                      onClick={handleAddImageSlot}
-                      className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                      onClick={() => {
+                        const firstPdf = formData.certificatePdfUrl || certificateImages.find((img) => img.toLowerCase().includes(".pdf")) || "";
+                        setPdfSettingsTargetUrl(firstPdf);
+                        setIsPdfSettingsModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-600 dark:text-purple-400 border border-purple-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                     >
-                      + Add Image 2
+                      <span>⚙️</span>
+                      <span>PDF Multi-Page Settings</span>
                     </button>
-                  )}
+                    {certificateImages.length < 4 && (
+                      <button
+                        type="button"
+                        onClick={handleAddImageSlot}
+                        className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-bold transition cursor-pointer"
+                      >
+                        + Add Image Slot
+                      </button>
+                    )}
+                  </div>
                 </div>
 
+                {/* Layout Choice Controls */}
+                <div className="p-3.5 rounded-xl bg-white dark:bg-darklight border border-border/80 dark:border-dark_border space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-dark dark:text-white flex items-center gap-1.5">
+                      <span>📐</span>
+                      <span>Display Layout on Certificate Card:</span>
+                    </span>
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                      {formData.certificateImageLayout || "side-by-side"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* 1. Side-by-Side (depeththe) */}
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, certificateImageLayout: "side-by-side" }))}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                        (formData.certificateImageLayout || "side-by-side") === "side-by-side"
+                          ? "bg-blue-50/70 dark:bg-blue-950/40 border-primary ring-2 ring-primary/30 shadow-xs"
+                          : "bg-gray-50/80 dark:bg-darkmode border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-dark dark:text-white">🪟 Side-by-Side</span>
+                        {(formData.certificateImageLayout || "side-by-side") === "side-by-side" && (
+                          <span className="text-[10px] text-primary font-bold">✓ Active</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-500">2 columns (left &amp; right split, vertical line)</p>
+                      {/* Mini Visual Icon */}
+                      <div className="w-full h-8 rounded border border-dashed border-primary/50 grid grid-cols-2 gap-0.5 p-0.5 bg-white dark:bg-darkmode">
+                        <div className="bg-primary/20 rounded-xs flex items-center justify-center text-[8px] font-bold text-primary">P1</div>
+                        <div className="bg-primary/20 rounded-xs flex items-center justify-center text-[8px] font-bold text-primary">P2</div>
+                      </div>
+                    </button>
+
+                    {/* 2. Stacked (uda yata) */}
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, certificateImageLayout: "stacked" }))}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                        formData.certificateImageLayout === "stacked"
+                          ? "bg-purple-50/70 dark:bg-purple-950/40 border-purple-600 ring-2 ring-purple-600/30 shadow-xs"
+                          : "bg-gray-50/80 dark:bg-darkmode border-border hover:border-purple-500/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-dark dark:text-white">🥞 Stacked</span>
+                        {formData.certificateImageLayout === "stacked" && (
+                          <span className="text-[10px] text-purple-600 font-bold">✓ Active</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-500">2 rows (top &amp; bottom split, horizontal line)</p>
+                      {/* Mini Visual Icon */}
+                      <div className="w-full h-8 rounded border border-dashed border-purple-500/50 grid grid-rows-2 gap-0.5 p-0.5 bg-white dark:bg-darkmode">
+                        <div className="bg-purple-500/20 rounded-xs flex items-center justify-center text-[8px] font-bold text-purple-600">P1 (Top)</div>
+                        <div className="bg-purple-500/20 rounded-xs flex items-center justify-center text-[8px] font-bold text-purple-600">P2 (Bottom)</div>
+                      </div>
+                    </button>
+
+                    {/* 3. Single / Tabs */}
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, certificateImageLayout: "tabs" }))}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                        formData.certificateImageLayout === "tabs" || formData.certificateImageLayout === "single"
+                          ? "bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-600 ring-2 ring-emerald-600/30 shadow-xs"
+                          : "bg-gray-50/80 dark:bg-darkmode border-border hover:border-emerald-500/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-dark dark:text-white">📑 Page Switcher</span>
+                        {(formData.certificateImageLayout === "tabs" || formData.certificateImageLayout === "single") && (
+                          <span className="text-[10px] text-emerald-600 font-bold">✓ Active</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-500">Full cover with page switch dots / pills</p>
+                      {/* Mini Visual Icon */}
+                      <div className="w-full h-8 rounded border border-dashed border-emerald-500/50 p-1 flex items-center justify-between bg-white dark:bg-darkmode">
+                        <span className="text-[9px] font-bold text-emerald-600">Full Page</span>
+                        <div className="flex gap-1">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* PDF Link Indicator if present */}
+                {formData.certificatePdfUrl && (
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-red-50/60 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-base">📄</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-dark dark:text-white">Attached PDF Document</p>
+                        <p className="text-[10px] text-gray-500 truncate">{formData.certificatePdfUrl}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPdfSettingsTargetUrl(formData.certificatePdfUrl || "");
+                        setIsPdfSettingsModalOpen(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold transition shrink-0 cursor-pointer shadow-2xs"
+                    >
+                      Adjust Pages ⚙️
+                    </button>
+                  </div>
+                )}
+
+                {/* Individual Image Slots */}
                 {certificateImages.map((imgUrl, slotIdx) => (
                   <div
                     key={slotIdx}
-                    className="p-3 rounded-xl bg-white dark:bg-darklight border border-border/60 dark:border-dark_border/60 space-y-3"
+                    className="p-3.5 rounded-xl bg-white dark:bg-darklight border border-border/60 dark:border-dark_border/60 space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-dark dark:text-white">
-                        {slotIdx === 0 ? "Image 1 (Left / Full)" : "Image 2 (Right Half)"}
+                      <span className="text-xs font-bold text-dark dark:text-white flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] flex items-center justify-center font-bold">
+                          {slotIdx + 1}
+                        </span>
+                        <span>Image / Page {slotIdx + 1}</span>
+                        {slotIdx === 0 && (
+                          <span className="text-[10px] text-gray-400 font-normal">
+                            {(formData.certificateImageLayout || "side-by-side") === "side-by-side" ? "(Left Half)" : (formData.certificateImageLayout || "side-by-side") === "stacked" ? "(Top Half)" : "(Primary)"}
+                          </span>
+                        )}
+                        {slotIdx === 1 && (
+                          <span className="text-[10px] text-gray-400 font-normal">
+                            {(formData.certificateImageLayout || "side-by-side") === "side-by-side" ? "(Right Half)" : (formData.certificateImageLayout || "side-by-side") === "stacked" ? "(Bottom Half)" : "(Page 2)"}
+                          </span>
+                        )}
                       </span>
                       {certificateImages.length > 1 && (
                         <button
                           type="button"
                           onClick={() => handleRemoveImageSlot(slotIdx)}
-                          className="text-xs text-red-500 hover:text-red-700 cursor-pointer"
+                          className="text-xs text-red-500 hover:text-red-700 font-semibold cursor-pointer"
                         >
-                          Remove
+                          ✕ Remove
                         </button>
                       )}
                     </div>
+
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                       {imgUrl ? (
-                        <div className="relative w-32 h-24 rounded-xl overflow-hidden shrink-0 border border-border bg-white dark:bg-darklight">
+                        <div className="relative w-32 h-24 rounded-xl overflow-hidden shrink-0 border border-border bg-white dark:bg-darklight shadow-2xs">
                           <Image
                             src={imgUrl}
                             alt={`Preview ${slotIdx + 1}`}
@@ -1216,7 +1428,7 @@ export const CertificationsManager: React.FC = () => {
                         </div>
                       ) : (
                         <div className="w-32 h-24 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-[10px] text-gray-400 shrink-0">
-                          Empty
+                          Empty Slot
                         </div>
                       )}
                       <div className="flex-1 w-full space-y-2">
@@ -1224,12 +1436,12 @@ export const CertificationsManager: React.FC = () => {
                           type="text"
                           value={imgUrl}
                           onChange={(e) => handleCertImageUrlChange(slotIdx, e.target.value)}
-                          placeholder="Image URL or upload certificate file..."
+                          placeholder="Image URL or upload certificate file/PDF..."
                           className={inputCls}
                         />
                         <div className="flex items-center gap-3">
                           <label className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-blue-700 transition cursor-pointer shadow-xs">
-                            <span>Upload Image {slotIdx + 1}</span>
+                            <span>Upload Image or PDF</span>
                             <input
                               type="file"
                               accept="image/*,.pdf"
@@ -1424,6 +1636,313 @@ export const CertificationsManager: React.FC = () => {
               </div>
 
             </form>
+      {/* ═══════════ PDF & MULTI-PAGE DOCUMENT SETTINGS MODAL ═══════════ */}
+      {isPdfSettingsModalOpen && (
+        <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-darklight rounded-3xl border border-border dark:border-dark_border shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 my-auto space-y-6">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-border dark:border-dark_border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-600/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl">
+                  📄
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-dark dark:text-white leading-tight">
+                    Multi-Page Document &amp; PDF Layout Settings
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Configure how multi-page certificates or PDFs are displayed on the public card.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPdfSettingsModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-darkmode text-gray-500 hover:text-dark dark:hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Document PDF URL */}
+            <div className="space-y-1.5">
+              <label className={labelCls}>PDF Document URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={pdfSettingsTargetUrl}
+                  onChange={(e) => setPdfSettingsTargetUrl(e.target.value)}
+                  placeholder="https://res.cloudinary.com/.../cert.pdf"
+                  className={inputCls}
+                />
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Cloudinary automatically generates high-resolution page previews (`pg_1`, `pg_2`, etc.).
+              </p>
+            </div>
+
+            {/* Total Pages in Document */}
+            <div className="space-y-2">
+              <label className={labelCls}>How many pages does this certificate / document have?</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[1, 2, 3, 4].map((cnt) => (
+                  <button
+                    key={cnt}
+                    type="button"
+                    onClick={() => {
+                      setPdfPageCount(cnt);
+                      if (cnt === 1) {
+                        setPdfSelectedPages([1]);
+                        setPdfChosenLayout("single");
+                      } else {
+                        setPdfSelectedPages([1, 2]);
+                        setPdfChosenLayout("side-by-side");
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      pdfPageCount === cnt
+                        ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                        : "bg-gray-50 dark:bg-darkmode text-gray-600 dark:text-gray-300 border-border hover:border-purple-500/50"
+                    }`}
+                  >
+                    {cnt} {cnt === 1 ? "Page" : "Pages"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Pages to display */}
+            {pdfPageCount > 1 && (
+              <div className="space-y-2">
+                <label className={labelCls}>Select pages to include in the preview card:</label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {Array.from({ length: pdfPageCount }, (_, i) => i + 1).map((pg) => {
+                    const isChecked = pdfSelectedPages.includes(pg);
+                    return (
+                      <button
+                        key={pg}
+                        type="button"
+                        onClick={() => {
+                          if (isChecked) {
+                            if (pdfSelectedPages.length > 1) {
+                              setPdfSelectedPages((prev) => prev.filter((p) => p !== pg));
+                            }
+                          } else {
+                            setPdfSelectedPages((prev) => [...prev, pg].sort((a, b) => a - b));
+                          }
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center gap-1.5 ${
+                          isChecked
+                            ? "bg-primary/10 text-primary border-primary/40 ring-1 ring-primary/40"
+                            : "bg-gray-50 dark:bg-darkmode text-gray-500 border-border"
+                        }`}
+                      >
+                        <span>{isChecked ? "☑" : "☐"}</span>
+                        <span>Page {pg}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Display Layout Choice (Matches User's 2 Drawings) */}
+            <div className="space-y-2.5">
+              <label className={labelCls}>How to arrange pages on the certificate card:</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Side-by-Side (User's Drawing 1: Vertical Red Line Down Middle) */}
+                <button
+                  type="button"
+                  onClick={() => setPdfChosenLayout("side-by-side")}
+                  className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2.5 ${
+                    pdfChosenLayout === "side-by-side"
+                      ? "bg-blue-50/70 dark:bg-blue-950/40 border-primary ring-2 ring-primary/30 shadow-xs"
+                      : "bg-gray-50/70 dark:bg-darkmode border-border hover:border-primary/40"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-dark dark:text-white">🪟 Side-by-Side</span>
+                    {pdfChosenLayout === "side-by-side" && (
+                      <span className="text-[10px] text-primary font-bold">✓ Selected</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500">
+                    2 columns side-by-side with vertical dividing line (left &amp; right)
+                  </p>
+                  {/* Miniature diagram replicating image 1 */}
+                  <div className="w-full h-14 rounded-lg border-2 border-dashed border-primary/60 grid grid-cols-2 divide-x-2 divide-red-500 bg-white dark:bg-darklight p-1">
+                    <div className="flex items-center justify-center text-[9px] font-bold text-gray-600 dark:text-gray-300">
+                      Page 1
+                    </div>
+                    <div className="flex items-center justify-center text-[9px] font-bold text-gray-600 dark:text-gray-300">
+                      Page 2
+                    </div>
+                  </div>
+                </button>
+
+                {/* 2. Stacked (User's Drawing 2: Horizontal Red Line Across Middle) */}
+                <button
+                  type="button"
+                  onClick={() => setPdfChosenLayout("stacked")}
+                  className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2.5 ${
+                    pdfChosenLayout === "stacked"
+                      ? "bg-purple-50/70 dark:bg-purple-950/40 border-purple-600 ring-2 ring-purple-600/30 shadow-xs"
+                      : "bg-gray-50/70 dark:bg-darkmode border-border hover:border-purple-500/40"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-dark dark:text-white">🥞 Stacked</span>
+                    {pdfChosenLayout === "stacked" && (
+                      <span className="text-[10px] text-purple-600 font-bold">✓ Selected</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500">
+                    2 rows stacked with horizontal dividing line (top &amp; bottom)
+                  </p>
+                  {/* Miniature diagram replicating image 2 */}
+                  <div className="w-full h-14 rounded-lg border-2 border-dashed border-purple-500/60 grid grid-rows-2 divide-y-2 divide-red-500 bg-white dark:bg-darklight p-1">
+                    <div className="flex items-center justify-center text-[9px] font-bold text-gray-600 dark:text-gray-300">
+                      Page 1 (Top)
+                    </div>
+                    <div className="flex items-center justify-center text-[9px] font-bold text-gray-600 dark:text-gray-300">
+                      Page 2 (Bottom)
+                    </div>
+                  </div>
+                </button>
+
+                {/* 3. Single Cover / Switcher */}
+                <button
+                  type="button"
+                  onClick={() => setPdfChosenLayout("single")}
+                  className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2.5 ${
+                    pdfChosenLayout === "single" || pdfChosenLayout === "tabs"
+                      ? "bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-600 ring-2 ring-emerald-600/30 shadow-xs"
+                      : "bg-gray-50/70 dark:bg-darkmode border-border hover:border-emerald-500/40"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-dark dark:text-white">📑 Single Cover</span>
+                    {(pdfChosenLayout === "single" || pdfChosenLayout === "tabs") && (
+                      <span className="text-[10px] text-emerald-600 font-bold">✓ Selected</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500">
+                    Single prominent cover page (with page switcher pills)
+                  </p>
+                  {/* Miniature diagram */}
+                  <div className="w-full h-14 rounded-lg border-2 border-dashed border-emerald-500/60 p-2 flex items-center justify-center bg-white dark:bg-darklight text-[9px] font-bold text-emerald-600">
+                    Full Cover (Page 1)
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Live Interactive Preview Box */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
+                Live Preview of Card Output:
+              </span>
+              <div className="w-full h-44 rounded-2xl border border-border dark:border-dark_border bg-slate-900/5 dark:bg-slate-950/50 p-2 overflow-hidden flex items-center justify-center">
+                {pdfChosenLayout === "side-by-side" && pdfSelectedPages.length >= 2 ? (
+                  <div className="grid grid-cols-2 w-full h-full gap-1 rounded-xl overflow-hidden bg-border/40 dark:bg-dark_border/60 p-0.5">
+                    {pdfSelectedPages.slice(0, 2).map((pg) => {
+                      const img = getPdfPageImageUrl(pdfSettingsTargetUrl, pg);
+                      return (
+                        <div key={pg} className="relative w-full h-full bg-white dark:bg-darkmode rounded flex items-center justify-center overflow-hidden">
+                          {img ? (
+                            <Image
+                              src={img}
+                              alt={`Page ${pg}`}
+                              fill
+                              className="object-contain p-1"
+                              unoptimized
+                            />
+                          ) : (
+                            <span className="text-xs font-bold text-gray-400">Page {pg}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : pdfChosenLayout === "stacked" && pdfSelectedPages.length >= 2 ? (
+                  <div className="grid grid-rows-2 w-full h-full gap-1 rounded-xl overflow-hidden bg-border/40 dark:bg-dark_border/60 p-0.5">
+                    {pdfSelectedPages.slice(0, 2).map((pg) => {
+                      const img = getPdfPageImageUrl(pdfSettingsTargetUrl, pg);
+                      return (
+                        <div key={pg} className="relative w-full h-full bg-white dark:bg-darkmode rounded flex items-center justify-center overflow-hidden">
+                          {img ? (
+                            <Image
+                              src={img}
+                              alt={`Page ${pg}`}
+                              fill
+                              className="object-contain p-0.5"
+                              unoptimized
+                            />
+                          ) : (
+                            <span className="text-xs font-bold text-gray-400">Page {pg}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="relative w-full h-full bg-white dark:bg-darkmode rounded-xl flex items-center justify-center overflow-hidden">
+                    {pdfSettingsTargetUrl ? (
+                      <Image
+                        src={getPdfPageImageUrl(pdfSettingsTargetUrl, pdfSelectedPages[0] || 1)}
+                        alt="Page 1"
+                        fill
+                        className="object-contain p-2"
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-gray-400">Page 1 Cover</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border dark:border-dark_border">
+              <button
+                type="button"
+                onClick={() => setIsPdfSettingsModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl border border-border text-gray-600 dark:text-gray-400 text-xs font-bold hover:bg-gray-100 dark:hover:bg-darkmode transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetUrl = pdfSettingsTargetUrl.trim() || formData.certificatePdfUrl || "";
+                  if (!targetUrl) {
+                    toast.error("Please provide a valid PDF or document URL.");
+                    return;
+                  }
+
+                  const generatedImgs = pdfSelectedPages.map((pg) =>
+                    getPdfPageImageUrl(targetUrl, pg)
+                  );
+
+                  setCertificateImages(generatedImgs);
+                  setFormData((prev) => ({
+                    ...prev,
+                    certificatePdfUrl: targetUrl,
+                    certificateImageLayout: pdfChosenLayout,
+                    pdfPagesCount: pdfPageCount,
+                  }));
+
+                  setIsPdfSettingsModalOpen(false);
+                  toast.success(`Applied ${generatedImgs.length} page(s) with ${pdfChosenLayout} layout! ✨`);
+                }}
+                className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-bold transition shadow-md shadow-purple-600/20 cursor-pointer flex items-center gap-1.5"
+              >
+                <span>✓ Apply Pages &amp; Layout to Certificate</span>
+              </button>
+            </div>
+
           </div>
         </div>
       )}
@@ -1431,3 +1950,5 @@ export const CertificationsManager: React.FC = () => {
     </div>
   );
 };
+
+export default CertificationsManager;
