@@ -10,6 +10,10 @@ import {
   defaultExperiences,
   ExperienceCategory,
 } from "@/types/experience";
+import {
+  trackExperienceClick,
+  trackExperienceHover,
+} from "@/utils/experienceAnalytics";
 
 // ── Organization Logo with smart error fallback & sizing ────────────────────
 const OrganizationLogo: React.FC<{
@@ -395,7 +399,11 @@ export const ExperienceEducation: React.FC = () => {
 
                       {/* Clickable Compact Card */}
                       <div
-                        onClick={() => setSelectedItem(item)}
+                        onClick={() => {
+                          setSelectedItem(item);
+                          trackExperienceClick(item.id);
+                        }}
+                        onMouseEnter={() => trackExperienceHover(item.id)}
                         className="flex-1 min-w-0 cursor-pointer rounded-2xl border border-slate-200/90 dark:border-dark_border bg-slate-50/60 dark:bg-darkmode/50 hover:bg-white dark:hover:bg-darkmode hover:border-primary/50 dark:hover:border-primary/50 p-3.5 transition-all duration-200 shadow-2xs hover:shadow-md hover:-translate-y-0.5 group/card"
                       >
                         {/* Title & Status Header */}
@@ -614,7 +622,11 @@ export const ExperienceEducation: React.FC = () => {
 
                       {/* Clickable Compact Card */}
                       <div
-                        onClick={() => setSelectedItem(item)}
+                        onClick={() => {
+                          setSelectedItem(item);
+                          trackExperienceClick(item.id);
+                        }}
+                        onMouseEnter={() => trackExperienceHover(item.id)}
                         className="flex-1 min-w-0 cursor-pointer rounded-2xl border border-slate-200/90 dark:border-dark_border bg-slate-50/60 dark:bg-darkmode/50 hover:bg-white dark:hover:bg-darkmode hover:border-purple-500/50 dark:hover:border-purple-500/50 p-3.5 transition-all duration-200 shadow-2xs hover:shadow-md hover:-translate-y-0.5 group/card"
                       >
                         {/* Organization & Ongoing Header */}
