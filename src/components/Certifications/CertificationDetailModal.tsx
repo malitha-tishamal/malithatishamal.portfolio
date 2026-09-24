@@ -63,17 +63,23 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
         {certificateImages.length > 0 && (
           <div
             className={`grid gap-3 mb-6 ${
-              certificateImages.length >= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
+              item.certificateImageLayout === "stacked"
+                ? "grid-cols-1"
+                : certificateImages.length >= 2
+                ? "grid-cols-1 sm:grid-cols-2"
+                : "grid-cols-1"
             }`}
           >
             {certificateImages.map((img, idx) => (
               <div
                 key={idx}
-                className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border border-border dark:border-dark_border bg-gray-100 dark:bg-darkmode shadow-inner"
+                className={`relative w-full ${
+                  item.certificateImageLayout === "stacked" ? "h-80 sm:h-96" : "h-72 sm:h-80"
+                } rounded-2xl overflow-hidden border border-border dark:border-dark_border bg-gray-100 dark:bg-darkmode shadow-inner`}
               >
                 <Image
                   src={img}
-                  alt={`${item.title} - Image ${idx + 1}`}
+                  alt={`${item.title} - Page ${idx + 1}`}
                   fill
                   className="object-contain p-2"
                   priority={idx === 0}
@@ -81,6 +87,27 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
                 />
               </div>
             ))}
+          </div>
+        )}
+
+        {item.certificatePdfUrl && (
+          <div className="mb-6 flex items-center justify-between p-3.5 rounded-2xl bg-red-50/70 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">📄</span>
+              <div>
+                <p className="text-xs font-bold text-dark dark:text-white">Official Document (PDF)</p>
+                <p className="text-[11px] text-gray-500">View or download the full resolution certificate PDF</p>
+              </div>
+            </div>
+            <a
+              href={item.certificatePdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <span>Open PDF</span>
+              <span>↗</span>
+            </a>
           </div>
         )}
 
