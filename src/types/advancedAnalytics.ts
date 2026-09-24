@@ -335,7 +335,7 @@ export const defaultAdvancedAnalytics: Partial<AdvancedAnalyticsData> = {
   browser: {
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
     language: typeof navigator !== 'undefined' ? navigator.language : 'en-US',
-    languages: typeof navigator !== 'undefined' ? navigator.languages : ['en-US'],
+    languages: typeof navigator !== 'undefined' ? [...navigator.languages] : ['en-US'],
     cookiesEnabled: typeof navigator !== 'undefined' ? navigator.cookieEnabled : false,
     capabilities: {},
   },
