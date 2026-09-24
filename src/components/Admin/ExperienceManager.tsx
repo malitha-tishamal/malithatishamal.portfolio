@@ -10,6 +10,8 @@ import {
   deleteDoc,
   serverTimestamp,
   query,
+  onSnapshot,
+  arrayUnion,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -237,6 +239,10 @@ export const ExperienceManager: React.FC = () => {
   const [mediaType, setMediaType] = useState<"certificate" | "award" | "document" | "image" | "link">("certificate");
   const [mediaProgress, setMediaProgress] = useState<number | null>(null);
 
+  // Analytics & Custom Skills State
+  const [sectionViewCount, setSectionViewCount] = useState<number>(0);
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+
   // Fetch Items from Firestore
   const fetchItems = async () => {
     try {
@@ -262,6 +268,25 @@ export const ExperienceManager: React.FC = () => {
 
   useEffect(() => {
     fetchItems();
+
+    // Listen to section view count analytics
+    const unsubViews = onSnapshot(doc(db, "siteContent", "experienceAnalytics"), (snap) => {
+      if (snap.exists()) {
+        setSectionViewCount(Number(snap.data()?.sectionViewCount) || 0);
+      }
+    });
+
+    // Listen to custom persistent skills
+    const unsubSkills = onSnapshot(doc(db, "siteContent", "customSkills"), (snap) => {
+      if (snap.exists() && Array.isArray(snap.data()?.skills)) {
+        setCustomSkills(snap.data().skills);
+      }
+    });
+
+    return () => {
+      unsubViews();
+      unsubSkills();
+    };
   }, []);
 
   // Seed default items
@@ -374,20 +399,27 @@ export const ExperienceManager: React.FC = () => {
     }
   };
 
-  // Skill tag management with 5,500+ auto-suggest (case-insensitive)
+  // Skill tag management with 5,500+ auto-suggest + custom persistent database
   const handleSkillInputChange = (val: string) => {
     setNewSkill(val);
     if (val.trim().length > 0) {
-      const results = searchSkills(val, 15);
-      setSkillSuggestions(results);
-      setShowSkillSuggestions(results.length > 0);
+      const q = val.trim().toLowerCase();
+      const dbResults = searchSkills(val, 15);
+      const customMatches = customSkills.filter(
+        (cs) =>
+          cs.toLowerCase().includes(q) &&
+          !dbResults.some((d) => d.toLowerCase() === cs.toLowerCase())
+      );
+      const combined = [...customMatches, ...dbResults].slice(0, 15);
+      setSkillSuggestions(combined);
+      setShowSkillSuggestions(combined.length > 0);
     } else {
       setSkillSuggestions([]);
       setShowSkillSuggestions(false);
     }
   };
 
-  const addSkill = (skillToAdd?: string) => {
+  const addSkill = async (skillToAdd?: string) => {
     const s = (skillToAdd || newSkill).trim();
     if (!s) return;
     const current = formData.skills || [];
@@ -397,6 +429,29 @@ export const ExperienceManager: React.FC = () => {
     );
     if (!alreadyExists) {
       setFormData((prev) => ({ ...prev, skills: [...current, s] }));
+
+      // Check if skill is in skillsDatabase or customSkills
+      const inSkillsDb = searchSkills(s, 100).some(
+        (existing) => existing.toLowerCase() === s.toLowerCase()
+      );
+      const inCustom = customSkills.some(
+        (existing) => existing.toLowerCase() === s.toLowerCase()
+      );
+
+      // If it's a new custom skill not in existing database, save to Firestore!
+      if (!inSkillsDb && !inCustom) {
+        setCustomSkills((prev) => [...prev, s]);
+        try {
+          await setDoc(
+            doc(db, "siteContent", "customSkills"),
+            { skills: arrayUnion(s) },
+            { merge: true }
+          );
+          toast.success(`New skill "${s}" saved to database for future use! ✨`);
+        } catch (err) {
+          console.warn("Could not save new skill to database", err);
+        }
+      }
     } else {
       toast("Skill already added", { icon: "ℹ️" });
     }
@@ -625,6 +680,73 @@ export const ExperienceManager: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Analytics Stats Bar ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Section Views */}
+        <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-4 shadow-xs flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Section Views
+            </span>
+            <span className="text-lg">👁️</span>
+          </div>
+          <p className="text-2xl font-extrabold text-dark dark:text-white">
+            {sectionViewCount}
+          </p>
+          <p className="text-[11px] text-gray-400">
+            Visitors who scrolled to this section
+          </p>
+        </div>
+
+        {/* Total Items */}
+        <div className="bg-white dark:bg-darklight rounded-2xl border border-border dark:border-dark_border p-4 shadow-xs flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Total Items
+            </span>
+            <span className="text-lg">📋</span>
+          </div>
+          <p className="text-2xl font-extrabold text-dark dark:text-white">
+            {items.length}
+          </p>
+          <p className="text-[11px] text-gray-400">
+            All experience & education records
+          </p>
+        </div>
+
+        {/* Education Count */}
+        <div className="bg-purple-50 dark:bg-purple-950/20 rounded-2xl border border-purple-200 dark:border-purple-900/40 p-4 shadow-xs flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+              Education
+            </span>
+            <span className="text-lg">🎓</span>
+          </div>
+          <p className="text-2xl font-extrabold text-purple-700 dark:text-purple-300">
+            {items.filter((i) => i.category === "education").length}
+          </p>
+          <p className="text-[11px] text-purple-500 dark:text-purple-400">
+            Degrees, diplomas & training
+          </p>
+        </div>
+
+        {/* Work + Volunteer Count */}
+        <div className="bg-blue-50 dark:bg-blue-950/20 rounded-2xl border border-blue-200 dark:border-blue-900/40 p-4 shadow-xs flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+              Work / Volunteer
+            </span>
+            <span className="text-lg">💼</span>
+          </div>
+          <p className="text-2xl font-extrabold text-primary">
+            {items.filter((i) => i.category === "work" || i.category === "volunteer").length}
+          </p>
+          <p className="text-[11px] text-blue-400">
+            Professional & volunteer positions
+          </p>
+        </div>
+      </div>
+
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-darklight p-4 rounded-2xl border border-border dark:border-dark_border shadow-xs">
         <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
@@ -691,6 +813,7 @@ export const ExperienceManager: React.FC = () => {
                   <th className="py-3.5 px-4 font-bold">Title / Degree</th>
                   <th className="py-3.5 px-4 font-bold">Period</th>
                   <th className="py-3.5 px-4 font-bold">Color</th>
+                  <th className="py-3.5 px-4 font-bold">Hover / Clicks</th>
                   <th className="py-3.5 px-4 font-bold">Status</th>
                   <th className="py-3.5 px-4 font-bold text-right">Actions</th>
                 </tr>
@@ -778,6 +901,26 @@ export const ExperienceManager: React.FC = () => {
                         <span className="text-[10px] text-gray-400 font-mono">
                           {item.accentColor || "default"}
                         </span>
+                      </div>
+                    </td>
+
+                    {/* Hover & Click Analytics per item */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5" title="Times cursor hovered on this card (unique per session)">
+                          <span className="text-[11px]">🖱️</span>
+                          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                            {item.hoverCount ?? 0}
+                          </span>
+                          <span className="text-[10px] text-gray-400">hovers</span>
+                        </div>
+                        <div className="flex items-center gap-1.5" title="Times this card was clicked / detail opened">
+                          <span className="text-[11px]">👆</span>
+                          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                            {item.clickCount ?? 0}
+                          </span>
+                          <span className="text-[10px] text-gray-400">clicks</span>
+                        </div>
                       </div>
                     </td>
 
