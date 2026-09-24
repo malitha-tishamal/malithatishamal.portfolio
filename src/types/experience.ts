@@ -50,6 +50,8 @@ export interface ExperienceItem {
   displayOrder?: number;
   published?: boolean;
   updatedAt?: any;
+  clickCount?: number; // Total clicks / detail modal views
+  hoverCount?: number; // Total cursor hover interactions
 }
 
 export const defaultExperiences: ExperienceItem[] = [
