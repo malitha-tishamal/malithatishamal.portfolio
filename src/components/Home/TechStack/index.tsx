@@ -9,6 +9,8 @@ import {
   TechStackSection,
   defaultTechStackSection,
 } from "@/types/techstack";
+import { TechDetailModal } from "./TechDetailModal";
+import { trackTechStackHover, trackTechStackClick } from "@/utils/techStackAnalytics";
 
 // ── Icon renderer ─────────────────────────────────────────────────────────────
 function TechIcon({ item }: { item: TechItem }) {
@@ -67,6 +69,7 @@ export default function TechStack() {
   const [categories, setCategories] = useState<TechCategory[]>([]);
   const [items, setItems] = useState<TechItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [selectedItem, setSelectedItem] = useState<TechItem | null>(null);
 
   // Load section heading content
   useEffect(() => {
@@ -173,28 +176,71 @@ export default function TechStack() {
             data-aos="fade-up"
             data-aos-delay="150"
           >
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="group relative flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-gray-50 dark:bg-darklight border border-gray-100 dark:border-dark_border hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-200 cursor-default"
-              >
-                <TechIcon item={item} />
-                <span className="text-xs font-semibold text-center text-gray-700 dark:text-gray-300 leading-tight">
-                  {item.name}
-                </span>
-                <ProficiencyDots level={item.proficiency} />
+            {filteredItems.map((item) => {
+              const cat = categories.find((c) => c.id === item.categoryId);
+              const cardColor = cat?.color ?? "#0a66c2";
+              const hoverDesc =
+                item.shortDescription ||
+                (item.description
+                  ? item.description.replace(/<[^>]+>/g, "").slice(0, 110) + "..."
+                  : `Click to view proficiency, experience, and overview for ${item.name}.`);
 
-                {/* Hover accent glow */}
-                <span
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-                  style={{
-                    boxShadow: `inset 0 0 0 1px ${
-                      categories.find((c) => c.id === item.categoryId)?.color ?? "#0a66c2"
-                    }55`,
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    trackTechStackClick(item);
+                    setSelectedItem(item);
                   }}
-                />
-              </div>
-            ))}
+                  onMouseEnter={() => {
+                    trackTechStackHover(item);
+                  }}
+                  className="group relative flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-gray-50 dark:bg-darklight border border-gray-100 dark:border-dark_border hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1.5 transition-all duration-200 cursor-pointer text-center select-none"
+                  title={`Click to view ${item.name} details`}
+                >
+                  <TechIcon item={item} />
+                  <span className="text-xs font-semibold text-center text-gray-700 dark:text-gray-300 leading-tight">
+                    {item.name}
+                  </span>
+                  <ProficiencyDots level={item.proficiency} />
+
+                  {/* Hover accent glow */}
+                  <span
+                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                    style={{
+                      boxShadow: `inset 0 0 0 1.5px ${cardColor}80`,
+                    }}
+                  />
+
+                  {/* Hover preview tooltip */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 hidden group-hover:flex flex-col items-center z-40 pointer-events-none transition-all duration-200 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 w-48 sm:w-56">
+                    <div className="p-2.5 rounded-xl bg-gray-900/95 dark:bg-gray-800/95 text-white border border-white/10 shadow-2xl backdrop-blur-md text-center">
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: cardColor }}
+                        />
+                        <span className="font-bold text-xs">{item.name}</span>
+                        {item.experienceYears && (
+                          <span className="text-[10px] text-gray-300 font-normal">
+                            ({item.experienceYears})
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] leading-snug text-gray-200 line-clamp-3">
+                        {hoverDesc}
+                      </p>
+                      <div className="mt-1.5 pt-1 border-t border-white/10 text-[9px] font-semibold text-blue-400 flex items-center justify-center gap-1">
+                        <span>Click for details</span>
+                        <span>↗</span>
+                      </div>
+                    </div>
+                    {/* Tooltip caret */}
+                    <div className="w-2 h-2 bg-gray-900/95 dark:bg-gray-800/95 rotate-45 -mt-1 border-r border-b border-white/10" />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -217,6 +263,13 @@ export default function TechStack() {
           </div>
         )}
       </div>
+
+      {/* Tech Details Modal */}
+      <TechDetailModal
+        item={selectedItem}
+        category={categories.find((c) => c.id === selectedItem?.categoryId)}
+        onClose={() => setSelectedItem(null)}
+      />
     </section>
   );
 }
