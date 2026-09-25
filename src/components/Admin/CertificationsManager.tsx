@@ -27,6 +27,12 @@ import {
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import { searchSkills, skillExistsInDatabase, setCustomSkills } from "@/data/skillsDatabase";
 import { loadCustomSkillsFromFirestore, registerCustomSkills } from "@/utils/customSkills";
+import { RichTextEditor } from "./RichTextEditor";
+import {
+  saveCustomCertificationCategory,
+  deleteCustomCertificationCategory,
+  getCombinedCategories,
+} from "@/utils/customCategories";
 import toast from "react-hot-toast";
 
 const LOGO_BG_PRESETS = [
@@ -96,6 +102,12 @@ export const CertificationsManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
 
+  // Custom Categories State
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [newCategoryInput, setNewCategoryInput] = useState<string>("");
+  const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
+  const [savingCategory, setSavingCategory] = useState<boolean>(false);
+
   // Upload Progress & Image slots
   const [certProgress, setCertProgress] = useState<number | null>(null);
   const [certUploadSlot, setCertUploadSlot] = useState<number | null>(null);
@@ -159,16 +171,28 @@ export const CertificationsManager: React.FC = () => {
       (err) => console.warn("Custom skills listener notice:", err)
     );
 
+    // 4. Real-time custom categories listener
+    const unsubCustomCategories = onSnapshot(
+      doc(db, "siteContent", "certificationCategories"),
+      (snap) => {
+        if (snap.exists() && Array.isArray(snap.data()?.categories)) {
+          setCustomCategories(snap.data().categories);
+        }
+      },
+      (err) => console.warn("Custom categories listener notice:", err)
+    );
+
     // Initial load of custom skills
     loadCustomSkillsFromFirestore();
 
-    // 4. Slider settings fetch
+    // 5. Slider settings fetch
     fetchSettings();
 
     return () => {
       unsubCerts();
       unsubAnalytics();
       unsubCustomSkills();
+      unsubCustomCategories();
     };
   }, []);
 
@@ -539,6 +563,51 @@ export const CertificationsManager: React.FC = () => {
     }
   };
 
+  // Computed categories combining built-in and Firestore custom categories
+  const allCategories = getCombinedCategories(customCategories);
+
+  const handleCreateCategory = async () => {
+    const trimmed = newCategoryInput.trim();
+    if (!trimmed) {
+      toast.error("Please enter a category name");
+      return;
+    }
+    setSavingCategory(true);
+    try {
+      const res = await saveCustomCertificationCategory(trimmed);
+      if (res.success) {
+        toast.success(res.message);
+        setFormData((prev) => ({ ...prev, category: trimmed }));
+        setNewCategoryInput("");
+        setIsAddingCategory(false);
+      } else {
+        toast.error(res.message);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to add category.");
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (catToDelete: string) => {
+    if (!confirm(`Are you sure you want to remove the category "${catToDelete}"?`)) return;
+    try {
+      await deleteCustomCertificationCategory(catToDelete);
+      toast.success(`Category "${catToDelete}" removed.`);
+      if (formData.category === catToDelete) {
+        setFormData((prev) => ({ ...prev, category: "Cybersecurity" }));
+      }
+      if (categoryFilter === catToDelete) {
+        setCategoryFilter("All");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete category.");
+    }
+  };
+
   const filteredItems = items.filter((it) => {
     const matchCat = categoryFilter === "All" || it.category === categoryFilter;
     const q = searchQuery.toLowerCase().trim();
@@ -743,7 +812,8 @@ export const CertificationsManager: React.FC = () => {
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="px-3 py-2 rounded-xl text-xs bg-gray-50 dark:bg-darkmode border border-border/80 dark:border-dark_border text-dark dark:text-white focus:outline-none"
           >
-            {CERTIFICATION_CATEGORIES.map((c) => (
+            <option value="All">All Categories</option>
+            {allCategories.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -810,7 +880,8 @@ export const CertificationsManager: React.FC = () => {
                             min={1}
                             value={item.displayOrder || index + 1}
                             onChange={(e) => handleQuickOrderChange(item.id, parseInt(e.target.value) || 1)}
-                            className="w-16 px-2 py-1 text-center font-bold text-xs rounded-lg border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white"
+                            className="w-20 px-2 py-1 text-center font-bold text-xs rounded-lg border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            title="Display Order (supports 5+ characters)"
                           />
                           <div className="flex flex-col">
                             <button
@@ -989,18 +1060,81 @@ export const CertificationsManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Category</label>
-                  <select
-                    value={formData.category || "Cybersecurity"}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
-                    className={inputCls}
-                  >
-                    {CERTIFICATION_CATEGORIES.filter((c) => c !== "All").map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={labelCls + " mb-0"}>Category *</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCategory(!isAddingCategory)}
+                      className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      {isAddingCategory ? "✕ Cancel" : "+ Add New Category"}
+                    </button>
+                  </div>
+
+                  {isAddingCategory ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCategoryInput}
+                        onChange={(e) => setNewCategoryInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleCreateCategory();
+                          }
+                          if (e.key === "Escape") {
+                            setIsAddingCategory(false);
+                          }
+                        }}
+                        placeholder="Type new category name..."
+                        className={`${inputCls} flex-1`}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        disabled={savingCategory || !newCategoryInput.trim()}
+                        onClick={handleCreateCategory}
+                        className="px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-blue-600 disabled:opacity-50 transition cursor-pointer shrink-0 shadow-xs"
+                      >
+                        {savingCategory ? "Saving..." : "Add & Save"}
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={formData.category || allCategories[0] || "Cybersecurity"}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
+                      className={inputCls}
+                    >
+                      {allCategories.map((c) => (
+                        <option key={c} value={c}>
+                          {c} {customCategories.includes(c) ? "(Custom)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* Custom Category Quick Chips with Remove Option */}
+                  {customCategories.length > 0 && !isAddingCategory && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="text-gray-400 font-semibold text-[10px]">Custom categories:</span>
+                      {customCategories.map((cat) => (
+                        <span
+                          key={cat}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-medium border border-primary/20"
+                        >
+                          {cat}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(cat)}
+                            title={`Delete custom category "${cat}"`}
+                            className="hover:text-red-500 font-bold ml-1 text-xs cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1577,15 +1711,19 @@ export const CertificationsManager: React.FC = () => {
                 )}
               </div>
 
-              {/* Description */}
+              {/* Description — Full MS Word-like Rich Text Editor */}
               <div>
-                <label className={labelCls}>Description / Learning Outcomes</label>
-                <textarea
-                  rows={3}
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className={labelCls + " mb-0"}>Description / Learning Outcomes</label>
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    Rich Text • Word/Docs Paste • Formatting &amp; Colors
+                  </span>
+                </div>
+                <RichTextEditor
                   value={formData.description || ""}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                  placeholder="Summary of course competencies and demonstrated knowledge..."
-                  className={inputCls}
+                  onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
+                  placeholder="Summary of course competencies, learning outcomes, or paste formatted text from MS Word/Google Docs..."
+                  minHeight="170px"
                 />
               </div>
 
