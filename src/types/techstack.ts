@@ -10,8 +10,43 @@ export interface TechItem {
   proficiency?: number;
   published: boolean;
   order: number;
+  shortDescription?: string;
+  description?: string;
+  experienceYears?: string;
+  officialUrl?: string;
+  projectsUsed?: string[];
+  clickCount?: number;
+  hoverCount?: number;
+  modalOpenCount?: number;
   createdAt?: unknown;
   updatedAt?: unknown;
+}
+
+export interface TechStackActivityLog {
+  id: string;
+  itemId: string;
+  itemName: string;
+  categoryId?: string;
+  eventType: "click" | "hover" | "modal_open";
+  ip?: string;
+  userAgent?: string;
+  device?: string;
+  browser?: string;
+  timestamp: any;
+  dateString?: string; // YYYY-MM-DD
+  monthString?: string; // YYYY-MM
+}
+
+export interface TechStackAnalyticsSummary {
+  totalClicks?: number;
+  totalHovers?: number;
+  totalModalOpens?: number;
+  todayClicks?: number;
+  todayHovers?: number;
+  todayModalOpens?: number;
+  monthClicks?: number;
+  monthHovers?: number;
+  monthModalOpens?: number;
 }
 
 export interface TechCategory {
