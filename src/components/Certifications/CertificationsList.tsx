@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   CertificationItem,
@@ -14,6 +14,7 @@ import { trackCertificationSectionView } from "@/utils/certificationAnalytics";
 
 export const CertificationsList: React.FC = () => {
   const [items, setItems] = useState<CertificationItem[]>([]);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [selectedItem, setSelectedItem] = useState<CertificationItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -22,7 +23,7 @@ export const CertificationsList: React.FC = () => {
   useEffect(() => {
     trackCertificationSectionView();
     try {
-      const unsubscribe = onSnapshot(
+      const unsubscribeCerts = onSnapshot(
         collection(db, "certifications"),
         (snapshot) => {
           if (!snapshot.empty) {
@@ -46,7 +47,21 @@ export const CertificationsList: React.FC = () => {
           setLoading(false);
         }
       );
-      return () => unsubscribe();
+
+      const unsubscribeCategories = onSnapshot(
+        doc(db, "siteContent", "certificationCategories"),
+        (snap) => {
+          if (snap.exists() && Array.isArray(snap.data()?.categories)) {
+            setCustomCategories(snap.data().categories);
+          }
+        },
+        (err) => console.warn("Custom categories listener notice:", err)
+      );
+
+      return () => {
+        unsubscribeCerts();
+        unsubscribeCategories();
+      };
     } catch (err) {
       console.error("Error in certifications listener:", err);
       setItems([]);
@@ -54,15 +69,18 @@ export const CertificationsList: React.FC = () => {
     }
   }, []);
 
-  // Available unique categories
+  // Available unique categories (built-in + custom + items)
   const categories = useMemo(() => {
     const cats = new Set<string>(["All"]);
     CERTIFICATION_CATEGORIES.forEach((c) => cats.add(c));
+    customCategories.forEach((c) => {
+      if (c && c.trim()) cats.add(c.trim());
+    });
     items.forEach((it) => {
       if (it.category) cats.add(it.category);
     });
     return Array.from(cats);
-  }, [items]);
+  }, [items, customCategories]);
 
   // Filtered items
   const filtered = useMemo(() => {
