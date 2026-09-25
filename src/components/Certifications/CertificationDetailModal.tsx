@@ -145,9 +145,10 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
             <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
               Credential Summary
             </h4>
-            <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-              {item.description}
-            </p>
+            <div
+              className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: item.description }}
+            />
           </div>
         )}
 
