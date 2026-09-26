@@ -94,9 +94,9 @@ export const TechDetailModal: React.FC<TechDetailModalProps> = ({
                 >
                   {category?.name || "Technology"}
                 </span>
-                {item.experienceYears && (
+                {displayExp && (
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300">
-                    ⏱️ {item.experienceYears}
+                    ⏱️ {displayExp}
                   </span>
                 )}
               </div>
@@ -145,37 +145,33 @@ export const TechDetailModal: React.FC<TechDetailModalProps> = ({
           </div>
 
           {/* Short Description */}
-          {item.shortDescription && (
-            <div className="text-sm font-medium text-gray-600 dark:text-gray-300 bg-primary/5 dark:bg-primary/10 p-3.5 rounded-2xl border border-primary/15 leading-relaxed">
-              💡 {item.shortDescription}
+          {displayShort && (
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 bg-primary/5 dark:bg-primary/10 p-3.5 rounded-2xl border border-primary/15 leading-relaxed">
+              💡 {displayShort}
             </div>
           )}
 
           {/* Detailed Description */}
-          {item.description ? (
+          {displayDesc && (
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
                 Overview &amp; Practical Experience
               </h4>
               <div
                 className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline"
-                dangerouslySetInnerHTML={{ __html: item.description }}
+                dangerouslySetInnerHTML={{ __html: displayDesc }}
               />
             </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-              Extensive hands-on experience utilizing {item.name} in modern software architecture, project workflows, and production systems.
-            </p>
           )}
 
           {/* Projects Used In */}
-          {item.projectsUsed && item.projectsUsed.length > 0 && (
+          {displayProjects && displayProjects.length > 0 && (
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
                 Applied in Projects &amp; Work
               </h4>
               <div className="flex flex-wrap gap-1.5">
-                {item.projectsUsed.map((proj, i) => (
+                {displayProjects.map((proj: string, i: number) => (
                   <span
                     key={i}
                     className="px-3 py-1 rounded-xl text-xs font-medium bg-gray-100 dark:bg-darkmode border border-border/80 dark:border-dark_border text-gray-700 dark:text-gray-300"
@@ -194,9 +190,9 @@ export const TechDetailModal: React.FC<TechDetailModalProps> = ({
             Click outside or press Esc to close
           </span>
           <div className="flex items-center gap-2">
-            {item.officialUrl && (
+            {displayUrl && (
               <a
-                href={item.officialUrl}
+                href={displayUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition shadow-sm hover:opacity-95"
