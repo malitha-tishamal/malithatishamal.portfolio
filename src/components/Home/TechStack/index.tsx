@@ -11,6 +11,7 @@ import {
 } from "@/types/techstack";
 import { TechDetailModal } from "./TechDetailModal";
 import { trackTechStackHover, trackTechStackClick } from "@/utils/techStackAnalytics";
+import { getTechInfo } from "@/data/techDescriptions";
 
 // ── Icon renderer ─────────────────────────────────────────────────────────────
 function TechIcon({ item }: { item: TechItem }) {
@@ -18,7 +19,6 @@ function TechIcon({ item }: { item: TechItem }) {
     return (
       <i
         className={`${item.iconValue} text-4xl`}
-        title={item.name}
         aria-label={item.name}
       />
     );
@@ -110,13 +110,10 @@ export default function TechStack() {
       ? items
       : items.filter((item) => item.categoryId === activeCategory);
 
-  // Get accent color for active category
-  const activeCat = categories.find((c) => c.id === activeCategory);
-  const accentColor = activeCat?.color ?? "#0a66c2";
-
   return (
     <section className="py-20 bg-white dark:bg-blacksection">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
         {/* Section Header */}
         <div className="text-center mb-12" data-aos="fade-up">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
@@ -141,7 +138,7 @@ export default function TechStack() {
               className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
                 activeCategory === "all"
                   ? "bg-primary text-white border-primary shadow-md"
-                  : "bg-white dark:bg-darklight border-gray-200 dark:border-dark_border text-gray-600 dark:text-gray-300 hover:border-primary/50 hover:text-primary"
+                  : "bg-gray-50 dark:bg-white/[0.05] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:border-primary/50 hover:text-primary"
               }`}
             >
               All
@@ -158,7 +155,7 @@ export default function TechStack() {
                 className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
                   activeCategory === cat.id
                     ? "text-white shadow-md"
-                    : "bg-white dark:bg-darklight border-gray-200 dark:border-dark_border text-gray-600 dark:text-gray-300 hover:border-primary/50 hover:text-primary"
+                    : "bg-gray-50 dark:bg-white/[0.05] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:border-primary/50 hover:text-primary"
                 }`}
               >
                 {cat.name}
@@ -179,11 +176,9 @@ export default function TechStack() {
             {filteredItems.map((item) => {
               const cat = categories.find((c) => c.id === item.categoryId);
               const cardColor = cat?.color ?? "#0a66c2";
-              const hoverDesc =
-                item.shortDescription ||
-                (item.description
-                  ? item.description.replace(/<[^>]+>/g, "").slice(0, 110) + "..."
-                  : `Click to view proficiency, experience, and overview for ${item.name}.`);
+              const fallback = getTechInfo(item.name);
+              const hoverDesc = item.shortDescription || fallback.shortDescription;
+              const displayExp = item.experienceYears || fallback.experienceYears;
 
               return (
                 <div
@@ -195,49 +190,129 @@ export default function TechStack() {
                   onMouseEnter={() => {
                     trackTechStackHover(item);
                   }}
-                  className="group relative flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-gray-50 dark:bg-darklight border border-gray-100 dark:border-dark_border hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1.5 transition-all duration-200 cursor-pointer text-center select-none"
-                  title={`Click to view ${item.name} details`}
+                  className="group relative flex flex-col items-center justify-center gap-2 p-4 rounded-2xl
+                    bg-gray-50 dark:bg-[#141b2d]
+                    border border-gray-200 dark:border-white/[0.08]
+                    hover:shadow-xl hover:-translate-y-1.5
+                    transition-all duration-200 cursor-pointer text-center select-none"
                 >
                   <TechIcon item={item} />
-                  <span className="text-xs font-semibold text-center text-gray-700 dark:text-gray-300 leading-tight">
+                  <span className="text-xs font-semibold text-center text-gray-700 dark:text-gray-200 leading-tight">
                     {item.name}
                   </span>
                   <ProficiencyDots level={item.proficiency} />
 
-                  {/* Hover accent glow */}
+                  {/* Hover accent border glow */}
                   <span
                     className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                     style={{
-                      boxShadow: `inset 0 0 0 1.5px ${cardColor}80`,
+                      boxShadow: `inset 0 0 0 1.5px ${cardColor}99, 0 8px 28px -6px ${cardColor}40`,
                     }}
                   />
 
-                  {/* Hover preview tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 hidden group-hover:flex flex-col items-center z-40 pointer-events-none transition-all duration-200 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 w-48 sm:w-56">
-                    <div className="p-2.5 rounded-xl bg-gray-900/95 dark:bg-gray-800/95 text-white border border-white/10 shadow-2xl backdrop-blur-md text-center">
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                  {/* ══ Premium Glass Tooltip ══════════════════════════════════ */}
+                  <div
+                    className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2
+                      invisible opacity-0 -translate-y-1
+                      group-hover:visible group-hover:opacity-100 group-hover:translate-y-0
+                      transition-all duration-200 ease-out
+                      z-50 pointer-events-none w-56"
+                  >
+                    {/* Glass panel */}
+                    <div
+                      className="relative rounded-2xl overflow-hidden text-left px-3.5 pt-3.5 pb-3"
+                      style={{
+                        background: `linear-gradient(135deg, ${cardColor}1a 0%, rgba(8,14,28,0.86) 70%)`,
+                        border: `1px solid ${cardColor}50`,
+                        backdropFilter: "blur(22px) saturate(200%)",
+                        WebkitBackdropFilter: "blur(22px) saturate(200%)",
+                        boxShadow: `0 20px 60px -10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)`,
+                      }}
+                    >
+                      {/* Top shimmer line */}
+                      <div
+                        className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl"
+                        style={{
+                          background: `linear-gradient(90deg, transparent, ${cardColor}cc 40%, ${cardColor} 50%, ${cardColor}cc 60%, transparent)`,
+                        }}
+                      />
+
+                      {/* Corner radial glow */}
+                      <div
+                        className="absolute top-0 right-0 w-16 h-16 pointer-events-none opacity-25"
+                        style={{
+                          background: `radial-gradient(circle at top right, ${cardColor}, transparent 70%)`,
+                        }}
+                      />
+
+                      {/* Header: dot + name + exp */}
+                      <div className="relative z-10 flex items-center gap-1.5 mb-2">
                         <span
                           className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: cardColor }}
+                          style={{
+                            backgroundColor: cardColor,
+                            boxShadow: `0 0 7px ${cardColor}`,
+                          }}
                         />
-                        <span className="font-bold text-xs">{item.name}</span>
-                        {item.experienceYears && (
-                          <span className="text-[10px] text-gray-300 font-normal">
-                            ({item.experienceYears})
+                        <span className="font-bold text-[12.5px] text-white leading-none">{item.name}</span>
+                        {displayExp && (
+                          <span
+                            className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                            style={{
+                              backgroundColor: `${cardColor}22`,
+                              color: cardColor,
+                              border: `1px solid ${cardColor}44`,
+                            }}
+                          >
+                            {displayExp}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] leading-snug text-gray-200 line-clamp-3">
+
+                      {/* Category label */}
+                      {cat && (
+                        <div
+                          className="relative z-10 text-[9px] font-bold uppercase tracking-widest mb-1.5"
+                          style={{ color: `${cardColor}dd` }}
+                        >
+                          {cat.name}
+                        </div>
+                      )}
+
+                      {/* Description */}
+                      <p className="relative z-10 text-[11px] leading-[1.55] text-gray-200/85 line-clamp-3">
                         {hoverDesc}
                       </p>
-                      <div className="mt-1.5 pt-1 border-t border-white/10 text-[9px] font-semibold text-blue-400 flex items-center justify-center gap-1">
-                        <span>Click for details</span>
-                        <span>↗</span>
+
+                      {/* CTA footer */}
+                      <div
+                        className="relative z-10 mt-2.5 pt-2 border-t flex items-center gap-1.5 text-[10px] font-bold"
+                        style={{
+                          borderColor: `${cardColor}28`,
+                          color: cardColor,
+                        }}
+                      >
+                        <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Click to view full details
                       </div>
                     </div>
-                    {/* Tooltip caret */}
-                    <div className="w-2 h-2 bg-gray-900/95 dark:bg-gray-800/95 rotate-45 -mt-1 border-r border-b border-white/10" />
+
+                    {/* Arrow caret */}
+                    <div className="flex justify-center">
+                      <div
+                        className="w-3 h-3 rotate-45 -mt-1.5"
+                        style={{
+                          background: "rgba(8,14,28,0.86)",
+                          borderRight: `1px solid ${cardColor}50`,
+                          borderBottom: `1px solid ${cardColor}50`,
+                        }}
+                      />
+                    </div>
                   </div>
+                  {/* ══ End Glass Tooltip ══════════════════════════════════════ */}
                 </div>
               );
             })}
@@ -246,7 +321,10 @@ export default function TechStack() {
 
         {/* Category legend (shown when "all" is selected) */}
         {activeCategory === "all" && categories.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-4 mt-10 pt-8 border-t border-gray-100 dark:border-dark_border" data-aos="fade-up">
+          <div
+            className="flex flex-wrap justify-center gap-4 mt-10 pt-8 border-t border-gray-100 dark:border-white/[0.07]"
+            data-aos="fade-up"
+          >
             {categories.map((cat) => (
               <button
                 key={cat.id}
