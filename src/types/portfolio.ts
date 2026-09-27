@@ -1,5 +1,20 @@
-export type PortfolioImageLayout = "single" | "split_horizontal_2" | "grid_4";
+export type PortfolioImageLayout = "single" | "split_horizontal_2" | "split_vertical_2" | "grid_4";
 export type PortfolioImageFit = "cover" | "contain" | "portrait_tall";
+export type PortfolioMediaType = "image" | "video";
+export type VideoPlaybackMode = "autoplay_loop" | "hover_play" | "thumbnail_only";
+
+export const isVideoUrl = (url?: string): boolean => {
+  if (!url) return false;
+  const clean = url.toLowerCase().split("?")[0];
+  return (
+    clean.endsWith(".mp4") ||
+    clean.endsWith(".webm") ||
+    clean.endsWith(".mov") ||
+    clean.endsWith(".m4v") ||
+    clean.endsWith(".ogv") ||
+    clean.includes("/video/upload/")
+  );
+};
 
 export interface PortfolioItem {
   id: string;
@@ -15,6 +30,10 @@ export interface PortfolioItem {
   images: string[]; // List of Cloudinary image URLs (1, 2, or 4 images)
   imageLayout?: PortfolioImageLayout;
   imageFit?: PortfolioImageFit; // Cover (Fill), Contain (Full Uncropped), Portrait Tall (Tall 3:4)
+  mediaType?: PortfolioMediaType;
+  videoUrl?: string;
+  videoThumbnail?: string;
+  videoPlaybackMode?: VideoPlaybackMode;
   displayOrder: number;
   featured?: boolean;
   altText?: string;
