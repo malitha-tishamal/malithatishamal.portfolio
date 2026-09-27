@@ -87,30 +87,24 @@ const PortfolioCard: React.FC = () => {
     pauseOnHover: sliderSettings.pauseOnHover,
     dots: false,
     arrows: false,
-    infinite: items.length > 3,
-    slidesToShow: Math.min(items.length, 5),
+    infinite: items.length > 2,
+    slidesToShow: Math.min(items.length, 4),
     slidesToScroll: 1,
     responsive: [
       {
-        breakpoint: 1320,
-        settings: {
-          slidesToShow: Math.min(items.length, 4),
-        },
-      },
-      {
-        breakpoint: 1024,
+        breakpoint: 1280,
         settings: {
           slidesToShow: Math.min(items.length, 3),
         },
       },
       {
-        breakpoint: 768,
+        breakpoint: 840,
         settings: {
           slidesToShow: Math.min(items.length, 2),
         },
       },
       {
-        breakpoint: 480,
+        breakpoint: 540,
         settings: {
           slidesToShow: 1,
         },
@@ -143,14 +137,14 @@ const PortfolioCard: React.FC = () => {
 
   return (
     <div id='portfolio' className='dark:bg-darkmode'>
-      <div className='lg:px-9 m-auto px-0 max-w-[1600px] slider-container pb-12'>
+      <div className='lg:px-9 m-auto px-2 max-w-[1600px] slider-container pb-12'>
         <Slider {...settings}>
           {items.map((item, index) => (
-            <div key={item.id || index} className='px-3.5 py-4'>
+            <div key={item.id || index} className='px-3 sm:px-4 py-4'>
               <PortfolioCardItem
                 item={item}
                 index={index}
-                isStaggered={true}
+                isStaggered={false}
                 onClick={() => setSelectedItem(item)}
               />
             </div>
