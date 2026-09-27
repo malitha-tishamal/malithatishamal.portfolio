@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   collection,
@@ -15,16 +15,25 @@ import {
   PortfolioItem,
   PortfolioImageLayout,
   PortfolioImageFit,
+  PortfolioMediaType,
+  VideoPlaybackMode,
   defaultPortfolioItems,
   PORTFOLIO_CATEGORIES,
   PortfolioSliderSettings,
   defaultPortfolioSliderSettings,
+  isVideoUrl,
 } from "@/types/portfolio";
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import { PortfolioCardItem } from "@/components/portfolio/PortfolioCardItem";
 import { PortfolioDetailModal } from "@/components/portfolio/PortfolioDetailModal";
 import { getImgPath } from "@/utils/image";
 import { generateImageAlt, generateSeoDescription, generateSeoKeywords } from "@/utils/seo";
+import { RichTextEditor } from "./RichTextEditor";
+import {
+  saveCustomPortfolioCategory,
+  deleteCustomPortfolioCategory,
+  getCombinedPortfolioCategories,
+} from "@/utils/portfolioCategories";
 import toast from "react-hot-toast";
 
 export const PortfolioSectionManager: React.FC = () => {
@@ -60,6 +69,22 @@ export const PortfolioSectionManager: React.FC = () => {
   const [images, setImages] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
   const [isUploading, setIsUploading] = useState<boolean>(false);
+
+  // Video Media Support State
+  const [mediaType, setMediaType] = useState<PortfolioMediaType>("image");
+  const [videoUrl, setVideoUrl] = useState<string>("");
+  const [videoThumbnail, setVideoThumbnail] = useState<string>("");
+  const [videoPlaybackMode, setVideoPlaybackMode] = useState<VideoPlaybackMode>("autoplay_loop");
+  const [isVideoUploading, setIsVideoUploading] = useState<boolean>(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState<number>(0);
+  const [isThumbUploading, setIsThumbUploading] = useState<boolean>(false);
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Custom Categories State
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [newCategoryInput, setNewCategoryInput] = useState<string>("");
+  const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
+  const [savingCategory, setSavingCategory] = useState<boolean>(false);
 
   // Subscribe to Firestore portfolio collection and load slider settings
   useEffect(() => {
