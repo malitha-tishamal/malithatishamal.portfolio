@@ -1,8 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useRef } from 'react'
 import Image from 'next/image'
-import { PortfolioItem } from '@/types/portfolio'
+import { PortfolioItem, isVideoUrl } from '@/types/portfolio'
 import { getImgPath } from '@/utils/image'
 
 interface PortfolioCardItemProps {
@@ -18,11 +18,23 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
   isStaggered = true,
   onClick,
 }) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const images = item.images || []
   const layout =
     item.imageLayout ||
     (images.length >= 4 ? 'grid_4' : images.length >= 2 ? 'split_horizontal_2' : 'single')
   const fit = item.imageFit || 'cover'
+
+  // Detect video media
+  const isVideo =
+    item.mediaType === 'video' ||
+    !!item.videoUrl ||
+    (images.length > 0 && isVideoUrl(images[0]))
+
+  const videoSrc = item.videoUrl || (images.find((img) => isVideoUrl(img)) || '')
+  const videoThumb =
+    item.videoThumbnail || (!isVideoUrl(images[0]) ? images[0] : '')
+  const playbackMode = item.videoPlaybackMode || 'autoplay_loop'
 
   // Image object-fit class
   const imgFitClass =
@@ -36,7 +48,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
       ? 'aspect-[3/4]'
       : fit === 'contain'
       ? 'aspect-[4/4]'
-      : 'aspect-[4/3.8]'
+      : 'aspect-[4/3.5]'
 
   // Format date helper
   const formatDate = (val: any): string => {
@@ -52,22 +64,108 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
     return 'Recently'
   }
 
+  // Strip rich HTML for clean card text preview
+  const plainDesc = (item.description || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const handleMouseEnter = () => {
+    if (isVideo && playbackMode === 'hover_play' && videoRef.current) {
+      videoRef.current.play().catch(() => {})
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (isVideo && playbackMode === 'hover_play' && videoRef.current) {
+      videoRef.current.pause()
+      videoRef.current.currentTime = 0
+    }
+  }
+
   return (
     <div
       onClick={onClick}
-      className={`w-full max-w-[21rem] sm:w-[19.5rem] group cursor-pointer flex flex-col justify-between bg-white dark:bg-darklight p-4 rounded-3xl border border-border/60 dark:border-dark_border/60 shadow-xs hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 ${
-        isStaggered && index % 2 !== 0 ? 'lg:mt-16 md:mt-10' : ''
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`w-full group cursor-pointer flex flex-col justify-between bg-white dark:bg-darklight p-4 rounded-3xl border border-border/60 dark:border-dark_border/60 shadow-xs hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 ${
+        isStaggered && index % 2 !== 0 ? 'lg:mt-12 md:mt-8' : ''
       }`}>
       <div>
-        {/* CARD IMAGE FRAME (Preserves exact aspect ratio & rounded corners) */}
+        {/* CARD MEDIA FRAME */}
         <div
           className={`relative w-full ${cardAspectClass} rounded-2xl overflow-hidden bg-gray-100 dark:bg-darkmode shadow-xs group-hover:shadow-lg transition-all duration-500 border border-border/40 dark:border-dark_border/40`}>
-          {images.length === 0 ? (
+          {isVideo && videoSrc ? (
+            /* ── VIDEO MEDIA DISPLAY ───────────────────────── */
+            <div className='relative w-full h-full overflow-hidden bg-black flex items-center justify-center'>
+              {playbackMode === 'thumbnail_only' && videoThumb ? (
+                <div className='relative w-full h-full'>
+                  <Image
+                    src={getImgPath(videoThumb)}
+                    alt={item.title}
+                    fill
+                    unoptimized
+                    className='object-cover'
+                  />
+                  {/* Play badge overlay */}
+                  <div className='absolute inset-0 bg-black/30 flex items-center justify-center'>
+                    <div className='w-12 h-12 rounded-full bg-white/90 dark:bg-darklight/90 shadow-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform'>
+                      <svg className='w-5 h-5 ml-0.5' fill='currentColor' viewBox='0 0 24 24'>
+                        <path d='M8 5v14l11-7z' />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={getImgPath(videoSrc)}
+                  poster={videoThumb ? getImgPath(videoThumb) : undefined}
+                  autoPlay={playbackMode === 'autoplay_loop'}
+                  muted
+                  loop
+                  playsInline
+                  preload='metadata'
+                  className='w-full h-full object-cover'
+                />
+              )}
+
+              {/* Video Badge */}
+              <div className='absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1 border border-white/20 z-10'>
+                <svg className='w-2.5 h-2.5 text-red-500 fill-current' viewBox='0 0 24 24'>
+                  <path d='M8 5v14l11-7z' />
+                </svg>
+                <span>VIDEO</span>
+              </div>
+            </div>
+          ) : images.length === 0 ? (
             <div className='w-full h-full flex items-center justify-center text-xs text-gray-400'>
-              No Image
+              No Media
+            </div>
+          ) : layout === 'split_vertical_2' && images.length >= 2 ? (
+            /* OPTION 2B: 2 Images Side-by-Side (Left & Right columns) */
+            <div className='grid grid-cols-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60'>
+              <div className='relative w-full h-full overflow-hidden'>
+                <Image
+                  src={getImgPath(images[0])}
+                  alt={item.altText ? `${item.altText} - Part 1` : `${item.title} (Left) – Showcase by Malitha Tishamal`}
+                  fill
+                  unoptimized
+                  className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
+                />
+              </div>
+              <div className='relative w-full h-full overflow-hidden'>
+                <Image
+                  src={getImgPath(images[1])}
+                  alt={item.altText ? `${item.altText} - Part 2` : `${item.title} (Right) – Showcase by Malitha Tishamal`}
+                  fill
+                  unoptimized
+                  className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
+                />
+              </div>
             </div>
           ) : layout === 'split_horizontal_2' && images.length >= 2 ? (
-            /* OPTION 2: 2 Images (Top Half & Bottom Half) */
+            /* OPTION 2A: 2 Images Stacked (Top Half & Bottom Half) */
             <div className='grid grid-rows-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60'>
               <div className='relative w-full h-full overflow-hidden'>
                 <Image
@@ -81,7 +179,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
               <div className='relative w-full h-full overflow-hidden'>
                 <Image
                   src={getImgPath(images[1])}
-                  alt={item.altText ? `${item.altText} - Part 2` : `${item.title} – Engineering Showcase by Malitha Tishamal`}
+                  alt={item.altText ? `${item.altText} - Part 2` : `${item.title} – Showcase by Malitha Tishamal`}
                   fill
                   unoptimized
                   className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
@@ -118,7 +216,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
         </div>
 
         {/* Category Pill & Date */}
-        <div className='flex items-center justify-between gap-2 mt-4 mb-1'>
+        <div className='flex items-center justify-between gap-2 mt-4 mb-1.5'>
           <span className='text-[11px] font-bold text-primary dark:text-blue-400 uppercase tracking-wider line-clamp-1'>
             {item.subtitle || 'Events'}
           </span>
@@ -127,15 +225,15 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
           </span>
         </div>
 
-        {/* Title */}
-        <h4 className='pb-1 group-hover:text-primary text-xl font-bold text-midnight_text dark:text-white transition-colors line-clamp-1'>
+        {/* Title — Full title visible with slightly reduced font size */}
+        <h4 className='group-hover:text-primary text-[15px] sm:text-[16px] font-bold text-midnight_text dark:text-white transition-colors leading-snug line-clamp-2 min-h-[2.5rem] flex items-center'>
           {item.title}
         </h4>
 
-        {/* Description */}
-        {item.description && (
-          <p className='text-xs sm:text-sm text-grey dark:text-gray-300 font-normal mt-1.5 line-clamp-2 leading-relaxed'>
-            {item.description}
+        {/* Description — more lines shown, rich HTML stripped */}
+        {plainDesc && (
+          <p className='text-xs sm:text-[13px] text-grey dark:text-gray-300 font-normal mt-1.5 line-clamp-3 leading-relaxed'>
+            {plainDesc}
           </p>
         )}
 
