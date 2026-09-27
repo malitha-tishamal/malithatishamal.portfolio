@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
-import { PortfolioItem } from '@/types/portfolio'
+import { PortfolioItem, isVideoUrl } from '@/types/portfolio'
 import { getImgPath } from '@/utils/image'
 
 interface PortfolioDetailModalProps {
@@ -31,6 +31,17 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
   }
 
   const images = item.images || []
+  const isVideo =
+    item.mediaType === 'video' ||
+    !!item.videoUrl ||
+    (images.length > 0 && isVideoUrl(images[0]))
+
+  const videoSrc = item.videoUrl || (images.find((img) => isVideoUrl(img)) || '')
+  const videoThumb =
+    item.videoThumbnail || (!isVideoUrl(images[0]) ? images[0] : '')
+
+  const nonVideoImages = images.filter((img) => !isVideoUrl(img))
+
   const hasLinks = !!(
     item.projectUrl ||
     item.linkedinUrl ||
@@ -62,6 +73,14 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
             <span className='px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20'>
               {item.subtitle || 'Events'}
             </span>
+            {isVideo && (
+              <span className='px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20 flex items-center gap-1'>
+                <svg className='w-3 h-3 fill-current' viewBox='0 0 24 24'>
+                  <path d='M8 5v14l11-7z' />
+                </svg>
+                <span>Video Showcase</span>
+              </span>
+            )}
             {item.displayOrder && (
               <span className='px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-400'>
                 Order: #{item.displayOrder}
@@ -76,11 +95,25 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
           </div>
         </div>
 
+        {/* ── VIDEO PLAYER IN MODAL ───────────────────────── */}
+        {isVideo && videoSrc && (
+          <div className='mb-6 rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black shadow-lg'>
+            <video
+              src={getImgPath(videoSrc)}
+              poster={videoThumb ? getImgPath(videoThumb) : undefined}
+              controls
+              autoPlay
+              playsInline
+              className='w-full max-h-[500px] object-contain mx-auto bg-black'
+            />
+          </div>
+        )}
+
         {/* View Mode Toggle for Photos (Fit vs Cover) */}
-        {images.length > 0 && (
+        {nonVideoImages.length > 0 && (
           <div className='flex items-center justify-between gap-2 mb-3'>
             <span className='text-xs font-bold uppercase tracking-wider text-gray-400'>
-              Photos ({images.length})
+              Photos ({nonVideoImages.length})
             </span>
             <div className='flex items-center gap-1 bg-gray-100 dark:bg-darkmode p-0.5 rounded-lg border border-border/40 dark:border-dark_border/40 text-xs'>
               <button
@@ -107,25 +140,25 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
           </div>
         )}
 
-        {/* Images Showcase in Modal (Optimized for Portrait & Landscape without cropping!) */}
-        {images.length > 0 && (
+        {/* Images Showcase in Modal */}
+        {nonVideoImages.length > 0 && (
           <div className='mb-6'>
             <div
               className={`grid gap-3 ${
-                images.length === 1
+                nonVideoImages.length === 1
                   ? 'grid-cols-1'
-                  : images.length === 2
+                  : nonVideoImages.length === 2
                   ? 'grid-cols-1 sm:grid-cols-2'
-                  : images.length === 3
+                  : nonVideoImages.length === 3
                   ? 'grid-cols-1 sm:grid-cols-3'
                   : 'grid-cols-1 sm:grid-cols-2'
               }`}>
-              {images.map((img, i) => (
+              {nonVideoImages.map((img, i) => (
                 <div
                   key={i}
                   onClick={() => setActivePhotoIdx(i)}
                   className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode group cursor-pointer ${
-                    images.length === 1
+                    nonVideoImages.length === 1
                       ? 'h-80 sm:h-96'
                       : 'h-72 sm:h-80'
                   }`}>
@@ -157,15 +190,16 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
           </div>
         )}
 
-        {/* Description */}
+        {/* Description / Overview & Details — Rich HTML Rendering */}
         {item.description && (
-          <div className='mb-6 bg-gray-50 dark:bg-darkmode/50 p-4 rounded-2xl border border-border/40 dark:border-dark_border/40'>
-            <h4 className='text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5'>
-              Overview & Details
+          <div className='mb-6 bg-gray-50 dark:bg-darkmode/50 p-5 rounded-2xl border border-border/40 dark:border-dark_border/40'>
+            <h4 className='text-xs font-bold uppercase tracking-wider text-gray-400 mb-2.5'>
+              Overview &amp; Details
             </h4>
-            <p className='text-sm sm:text-base text-grey dark:text-gray-300 leading-relaxed whitespace-pre-line'>
-              {item.description}
-            </p>
+            <div
+              className='text-sm sm:text-base leading-relaxed text-grey dark:text-gray-300 prose prose-sm sm:prose-base dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline'
+              dangerouslySetInnerHTML={{ __html: item.description }}
+            />
           </div>
         )}
 
