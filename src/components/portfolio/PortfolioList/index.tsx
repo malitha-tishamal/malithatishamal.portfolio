@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import {
   PortfolioItem,
@@ -21,9 +21,27 @@ const normalizeCategory = (cat: string): string => {
 
 const PortfolioList: React.FC = () => {
   const [items, setItems] = useState<PortfolioItem[]>([])
+  const [customCategories, setCustomCategories] = useState<string[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('All Photos')
+
+  // Real-time custom categories from Firestore
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(doc(db, 'siteContent', 'portfolioCategories'), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data()
+          if (Array.isArray(data.categories)) {
+            setCustomCategories(data.categories.filter(Boolean))
+          }
+        }
+      })
+      return () => unsub()
+    } catch (e) {
+      console.warn('Portfolio custom categories listener error:', e)
+    }
+  }, [])
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -70,10 +88,11 @@ const PortfolioList: React.FC = () => {
     'designation',
   ])
 
-  // Combine standard categories and any valid custom categories in database
+  // Combine standard categories, Firestore custom categories, and item categories
   const dynamicCategories = Array.from(
     new Set([
       ...PORTFOLIO_CATEGORIES,
+      ...customCategories,
       ...items
         .map((i) => normalizeCategory(i.subtitle || ''))
         .filter((cat) => cat && !excludedCategories.has(cat.toLowerCase())),
