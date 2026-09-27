@@ -16,7 +16,7 @@ export interface CloudinaryUploadResponse {
 export const uploadToCloudinary = async (
   file: File,
   onProgress?: (percent: number) => void,
-  resourceType: "auto" | "image" | "raw" = "auto"
+  resourceType: "auto" | "image" | "video" | "raw" = "auto"
 ): Promise<CloudinaryUploadResponse> => {
   const formData = new FormData();
   formData.append("file", file);
