@@ -86,86 +86,131 @@ export const PortfolioSectionManager: React.FC = () => {
   const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
   const [savingCategory, setSavingCategory] = useState<boolean>(false);
 
-  // Subscribe to Firestore portfolio collection and load slider settings
+  // Subscribe to custom portfolio categories
   useEffect(() => {
-    fetchSettings();
     try {
-      const unsubscribe = onSnapshot(
-        collection(db, "portfolio"),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const fetched: PortfolioItem[] = [];
-            snapshot.forEach((docSnap) => {
-              fetched.push({
-                ...(docSnap.data() as PortfolioItem),
-                id: docSnap.id,
-              });
-            });
-            fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-            setItems(fetched);
-          } else {
-            setItems(defaultPortfolioItems);
+      const unsub = onSnapshot(doc(db, "siteContent", "portfolioCategories"), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (Array.isArray(data.categories)) {
+            setCustomCategories(data.categories.filter(Boolean));
           }
-          setLoading(false);
-        },
-        (error) => {
-          console.warn("Firestore portfolio listener notice:", error.message);
-          setItems(defaultPortfolioItems);
-          setLoading(false);
         }
-      );
-
-      return () => unsubscribe();
-    } catch (err) {
-      console.error("Error setting up portfolio listener:", err);
-      setItems(defaultPortfolioItems);
-      setLoading(false);
+      });
+      return () => unsub();
+    } catch (e) {
+      console.warn("Portfolio custom categories listener error:", e);
     }
   }, []);
 
-  // Fetch slider settings from Firestore
-  const fetchSettings = async () => {
-    try {
-      const snap = await getDoc(doc(db, "siteContent", "portfolio"));
-      if (snap.exists()) {
-        const data = snap.data() as Partial<PortfolioSliderSettings>;
-        setSliderSettings({
-          autoplay: data.autoplay !== undefined ? data.autoplay : defaultPortfolioSliderSettings.autoplay,
-          autoplaySpeed: Number(data.autoplaySpeed) || defaultPortfolioSliderSettings.autoplaySpeed,
-          transitionSpeed: Number(data.transitionSpeed) || defaultPortfolioSliderSettings.transitionSpeed,
-          pauseOnHover: data.pauseOnHover !== undefined ? data.pauseOnHover : defaultPortfolioSliderSettings.pauseOnHover,
-        });
+  const handleCreateCategory = async () => {
+    if (!newCategoryInput.trim()) return;
+    setSavingCategory(true);
+    const res = await saveCustomPortfolioCategory(newCategoryInput.trim());
+    setSavingCategory(false);
+    if (res.success) {
+      toast.success(res.message);
+      setSubtitle(newCategoryInput.trim());
+      setNewCategoryInput("");
+      setIsAddingCategory(false);
+    } else {
+      toast.error(res.message);
+    }
+  };
+
+  const handleDeleteCategory = async (catToDelete: string) => {
+    if (!confirm(`Delete custom category "${catToDelete}"?`)) return;
+    const res = await deleteCustomPortfolioCategory(catToDelete);
+    if (res.success) {
+      toast.success(res.message);
+      if (subtitle === catToDelete) {
+        setSubtitle("Events");
       }
-    } catch (err) {
-      console.warn("Notice: could not load portfolio slider settings", err);
+    } else {
+      toast.error(res.message);
     }
   };
 
-  const handleSaveSettings = async () => {
+  // Video Upload & Frame Capture Handlers
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsVideoUploading(true);
+    setVideoUploadProgress(10);
+
     try {
-      setSavingSettings(true);
-      await setDoc(doc(db, "siteContent", "portfolio"), sliderSettings, { merge: true });
-      toast.success("Slider settings saved!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to save slider settings.");
+      const res = await uploadToCloudinary(file, (percent: number) => {
+        setVideoUploadProgress(percent);
+      }, "video");
+
+      if (res.secure_url) {
+        setVideoUrl(res.secure_url);
+        setMediaType("video");
+        toast.success("Video uploaded to Cloudinary!");
+      } else {
+        throw new Error("Upload failed: No secure URL returned.");
+      }
+    } catch (err: any) {
+      console.error("Video upload error:", err);
+      toast.error(err.message || "Failed to upload video.");
     } finally {
-      setSavingSettings(false);
+      setIsVideoUploading(false);
+      setVideoUploadProgress(0);
     }
   };
 
-  // Format date helper
-  const formatDate = (val: any): string => {
-    if (!val) return "Recently";
-    if (typeof val === "string") return val;
-    if (val?.toDate) {
-      return val.toDate().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsThumbUploading(true);
+    try {
+      const res = await uploadToCloudinary(file, undefined, "image");
+      if (res.secure_url) {
+        setVideoThumbnail(res.secure_url);
+        toast.success("Thumbnail uploaded!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload thumbnail.");
+    } finally {
+      setIsThumbUploading(false);
     }
-    return "Recently";
+  };
+
+  const handleCaptureVideoFrame = async () => {
+    const video = previewVideoRef.current;
+    if (!video) {
+      toast.error("Please load the video first to capture a frame.");
+      return;
+    }
+
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 360;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not get 2D canvas context");
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `frame_${Date.now()}.jpg`, { type: "image/jpeg" });
+
+      toast.loading("Uploading captured frame thumbnail...", { id: "thumb-cap" });
+      const res = await uploadToCloudinary(file, undefined, "image");
+      if (res.secure_url) {
+        setVideoThumbnail(res.secure_url);
+        toast.success("Captured video frame thumbnail saved!", { id: "thumb-cap" });
+      } else {
+        setVideoThumbnail(dataUrl);
+        toast.success("Video frame captured!", { id: "thumb-cap" });
+      }
+    } catch (err: any) {
+      console.error("Frame capture error:", err);
+      toast.error("Could not capture video frame: " + (err.message || "Unknown error"), { id: "thumb-cap" });
+    }
   };
 
   // Open Create Modal
@@ -184,6 +229,10 @@ export const PortfolioSectionManager: React.FC = () => {
     setImageLayout("single");
     setImageFit("cover");
     setImages([""]);
+    setMediaType("image");
+    setVideoUrl("");
+    setVideoThumbnail("");
+    setVideoPlaybackMode("autoplay_loop");
     setUploadProgress({});
     setIsModalOpen(true);
   };
@@ -204,6 +253,16 @@ export const PortfolioSectionManager: React.FC = () => {
     setImageLayout(item.imageLayout || "single");
     setImageFit(item.imageFit || "cover");
     setImages(item.images && item.images.length > 0 ? item.images : [""]);
+
+    const isVid =
+      item.mediaType === "video" ||
+      !!item.videoUrl ||
+      (item.images && item.images.length > 0 && isVideoUrl(item.images[0]));
+    setMediaType(isVid ? "video" : "image");
+    setVideoUrl(item.videoUrl || (item.images && isVideoUrl(item.images[0]) ? item.images[0] : ""));
+    setVideoThumbnail(item.videoThumbnail || (!isVideoUrl(item.images?.[0]) ? item.images?.[0] : ""));
+    setVideoPlaybackMode(item.videoPlaybackMode || "autoplay_loop");
+
     setUploadProgress({});
     setIsModalOpen(true);
   };
@@ -306,9 +365,18 @@ export const PortfolioSectionManager: React.FC = () => {
       linkedinUrl: linkedinUrl.trim(),
       facebookUrl: facebookUrl.trim(),
       instagramUrl: instagramUrl.trim(),
-      images: validImages.length > 0 ? validImages : ["/images/portfolio/cozycasa.png"],
+      images:
+        mediaType === "video"
+          ? [videoThumbnail || videoUrl || "/images/portfolio/cozycasa.png"]
+          : validImages.length > 0
+          ? validImages
+          : ["/images/portfolio/cozycasa.png"],
       imageLayout,
       imageFit,
+      mediaType,
+      videoUrl: mediaType === "video" ? videoUrl.trim() : undefined,
+      videoThumbnail: mediaType === "video" ? videoThumbnail.trim() : undefined,
+      videoPlaybackMode: mediaType === "video" ? videoPlaybackMode : undefined,
       displayOrder: Number(displayOrder) || 1,
       altText: generateImageAlt(title.trim(), subtitle.trim() || "Portfolio Showcase"),
       seoDescription: generateSeoDescription(description.trim(), title.trim()),
