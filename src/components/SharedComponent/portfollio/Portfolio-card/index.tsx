@@ -140,7 +140,7 @@ const PortfolioCard: React.FC = () => {
       <div className='lg:px-9 m-auto px-2 max-w-[1600px] slider-container pb-12'>
         <Slider {...settings}>
           {items.map((item, index) => (
-            <div key={item.id || index} className='px-3 sm:px-4 py-4'>
+            <div key={item.id || index} className='px-3 sm:px-5 py-5'>
               <PortfolioCardItem
                 item={item}
                 index={index}

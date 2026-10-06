@@ -1,7 +1,22 @@
 export type PortfolioImageLayout = "single" | "split_horizontal_2" | "split_vertical_2" | "grid_4";
 export type PortfolioImageFit = "cover" | "contain" | "portrait_tall";
 export type PortfolioMediaType = "image" | "video";
-export type VideoPlaybackMode = "autoplay_loop" | "hover_play" | "thumbnail_only";
+export type VideoPlaybackMode = "autoplay_loop" | "autoplay_once" | "hover_play" | "thumbnail_only";
+
+/** Per-media crop/zoom: zoom into a focal point (ox/oy in % of the frame) */
+export interface PortfolioMediaCrop {
+  zoom: number; // 1 = no zoom, up to 3
+  ox: number; // focal point X (0-100 %)
+  oy: number; // focal point Y (0-100 %)
+}
+
+export const defaultMediaCrop: PortfolioMediaCrop = { zoom: 1, ox: 50, oy: 50 };
+
+/** Video trim window (seconds) */
+export interface PortfolioVideoTrim {
+  start: number;
+  end: number; // 0 = until the real end
+}
 
 export const isVideoUrl = (url?: string): boolean => {
   if (!url) return false;
@@ -34,6 +49,9 @@ export interface PortfolioItem {
   videoUrl?: string;
   videoThumbnail?: string;
   videoPlaybackMode?: VideoPlaybackMode;
+  videoTrim?: PortfolioVideoTrim;
+  videoCrop?: PortfolioMediaCrop;
+  imageCrops?: (PortfolioMediaCrop | null)[]; // parallel to images[]
   displayOrder: number;
   featured?: boolean;
   altText?: string;

@@ -8,6 +8,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -16,6 +17,8 @@ import {
   PortfolioImageLayout,
   PortfolioImageFit,
   PortfolioMediaType,
+  PortfolioMediaCrop,
+  defaultMediaCrop,
   VideoPlaybackMode,
   defaultPortfolioItems,
   PORTFOLIO_CATEGORIES,
@@ -35,6 +38,34 @@ import {
   getCombinedPortfolioCategories,
 } from "@/utils/portfolioCategories";
 import toast from "react-hot-toast";
+
+const formatDate = (val: any): string => {
+  if (!val) return "Recently";
+  if (typeof val === "string") return val;
+  if (val?.toDate) {
+    return val.toDate().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+  return "Recently";
+};
+
+const fmtTime = (s: number): string => {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+};
+
+// Firestore setDoc rejects `undefined` field values — drop them before writing
+const stripUndefined = (obj: Record<string, any>): Record<string, any> => {
+  const out: Record<string, any> = {};
+  Object.keys(obj).forEach((k) => {
+    if (obj[k] !== undefined) out[k] = obj[k];
+  });
+  return out;
+};
 
 export const PortfolioSectionManager: React.FC = () => {
   const [items, setItems] = useState<PortfolioItem[]>([]);
@@ -80,11 +111,45 @@ export const PortfolioSectionManager: React.FC = () => {
   const [isThumbUploading, setIsThumbUploading] = useState<boolean>(false);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
 
+  // Per-photo crop/zoom + video trim/crop state
+  const [imageCrops, setImageCrops] = useState<(PortfolioMediaCrop | null)[]>([null]);
+  const [videoCrop, setVideoCrop] = useState<PortfolioMediaCrop>({ ...defaultMediaCrop });
+  const [videoTrimStart, setVideoTrimStart] = useState<number>(0);
+  const [videoTrimEnd, setVideoTrimEnd] = useState<number>(0);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
+
   // Custom Categories State
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [newCategoryInput, setNewCategoryInput] = useState<string>("");
   const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
   const [savingCategory, setSavingCategory] = useState<boolean>(false);
+
+  // Subscribe to portfolio items (real-time)
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(collection(db, "portfolio"), (snapshot) => {
+        if (!snapshot.empty) {
+          const fetched: PortfolioItem[] = [];
+          snapshot.forEach((docSnap) => {
+            fetched.push({ ...(docSnap.data() as PortfolioItem), id: docSnap.id });
+          });
+          fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+          setItems(fetched);
+        } else {
+          setItems([]);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.warn("Portfolio listener notice:", error.message);
+        setItems([]);
+        setLoading(false);
+      });
+      return () => unsub();
+    } catch (e) {
+      console.warn("Portfolio items listener error:", e);
+      setLoading(false);
+    }
+  }, []);
 
   // Subscribe to custom portfolio categories
   useEffect(() => {
@@ -102,6 +167,20 @@ export const PortfolioSectionManager: React.FC = () => {
       console.warn("Portfolio custom categories listener error:", e);
     }
   }, []);
+
+  // Save homepage slider settings (read by homepage carousel)
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await setDoc(doc(db, "siteContent", "portfolio"), { ...sliderSettings }, { merge: true });
+      toast.success("Slider settings saved!");
+    } catch (err: any) {
+      console.error("Save slider settings error:", err);
+      toast.error(err.message || "Failed to save slider settings.");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleCreateCategory = async () => {
     if (!newCategoryInput.trim()) return;
@@ -229,10 +308,15 @@ export const PortfolioSectionManager: React.FC = () => {
     setImageLayout("single");
     setImageFit("cover");
     setImages([""]);
+    setImageCrops([null]);
     setMediaType("image");
     setVideoUrl("");
     setVideoThumbnail("");
-    setVideoPlaybackMode("autoplay_loop");
+    setVideoPlaybackMode("autoplay_once");
+    setVideoCrop({ ...defaultMediaCrop });
+    setVideoTrimStart(0);
+    setVideoTrimEnd(0);
+    setVideoDuration(0);
     setUploadProgress({});
     setIsModalOpen(true);
   };
@@ -252,16 +336,28 @@ export const PortfolioSectionManager: React.FC = () => {
     setDisplayOrder(item.displayOrder || 1);
     setImageLayout(item.imageLayout || "single");
     setImageFit(item.imageFit || "cover");
-    setImages(item.images && item.images.length > 0 ? item.images : [""]);
+    const loadedImages = item.images && item.images.length > 0 ? item.images : [""];
+    setImages(loadedImages);
+    setImageCrops(loadedImages.map((_, i) => item.imageCrops?.[i] ?? null));
 
+    // Only treat as a video item when the video is the primary media —
+    // photo grids that merely contain a video slot must stay in Photos mode,
+    // and the thumbnail must never be auto-filled from an unrelated photo.
     const isVid =
       item.mediaType === "video" ||
       !!item.videoUrl ||
-      (item.images && item.images.length > 0 && isVideoUrl(item.images[0]));
+      (loadedImages.length === 1 && isVideoUrl(loadedImages[0]));
     setMediaType(isVid ? "video" : "image");
-    setVideoUrl(item.videoUrl || (item.images && isVideoUrl(item.images[0]) ? item.images[0] : ""));
-    setVideoThumbnail(item.videoThumbnail || (!isVideoUrl(item.images?.[0]) ? item.images?.[0] : ""));
+    setVideoUrl(item.videoUrl || loadedImages.find((img) => isVideoUrl(img)) || "");
+    setVideoThumbnail(
+      item.videoThumbnail ||
+        (isVid && loadedImages.length === 1 && !isVideoUrl(loadedImages[0]) ? loadedImages[0] : "")
+    );
     setVideoPlaybackMode(item.videoPlaybackMode || "autoplay_loop");
+    setVideoCrop(item.videoCrop ? { ...item.videoCrop } : { ...defaultMediaCrop });
+    setVideoTrimStart(item.videoTrim?.start || 0);
+    setVideoTrimEnd(item.videoTrim?.end || 0);
+    setVideoDuration(0);
 
     setUploadProgress({});
     setIsModalOpen(true);
@@ -312,11 +408,13 @@ export const PortfolioSectionManager: React.FC = () => {
       return;
     }
     setImages((prev) => [...prev, ""]);
+    setImageCrops((prev) => [...prev, null]);
   };
 
   // Remove an image slot
   const handleRemoveImageSlot = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+    setImageCrops((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Move image up/down in slot order
@@ -330,6 +428,51 @@ export const PortfolioSectionManager: React.FC = () => {
       next[targetIndex] = temp;
       return next;
     });
+    setImageCrops((prev) => {
+      const next = [...prev];
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+  };
+
+  // Per-slot crop/zoom update (null = reset)
+  const updateImageCrop = (idx: number, patch: Partial<PortfolioMediaCrop> | null) => {
+    setImageCrops((prev) => {
+      const next = [...prev];
+      next[idx] = patch === null ? null : { ...(next[idx] ?? { ...defaultMediaCrop }), ...patch };
+      return next;
+    });
+  };
+
+  // Persist crop / trim to the live card immediately (no full form save needed)
+  const [liveSaving, setLiveSaving] = useState(false);
+  const handleLiveSaveMedia = async () => {
+    if (!editingId) {
+      toast.error("Create / save the card once first — then Live Save works.");
+      return;
+    }
+    setLiveSaving(true);
+    try {
+      const payload: Record<string, any> = {
+        imageCrops: imageCrops.some((c) => c && c.zoom > 1) ? imageCrops : null,
+      };
+      if (mediaType === "video") {
+        payload.videoCrop = videoCrop.zoom > 1 ? videoCrop : null;
+        payload.videoTrim =
+          videoTrimStart > 0 || videoTrimEnd > 0
+            ? { start: videoTrimStart, end: videoTrimEnd }
+            : null;
+      }
+      await updateDoc(doc(db, "portfolio", editingId), payload);
+      toast.success("Crop / trim applied to the live card!");
+    } catch (err: any) {
+      console.error("Live save media error:", err);
+      toast.error(err.message || "Live save failed.");
+    } finally {
+      setLiveSaving(false);
+    }
   };
 
   // Save Card (Create or Update)
@@ -377,6 +520,12 @@ export const PortfolioSectionManager: React.FC = () => {
       videoUrl: mediaType === "video" ? videoUrl.trim() : undefined,
       videoThumbnail: mediaType === "video" ? videoThumbnail.trim() : undefined,
       videoPlaybackMode: mediaType === "video" ? videoPlaybackMode : undefined,
+      videoTrim:
+        mediaType === "video" && (videoTrimStart > 0 || videoTrimEnd > 0)
+          ? { start: videoTrimStart, end: videoTrimEnd }
+          : undefined,
+      videoCrop: mediaType === "video" && videoCrop.zoom > 1 ? videoCrop : undefined,
+      imageCrops: imageCrops.some((c) => c && c.zoom > 1) ? imageCrops : undefined,
       displayOrder: Number(displayOrder) || 1,
       altText: generateImageAlt(title.trim(), subtitle.trim() || "Portfolio Showcase"),
       seoDescription: generateSeoDescription(description.trim(), title.trim()),
@@ -386,7 +535,7 @@ export const PortfolioSectionManager: React.FC = () => {
     };
 
     try {
-      await setDoc(doc(db, "portfolio", id), itemData);
+      await setDoc(doc(db, "portfolio", id), stripUndefined(itemData) as PortfolioItem);
       toast.success(editingId ? "Portfolio card updated successfully!" : "New portfolio card created!");
       setIsModalOpen(false);
     } catch (err: any) {
@@ -814,15 +963,11 @@ export const PortfolioSectionManager: React.FC = () => {
                       onChange={(e) => setSubtitle(e.target.value)}
                       className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
                     />
-                    {/* Quick Category Chips */}
+                    {/* Quick Category Chips (built-in + saved custom categories) */}
                     <div className="flex flex-wrap gap-1">
                       {Array.from(
                         new Set([
-                          "Events",
-                          "Wins & Achivements",
-                          "Office",
-                          "Training Programs",
-                          "Travel",
+                          ...getCombinedPortfolioCategories(customCategories),
                           ...items.map((i) => i.subtitle).filter(Boolean),
                         ])
                       )
@@ -830,38 +975,102 @@ export const PortfolioSectionManager: React.FC = () => {
                           (preset) =>
                             preset.toLowerCase() !== "health & lifestyle community" &&
                             preset.toLowerCase() !== "events & wins" &&
-                            preset.toLowerCase() !== "events , wins & achivements"
+                            preset.toLowerCase() !== "events , wins & achivements" &&
+                            preset.toLowerCase() !== "all photos"
                         )
-                        .map((preset) => (
+                        .map((preset) => {
+                          const isCustom = customCategories.some(
+                            (c) => c.toLowerCase() === preset.toLowerCase()
+                          );
+                          return (
+                            <span
+                              key={preset}
+                              className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md font-semibold transition ${
+                                subtitle === preset
+                                  ? "bg-primary text-white shadow-xs"
+                                  : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300 hover:bg-gray-200"
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setSubtitle(preset)}
+                                className="cursor-pointer"
+                              >
+                                {preset}
+                              </button>
+                              {isCustom && (
+                                <button
+                                  type="button"
+                                  title={`Delete category "${preset}"`}
+                                  onClick={() => handleDeleteCategory(preset)}
+                                  className="cursor-pointer text-red-400 hover:text-red-600 font-bold leading-none"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </span>
+                          );
+                        })}
+
+                      {/* Add / Save New Category to DB */}
+                      {isAddingCategory ? (
+                        <span className="inline-flex items-center gap-1">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={newCategoryInput}
+                            onChange={(e) => setNewCategoryInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleCreateCategory();
+                              }
+                            }}
+                            placeholder="New category name..."
+                            className="px-2 py-0.5 text-[10px] rounded-md border border-primary bg-white dark:bg-darkmode text-dark dark:text-white focus:outline-hidden w-32"
+                          />
                           <button
-                            key={preset}
                             type="button"
-                            onClick={() => setSubtitle(preset)}
-                            className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition cursor-pointer ${
-                              subtitle === preset
-                                ? "bg-primary text-white shadow-xs"
-                                : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300 hover:bg-gray-200"
-                            }`}
+                            disabled={savingCategory}
+                            onClick={handleCreateCategory}
+                            className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-primary text-white hover:bg-blue-700 cursor-pointer disabled:opacity-50"
                           >
-                            {preset}
+                            {savingCategory ? "..." : "Save"}
                           </button>
-                        ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddingCategory(false);
+                              setNewCategoryInput("");
+                            }}
+                            className="text-[10px] px-1.5 py-0.5 rounded-md font-bold text-gray-500 hover:text-red-500 cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingCategory(true)}
+                          className="text-[10px] px-2 py-0.5 rounded-md font-bold border border-dashed border-primary/60 text-primary hover:bg-primary/10 cursor-pointer"
+                        >
+                          + Add Category
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Row 2: Description */}
+              {/* Row 2: Description — Full Rich Text Editor (MS Word style) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
                   Project Description (Shown on Card &amp; Details)
                 </label>
-                <textarea
-                  rows={3}
-                  placeholder="Describe the project achievements, event context, or work details..."
+                <RichTextEditor
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-dark_border bg-gray-50 dark:bg-darkmode text-dark dark:text-white focus:outline-hidden focus:border-primary"
+                  onChange={setDescription}
+                  placeholder="Describe the project achievements, event context, or work details... (Bold, colors, fonts, lists & MS Word paste supported)"
                 />
               </div>
 
@@ -938,7 +1147,7 @@ export const PortfolioSectionManager: React.FC = () => {
                 <label className="block text-xs font-bold uppercase tracking-wider mb-2">
                   Card Layout (Photos count in Card Frame)
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
                     {
                       id: "single" as PortfolioImageLayout,
@@ -951,8 +1160,19 @@ export const PortfolioSectionManager: React.FC = () => {
                       ),
                     },
                     {
+                      id: "split_vertical_2" as PortfolioImageLayout,
+                      title: "2 Photos Side-by-Side",
+                      desc: "Left & Right columns",
+                      icon: (
+                        <div className="w-8 h-8 rounded-md bg-primary/20 border border-primary/40 grid grid-cols-2 gap-0.5 p-0.5">
+                          <div className="bg-primary/40 rounded-xs"></div>
+                          <div className="bg-primary/40 rounded-xs"></div>
+                        </div>
+                      ),
+                    },
+                    {
                       id: "split_horizontal_2" as PortfolioImageLayout,
-                      title: "2 Photos",
+                      title: "2 Photos Stacked",
                       desc: "Top & Bottom split",
                       icon: (
                         <div className="w-8 h-8 rounded-md bg-primary/20 border border-primary/40 grid grid-rows-2 gap-0.5 p-0.5">
@@ -980,7 +1200,10 @@ export const PortfolioSectionManager: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setImageLayout(mode.id);
-                        if (mode.id === "split_horizontal_2" && images.length < 2) {
+                        if (
+                          (mode.id === "split_horizontal_2" || mode.id === "split_vertical_2") &&
+                          images.length < 2
+                        ) {
                           setImages((prev) => [...prev, ...Array(2 - prev.length).fill("")]);
                         } else if (mode.id === "grid_4" && images.length < 4) {
                           setImages((prev) => [...prev, ...Array(4 - prev.length).fill("")]);
@@ -1077,6 +1300,355 @@ export const PortfolioSectionManager: React.FC = () => {
                 </div>
               </div>
 
+              {/* Media Type Selector: Photos or Video */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2">
+                  Card Media Type
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setMediaType("image")}
+                    className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-center gap-2 ${
+                      mediaType === "image"
+                        ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-2 ring-primary/20"
+                        : "border-border dark:border-dark_border hover:border-gray-400 text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    <span className="text-base">📷</span>
+                    <span>
+                      <span className="block text-xs font-bold text-midnight_text dark:text-white">Photos</span>
+                      <span className="block text-[10px] text-gray-500 dark:text-gray-400">1–4 image slots</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMediaType("video")}
+                    className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-center gap-2 ${
+                      mediaType === "video"
+                        ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-2 ring-primary/20"
+                        : "border-border dark:border-dark_border hover:border-gray-400 text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    <span className="text-base">🎬</span>
+                    <span>
+                      <span className="block text-xs font-bold text-midnight_text dark:text-white">Video</span>
+                      <span className="block text-[10px] text-gray-500 dark:text-gray-400">Upload video + thumbnail</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {mediaType === "video" ? (
+              /* ─────────── VIDEO UPLOAD, THUMBNAIL & PLAYBACK SETTINGS ─────────── */
+              <div className="space-y-3 pt-2 p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border/60 dark:border-dark_border/60">
+                <label className="block text-xs font-bold uppercase tracking-wider">
+                  Video Upload &amp; Playback
+                </label>
+
+                {/* Video upload + URL paste */}
+                <div className="flex items-center gap-2">
+                  <label
+                    className={`px-3 py-1.5 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer transition shrink-0 ${
+                      isVideoUploading ? "opacity-60 pointer-events-none" : ""
+                    }`}
+                  >
+                    {isVideoUploading ? `Uploading ${videoUploadProgress}%` : "⬆ Upload Video"}
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={handleVideoUpload}
+                    />
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="or paste Video URL (.mp4 / .webm / Cloudinary)"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-border dark:border-dark_border bg-white dark:bg-darklight text-dark dark:text-white"
+                  />
+                </div>
+
+                {isVideoUploading && (
+                  <div className="w-full bg-gray-200 dark:bg-darklight rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-primary h-full transition-all duration-200"
+                      style={{ width: `${videoUploadProgress}%` }}
+                    ></div>
+                  </div>
+                )}
+
+                {/* Video preview + frame capture (Instagram / TikTok style) */}
+                {videoUrl && (
+                  <div className="space-y-2">
+                    <video
+                      ref={previewVideoRef}
+                      src={getImgPath(videoUrl)}
+                      controls
+                      muted
+                      playsInline
+                      crossOrigin="anonymous"
+                      onLoadedMetadata={(e) => setVideoDuration(e.currentTarget.duration || 0)}
+                      className="w-full max-h-64 rounded-xl bg-black border border-border/60 dark:border-dark_border/60"
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCaptureVideoFrame}
+                        className="px-3 py-1.5 rounded-lg bg-gray-900 hover:bg-black dark:bg-gray-700 text-white text-[11px] font-bold cursor-pointer transition flex items-center gap-1.5"
+                      >
+                        📸 Capture Current Frame as Thumbnail
+                      </button>
+                      <label
+                        className={`px-3 py-1.5 rounded-lg border border-border dark:border-dark_border bg-white dark:bg-darklight text-[11px] font-bold text-dark dark:text-white cursor-pointer hover:border-primary transition ${
+                          isThumbUploading ? "opacity-60 pointer-events-none" : ""
+                        }`}
+                      >
+                        {isThumbUploading ? "Uploading..." : "⬆ Upload Thumbnail Image"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleThumbnailUpload}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                      Tip: pause the preview at the exact moment you like (like Instagram / TikTok),
+                      then capture that frame as the card thumbnail.
+                    </p>
+                  </div>
+                )}
+
+                {/* Trim & Crop / Zoom for the video (reflected on the card) */}
+                <div className="space-y-2 pt-2 border-t border-border/40 dark:border-dark_border/40">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Trim &amp; Crop (as shown on card)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {(videoTrimStart > 0 || videoTrimEnd > 0 || videoCrop.zoom > 1) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVideoTrimStart(0);
+                            setVideoTrimEnd(0);
+                            setVideoCrop({ ...defaultMediaCrop });
+                          }}
+                          className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleLiveSaveMedia}
+                        disabled={liveSaving || !editingId}
+                        title={editingId ? "Save trim / crop to the live card now" : "Save the card once first"}
+                        className="px-2 py-0.5 rounded-md bg-primary hover:bg-blue-700 disabled:opacity-40 text-white text-[10px] font-bold cursor-pointer transition"
+                      >
+                        {liveSaving ? "Saving..." : "💾 Live Save"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {videoDuration > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <label className="space-y-0.5">
+                        <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                          <span>Trim Start</span>
+                          <span className="font-bold">
+                            {fmtTime(videoTrimStart)} / {fmtTime(videoDuration)}
+                          </span>
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={videoDuration}
+                          step={0.1}
+                          value={videoTrimStart}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setVideoTrimStart(Math.min(v, videoTrimEnd > 0 ? videoTrimEnd : v));
+                          }}
+                          className="w-full accent-primary cursor-pointer"
+                        />
+                      </label>
+                      <label className="space-y-0.5">
+                        <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                          <span>Trim End (0 = full)</span>
+                          <span className="font-bold">
+                            {videoTrimEnd > 0 ? fmtTime(videoTrimEnd) : fmtTime(videoDuration)}
+                          </span>
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={videoDuration}
+                          step={0.1}
+                          value={videoTrimEnd}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setVideoTrimEnd(v > 0 ? Math.max(v, videoTrimStart) : 0);
+                          }}
+                          className="w-full accent-primary cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                      Load the video preview above to enable the trim sliders.
+                    </p>
+                  )}
+
+                  <div className="flex flex-col gap-2">
+                    {/* Live preview — mirrors the card video crop/zoom exactly */}
+                    {videoUrl && (
+                      <div style={{ width: 160, height: 128 }} className="relative rounded-xl overflow-hidden bg-black border-2 border-primary/50 shrink-0">
+                        <div
+                          className="absolute inset-0"
+                          style={
+                            videoCrop.zoom > 1
+                              ? {
+                                  transform: `scale(${videoCrop.zoom})`,
+                                  transformOrigin: `${videoCrop.ox}% ${videoCrop.oy}%`,
+                                }
+                              : undefined
+                          }
+                        >
+                          <video
+                            src={getImgPath(videoUrl)}
+                            muted
+                            loop
+                            autoPlay
+                            playsInline
+                            preload="metadata"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[8px] font-bold tracking-wide">
+                          LIVE OUTPUT (CARD)
+                        </span>
+                      </div>
+                    )}
+                    <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <label className="space-y-0.5">
+                      <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                        <span>Zoom</span>
+                        <span className="font-bold">{Math.round(videoCrop.zoom * 100)}%</span>
+                      </span>
+                      <input
+                        type="range"
+                        min={1}
+                        max={3}
+                        step={0.05}
+                        value={videoCrop.zoom}
+                        onChange={(e) => setVideoCrop((p) => ({ ...p, zoom: Number(e.target.value) }))}
+                        className="w-full accent-primary cursor-pointer"
+                      />
+                    </label>
+                    <label className="space-y-0.5">
+                      <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                        <span>Focus X</span>
+                        <span className="font-bold">{videoCrop.ox}%</span>
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={videoCrop.ox}
+                        onChange={(e) => setVideoCrop((p) => ({ ...p, ox: Number(e.target.value) }))}
+                        className="w-full accent-primary cursor-pointer"
+                      />
+                    </label>
+                    <label className="space-y-0.5">
+                      <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                        <span>Focus Y</span>
+                        <span className="font-bold">{videoCrop.oy}%</span>
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={videoCrop.oy}
+                        onChange={(e) => setVideoCrop((p) => ({ ...p, oy: Number(e.target.value) }))}
+                        className="w-full accent-primary cursor-pointer"
+                      />
+                    </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Thumbnail preview / hint */}
+                <div className="flex items-center gap-3">
+                  {videoThumbnail ? (
+                    <>
+                      <div className="relative w-24 h-16 rounded-lg overflow-hidden border border-border/60 dark:border-dark_border/60 bg-gray-200 shrink-0">
+                        <Image
+                          src={getImgPath(videoThumbnail)}
+                          alt="Video thumbnail"
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVideoThumbnail("")}
+                        className="text-[11px] font-bold text-red-500 hover:text-red-700 cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                        Card shows this thumbnail image.
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                      No thumbnail set — the card will play the video itself and show a Replay
+                      button when it finishes.
+                    </span>
+                  )}
+                </div>
+
+                {/* Playback mode setting */}
+                <div>
+                  <label className="block text-[11px] font-bold mb-1.5 text-dark dark:text-white">
+                    How should the video appear on the card? (Setting)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(
+                      [
+                        { id: "autoplay_loop", title: "Autoplay & Loop", desc: "Plays continuously on the card" },
+                        { id: "autoplay_once", title: "Play Once + Replay", desc: "Plays once, then Replay button shows" },
+                        { id: "hover_play", title: "Play on Hover", desc: "Plays only while mouse is over card" },
+                        { id: "thumbnail_only", title: "Thumbnail Only", desc: "Static image; video plays in details" },
+                      ] as { id: VideoPlaybackMode; title: string; desc: string }[]
+                    ).map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setVideoPlaybackMode(m.id)}
+                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                          videoPlaybackMode === m.id
+                            ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                            : "border-border dark:border-dark_border hover:border-gray-400"
+                        }`}
+                      >
+                        <span className="block text-[11px] font-bold text-midnight_text dark:text-white">
+                          {m.title}
+                        </span>
+                        <span className="block text-[10px] text-gray-500 dark:text-gray-400">{m.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              ) : (
+              <>
               {/* Multi-Image Cloudinary Upload Slots */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
@@ -1101,7 +1673,13 @@ export const PortfolioSectionManager: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-dark dark:text-white">
-                        {imageLayout === "split_horizontal_2"
+                        {imageLayout === "split_vertical_2"
+                          ? slotIdx === 0
+                            ? "Photo 01 (Left Half)"
+                            : slotIdx === 1
+                            ? "Photo 02 (Right Half)"
+                            : `Photo 0${slotIdx + 1}`
+                          : imageLayout === "split_horizontal_2"
                           ? slotIdx === 0
                             ? "Photo 01 (Top Half)"
                             : slotIdx === 1
@@ -1153,17 +1731,34 @@ export const PortfolioSectionManager: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                      {/* Thumbnail */}
+                      {/* Thumbnail (video URLs get a live video preview, not a broken image) */}
                       {imgUrl ? (
-                        <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-200 shrink-0 border border-border/60">
-                          <Image
-                            src={getImgPath(imgUrl)}
-                            alt={`Preview ${slotIdx + 1}`}
-                            fill
-                            unoptimized
-                            className="object-cover"
-                          />
-                        </div>
+                        isVideoUrl(imgUrl) ? (
+                          <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black shrink-0 border border-border/60">
+                            <video
+                              src={getImgPath(imgUrl)}
+                              muted
+                              loop
+                              autoPlay
+                              playsInline
+                              preload="metadata"
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-0.5 right-0.5 px-1 py-px rounded bg-black/70 text-white text-[8px] font-bold border border-white/20">
+                              VIDEO
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-200 shrink-0 border border-border/60">
+                            <Image
+                              src={getImgPath(imgUrl)}
+                              alt={`Preview ${slotIdx + 1}`}
+                              fill
+                              unoptimized
+                              className="object-cover"
+                            />
+                          </div>
+                        )
                       ) : (
                         <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-darklight border border-dashed border-gray-400 flex items-center justify-center text-[10px] text-gray-400 shrink-0">
                           Empty
@@ -1214,9 +1809,121 @@ export const PortfolioSectionManager: React.FC = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Crop / Zoom controls for this photo (reflected on the card) */}
+                    {imgUrl && !isVideoUrl(imgUrl) && (
+                      <div className="space-y-1.5 pt-2 border-t border-border/40 dark:border-dark_border/40">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            Crop / Zoom (as shown on card)
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {(imageCrops[slotIdx]?.zoom || 1) > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => updateImageCrop(slotIdx, null)}
+                                className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                              >
+                                Reset
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleLiveSaveMedia}
+                              disabled={liveSaving || !editingId}
+                              title={editingId ? "Save crop to the live card now" : "Save the card once first"}
+                              className="px-2 py-0.5 rounded-md bg-primary hover:bg-blue-700 disabled:opacity-40 text-white text-[10px] font-bold cursor-pointer transition"
+                            >
+                              {liveSaving ? "Saving..." : "💾 Live Save"}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {/* Live preview — mirrors the card crop/zoom exactly */}
+                          <div style={{ width: 160, height: 128 }} className="relative rounded-xl overflow-hidden bg-gray-900 border-2 border-primary/50 shrink-0">
+                            <div
+                              className="absolute inset-0"
+                              style={
+                                (imageCrops[slotIdx]?.zoom || 1) > 1
+                                  ? {
+                                      transform: `scale(${imageCrops[slotIdx]!.zoom})`,
+                                      transformOrigin: `${imageCrops[slotIdx]!.ox}% ${imageCrops[slotIdx]!.oy}%`,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              <Image
+                                src={getImgPath(imgUrl)}
+                                alt="Card preview"
+                                fill
+                                unoptimized
+                                style={
+                                  imageCrops[slotIdx]
+                                    ? { objectPosition: `${imageCrops[slotIdx]!.ox}% ${imageCrops[slotIdx]!.oy}%` }
+                                    : undefined
+                                }
+                                className="object-cover object-top"
+                              />
+                            </div>
+                            <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[8px] font-bold tracking-wide">
+                              LIVE OUTPUT (CARD)
+                            </span>
+                          </div>
+                          <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <label className="space-y-0.5">
+                            <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                              <span>Zoom</span>
+                              <span className="font-bold">{Math.round((imageCrops[slotIdx]?.zoom || 1) * 100)}%</span>
+                            </span>
+                            <input
+                              type="range"
+                              min={1}
+                              max={3}
+                              step={0.05}
+                              value={imageCrops[slotIdx]?.zoom || 1}
+                              onChange={(e) => updateImageCrop(slotIdx, { zoom: Number(e.target.value) })}
+                              className="w-full accent-primary cursor-pointer"
+                            />
+                          </label>
+                          <label className="space-y-0.5">
+                            <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                              <span>Focus X</span>
+                              <span className="font-bold">{imageCrops[slotIdx]?.ox ?? 50}%</span>
+                            </span>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              step={1}
+                              value={imageCrops[slotIdx]?.ox ?? 50}
+                              onChange={(e) => updateImageCrop(slotIdx, { ox: Number(e.target.value) })}
+                              className="w-full accent-primary cursor-pointer"
+                            />
+                          </label>
+                          <label className="space-y-0.5">
+                            <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                              <span>Focus Y</span>
+                              <span className="font-bold">{imageCrops[slotIdx]?.oy ?? 50}%</span>
+                            </span>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              step={1}
+                              value={imageCrops[slotIdx]?.oy ?? 50}
+                              onChange={(e) => updateImageCrop(slotIdx, { oy: Number(e.target.value) })}
+                              className="w-full accent-primary cursor-pointer"
+                            />
+                          </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+              </>
+              )}
 
               {/* Submit Buttons */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/40 dark:border-dark_border/40">

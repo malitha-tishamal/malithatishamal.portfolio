@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import Image from 'next/image'
-import { PortfolioItem, isVideoUrl } from '@/types/portfolio'
+import { PortfolioItem, PortfolioMediaCrop, isVideoUrl } from '@/types/portfolio'
 import { getImgPath } from '@/utils/image'
 
 interface PortfolioCardItemProps {
@@ -19,28 +19,123 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
   onClick,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [videoEnded, setVideoEnded] = useState(false)
+  const [thumbPlayStarted, setThumbPlayStarted] = useState(false)
   const images = item.images || []
   const layout =
     item.imageLayout ||
     (images.length >= 4 ? 'grid_4' : images.length >= 2 ? 'split_horizontal_2' : 'single')
   const fit = item.imageFit || 'cover'
 
-  // Detect video media
+  // Detect video media (explicit video item, or a single video file as media)
+  const videoSrc = item.videoUrl || images.find((img) => isVideoUrl(img)) || ''
   const isVideo =
     item.mediaType === 'video' ||
     !!item.videoUrl ||
-    (images.length > 0 && isVideoUrl(images[0]))
+    (images.length === 1 && isVideoUrl(images[0]))
 
-  const videoSrc = item.videoUrl || (images.find((img) => isVideoUrl(img)) || '')
   const videoThumb =
-    item.videoThumbnail || (!isVideoUrl(images[0]) ? images[0] : '')
+    item.videoThumbnail ||
+    (isVideo && images.length === 1 && !isVideoUrl(images[0]) ? images[0] : '')
   const playbackMode = item.videoPlaybackMode || 'autoplay_loop'
+  const trimStart = item.videoTrim?.start || 0
+  const trimEnd = item.videoTrim?.end || 0
+  const videoCrop = item.videoCrop && item.videoCrop.zoom > 1 ? item.videoCrop : null
+
+  // Zoom into a focal point without re-encoding the media
+  const cropWrapStyle = (crop: PortfolioMediaCrop | null | undefined) =>
+    crop && crop.zoom > 1
+      ? { transform: `scale(${crop.zoom})`, transformOrigin: `${crop.ox}% ${crop.oy}%` }
+      : undefined
+
+  // Thumbnail-first display: static thumb + play badge until user taps play
+  const showStaticThumb =
+    isVideo &&
+    !!videoThumb &&
+    (playbackMode === 'thumbnail_only' ||
+      (playbackMode === 'autoplay_once' && !thumbPlayStarted))
+
+  const startThumbPlay = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setThumbPlayStarted(true)
+    setVideoEnded(false)
+    setTimeout(() => {
+      const el = videoRef.current
+      if (el) {
+        el.currentTime = trimStart
+        el.play().catch(() => {})
+      }
+    }, 0)
+  }
+
+  const handleReplay = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (videoRef.current) {
+      videoRef.current.currentTime = trimStart
+      videoRef.current.play().catch(() => {})
+    }
+    setVideoEnded(false)
+  }
+
+  // Seek to trim start once metadata is ready
+  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    if (trimStart > 0) e.currentTarget.currentTime = trimStart
+  }
+
+  // Clamp playback to the trimmed [start, end] window
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const el = e.currentTarget
+    if (trimEnd > 0 && el.currentTime >= trimEnd) {
+      if (playbackMode === 'autoplay_loop') {
+        el.currentTime = trimStart
+      } else {
+        el.pause()
+        setVideoEnded(true)
+      }
+    } else if (trimStart > 0 && el.currentTime < trimStart - 0.15) {
+      el.currentTime = trimStart
+    }
+  }
 
   // Image object-fit class
   const imgFitClass =
     fit === 'contain'
       ? 'object-contain p-1 bg-gray-50/50 dark:bg-black/20'
       : 'object-cover object-top'
+
+  // Render one media slot: inline video for video URLs (no more broken image icons),
+  // with the per-slot crop/zoom applied
+  const renderMediaSlot = (src: string, alt: string, idx: number) => {
+    const wrapStyle = cropWrapStyle(item.imageCrops?.[idx])
+    return isVideoUrl(src) ? (
+      <div className='absolute inset-0' style={wrapStyle}>
+        <video
+          src={getImgPath(src)}
+          muted
+          loop
+          autoPlay
+          playsInline
+          preload='metadata'
+          className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-black' : 'object-cover'}`}
+        />
+      </div>
+    ) : (
+      <div className='absolute inset-0' style={wrapStyle}>
+        <Image
+          src={getImgPath(src)}
+          alt={alt}
+          fill
+          unoptimized
+          style={
+            item.imageCrops?.[idx]
+              ? { objectPosition: `${item.imageCrops[idx]!.ox}% ${item.imageCrops[idx]!.oy}%` }
+              : undefined
+          }
+          className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
+        />
+      </div>
+    )
+  }
 
   // Card Aspect Ratio
   const cardAspectClass =
@@ -72,6 +167,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
 
   const handleMouseEnter = () => {
     if (isVideo && playbackMode === 'hover_play' && videoRef.current) {
+      videoRef.current.currentTime = trimStart
       videoRef.current.play().catch(() => {})
     }
   }
@@ -79,7 +175,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
   const handleMouseLeave = () => {
     if (isVideo && playbackMode === 'hover_play' && videoRef.current) {
       videoRef.current.pause()
-      videoRef.current.currentTime = 0
+      videoRef.current.currentTime = trimStart
     }
   }
 
@@ -98,7 +194,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
           {isVideo && videoSrc ? (
             /* ── VIDEO MEDIA DISPLAY ───────────────────────── */
             <div className='relative w-full h-full overflow-hidden bg-black flex items-center justify-center'>
-              {playbackMode === 'thumbnail_only' && videoThumb ? (
+              {showStaticThumb ? (
                 <div className='relative w-full h-full'>
                   <Image
                     src={getImgPath(videoThumb)}
@@ -107,27 +203,67 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
                     unoptimized
                     className='object-cover'
                   />
-                  {/* Play badge overlay */}
+                  {/* Play badge overlay — tap to play the video in place */}
                   <div className='absolute inset-0 bg-black/30 flex items-center justify-center'>
-                    <div className='w-12 h-12 rounded-full bg-white/90 dark:bg-darklight/90 shadow-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform'>
+                    <button
+                      type='button'
+                      onClick={startThumbPlay}
+                      title='Play video'
+                      className='w-12 h-12 rounded-full bg-white/90 dark:bg-darklight/90 shadow-xl flex items-center justify-center text-primary hover:scale-110 transition-transform cursor-pointer'>
                       <svg className='w-5 h-5 ml-0.5' fill='currentColor' viewBox='0 0 24 24'>
                         <path d='M8 5v14l11-7z' />
                       </svg>
-                    </div>
+                    </button>
                   </div>
                 </div>
               ) : (
-                <video
-                  ref={videoRef}
-                  src={getImgPath(videoSrc)}
-                  poster={videoThumb ? getImgPath(videoThumb) : undefined}
-                  autoPlay={playbackMode === 'autoplay_loop'}
-                  muted
-                  loop
-                  playsInline
-                  preload='metadata'
-                  className='w-full h-full object-cover'
-                />
+                <>
+                  <div className='absolute inset-0' style={cropWrapStyle(videoCrop)}>
+                    <video
+                      ref={videoRef}
+                      src={getImgPath(videoSrc)}
+                      poster={videoThumb ? getImgPath(videoThumb) : undefined}
+                      autoPlay={playbackMode !== 'hover_play' && playbackMode !== 'thumbnail_only'}
+                      muted
+                      loop={playbackMode === 'autoplay_loop'}
+                      playsInline
+                      preload='metadata'
+                      onLoadedMetadata={handleLoadedMetadata}
+                      onTimeUpdate={handleTimeUpdate}
+                      onEnded={() => setVideoEnded(true)}
+                      className='w-full h-full object-cover'
+                    />
+                  </div>
+                  {/* Replay overlay once the video finishes (non-looping modes) */}
+                  {videoEnded && playbackMode !== 'autoplay_loop' && (
+                    <div className='absolute inset-0 bg-black/60 flex items-center justify-center'>
+                      <button
+                        type='button'
+                        onClick={handleReplay}
+                        className='px-4 py-2 rounded-full bg-white/90 dark:bg-darklight/90 text-dark dark:text-white text-xs font-bold shadow-xl flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer'>
+                        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                          <path
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth='2'
+                            d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
+                          />
+                        </svg>
+                        <span>Replay</span>
+                      </button>
+                    </div>
+                  )}
+                  {/* Static mode without thumbnail: show a play badge over paused video */}
+                  {playbackMode === 'thumbnail_only' && !videoThumb && (
+                    <div className='absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none'>
+                      <div className='w-12 h-12 rounded-full bg-white/90 dark:bg-darklight/90 shadow-xl flex items-center justify-center text-primary'>
+                        <svg className='w-5 h-5 ml-0.5' fill='currentColor' viewBox='0 0 24 24'>
+                          <path d='M8 5v14l11-7z' />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Video Badge */}
@@ -146,44 +282,36 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
             /* OPTION 2B: 2 Images Side-by-Side (Left & Right columns) */
             <div className='grid grid-cols-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60'>
               <div className='relative w-full h-full overflow-hidden'>
-                <Image
-                  src={getImgPath(images[0])}
-                  alt={item.altText ? `${item.altText} - Part 1` : `${item.title} (Left) – Showcase by Malitha Tishamal`}
-                  fill
-                  unoptimized
-                  className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
-                />
+                {renderMediaSlot(
+                  images[0],
+                  item.altText ? `${item.altText} - Part 1` : `${item.title} (Left) – Showcase by Malitha Tishamal`,
+                  0
+                )}
               </div>
               <div className='relative w-full h-full overflow-hidden'>
-                <Image
-                  src={getImgPath(images[1])}
-                  alt={item.altText ? `${item.altText} - Part 2` : `${item.title} (Right) – Showcase by Malitha Tishamal`}
-                  fill
-                  unoptimized
-                  className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
-                />
+                {renderMediaSlot(
+                  images[1],
+                  item.altText ? `${item.altText} - Part 2` : `${item.title} (Right) – Showcase by Malitha Tishamal`,
+                  1
+                )}
               </div>
             </div>
           ) : layout === 'split_horizontal_2' && images.length >= 2 ? (
             /* OPTION 2A: 2 Images Stacked (Top Half & Bottom Half) */
             <div className='grid grid-rows-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60'>
               <div className='relative w-full h-full overflow-hidden'>
-                <Image
-                  src={getImgPath(images[0])}
-                  alt={item.altText ? `${item.altText} - Part 1` : `${item.title} – Showcase by Malitha Tishamal`}
-                  fill
-                  unoptimized
-                  className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
-                />
+                {renderMediaSlot(
+                  images[0],
+                  item.altText ? `${item.altText} - Part 1` : `${item.title} – Showcase by Malitha Tishamal`,
+                  0
+                )}
               </div>
               <div className='relative w-full h-full overflow-hidden'>
-                <Image
-                  src={getImgPath(images[1])}
-                  alt={item.altText ? `${item.altText} - Part 2` : `${item.title} – Showcase by Malitha Tishamal`}
-                  fill
-                  unoptimized
-                  className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
-                />
+                {renderMediaSlot(
+                  images[1],
+                  item.altText ? `${item.altText} - Part 2` : `${item.title} – Showcase by Malitha Tishamal`,
+                  1
+                )}
               </div>
             </div>
           ) : layout === 'grid_4' && images.length >= 3 ? (
@@ -191,26 +319,22 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
             <div className='grid grid-cols-2 grid-rows-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60'>
               {images.slice(0, 4).map((img, i) => (
                 <div key={i} className='relative w-full h-full overflow-hidden'>
-                  <Image
-                    src={getImgPath(img)}
-                    alt={item.altText ? `${item.altText} - Photo ${i + 1}` : `${item.title} (Photo ${i + 1}) by Malitha Tishamal`}
-                    fill
-                    unoptimized
-                    className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
-                  />
+                  {renderMediaSlot(
+                    img,
+                    item.altText ? `${item.altText} - Photo ${i + 1}` : `${item.title} (Photo ${i + 1}) by Malitha Tishamal`,
+                    i
+                  )}
                 </div>
               ))}
             </div>
           ) : (
             /* OPTION 1: 1 Single Image occupying full card */
             <div className='relative w-full h-full overflow-hidden'>
-              <Image
-                src={getImgPath(images[0])}
-                alt={item.altText || `${item.title} – Portfolio Showcase by Malitha Tishamal`}
-                fill
-                unoptimized
-                className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
-              />
+              {renderMediaSlot(
+                images[0],
+                item.altText || `${item.title} – Portfolio Showcase by Malitha Tishamal`,
+                0
+              )}
             </div>
           )}
         </div>
@@ -225,14 +349,14 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
           </span>
         </div>
 
-        {/* Title — Full title visible with slightly reduced font size */}
-        <h4 className='group-hover:text-primary text-[15px] sm:text-[16px] font-bold text-midnight_text dark:text-white transition-colors leading-snug line-clamp-2 min-h-[2.5rem] flex items-center'>
+        {/* Title — always fully visible, slightly reduced font size */}
+        <h4 className='group-hover:text-primary text-[13px] sm:text-[14px] font-bold text-midnight_text dark:text-white transition-colors leading-snug'>
           {item.title}
         </h4>
 
-        {/* Description — more lines shown, rich HTML stripped */}
+        {/* Description — a few more lines shown, rich HTML stripped */}
         {plainDesc && (
-          <p className='text-xs sm:text-[13px] text-grey dark:text-gray-300 font-normal mt-1.5 line-clamp-3 leading-relaxed'>
+          <p className='text-xs sm:text-[13px] text-grey dark:text-gray-300 font-normal mt-1.5 line-clamp-4 leading-relaxed'>
             {plainDesc}
           </p>
         )}
