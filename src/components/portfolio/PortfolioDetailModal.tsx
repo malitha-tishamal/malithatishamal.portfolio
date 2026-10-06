@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
-import { PortfolioItem, isVideoUrl } from '@/types/portfolio'
+import { PortfolioItem, PortfolioBlock, PortfolioMediaCrop, isVideoUrl } from '@/types/portfolio'
 import { getImgPath } from '@/utils/image'
 
 interface PortfolioDetailModalProps {
@@ -12,6 +12,7 @@ interface PortfolioDetailModalProps {
 
 export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item, onClose }) => {
   const [activePhotoIdx, setActivePhotoIdx] = useState<number | null>(null)
+  const [activeVideoIdx, setActiveVideoIdx] = useState<number | null>(null)
   const [modalImageFit, setModalImageFit] = useState<'contain' | 'cover'>('contain')
 
   if (!item) return null
@@ -31,16 +32,25 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
   }
 
   const images = item.images || []
-  const isVideo =
-    item.mediaType === 'video' ||
-    !!item.videoUrl ||
-    (images.length > 0 && isVideoUrl(images[0]))
+  // Every video on the item: explicit videoUrl + any video URLs stored in image slots
+  const videoSources = [item.videoUrl, ...images.filter((img) => isVideoUrl(img))].filter(
+    (v): v is string => !!v
+  )
+  const isVideo = item.mediaType === 'video' || videoSources.length > 0
 
-  const videoSrc = item.videoUrl || (images.find((img) => isVideoUrl(img)) || '')
   const videoThumb =
-    item.videoThumbnail || (!isVideoUrl(images[0]) ? images[0] : '')
+    item.videoThumbnail || (images.length > 0 && !isVideoUrl(images[0]) ? images[0] : '')
 
   const nonVideoImages = images.filter((img) => !isVideoUrl(img))
+
+  // Unified media grid: videos + photos as same-size tiles
+  type MediaTile =
+    | { kind: 'video'; src: string; vi: number }
+    | { kind: 'image'; src: string }
+  const mediaTiles: MediaTile[] = [
+    ...videoSources.map((src, vi) => ({ kind: 'video' as const, src, vi })),
+    ...nonVideoImages.map((src) => ({ kind: 'image' as const, src })),
+  ]
 
   const hasLinks = !!(
     item.projectUrl ||
@@ -49,6 +59,115 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
     item.instagramUrl ||
     item.githubUrl
   )
+
+  // Custom web-page-style detail content (built in the admin Page Builder)
+  const blocks = item.contentBlocks || []
+  const hasCustomPage = blocks.length > 0
+
+  // Mirror the card's per-photo crop/zoom in the detail view
+  const cropWrapStyle = (crop?: PortfolioMediaCrop | null) =>
+    crop && crop.zoom > 1
+      ? { transform: `scale(${crop.zoom})`, transformOrigin: `${crop.ox}% ${crop.oy}%` }
+      : undefined
+  const cropFor = (src: string): PortfolioMediaCrop | null => {
+    const orig = images.indexOf(src)
+    return orig >= 0 ? item.imageCrops?.[orig] ?? null : null
+  }
+
+  const renderBlock = (b: PortfolioBlock) => {
+    switch (b.type) {
+      case 'heading':
+        return (
+          <h3 key={b.id} className='text-xl sm:text-2xl font-bold text-midnight_text dark:text-white'>
+            {b.text}
+          </h3>
+        )
+      case 'text':
+        return (
+          <div
+            key={b.id}
+            className='text-sm sm:text-base leading-relaxed text-grey dark:text-gray-300 prose prose-sm sm:prose-base dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline'
+            dangerouslySetInnerHTML={{ __html: b.html || '' }}
+          />
+        )
+      case 'quote':
+        return (
+          <blockquote
+            key={b.id}
+            className='border-l-4 border-primary/60 pl-4 italic text-grey dark:text-gray-300'>
+            {b.text}
+          </blockquote>
+        )
+      case 'divider':
+        return <hr key={b.id} className='border-border/60 dark:border-dark_border/60' />
+      case 'image':
+        return (
+          <figure key={b.id}>
+            <div
+              className='relative w-full rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode'
+              style={{ aspectRatio: '16/9' }}>
+              <Image
+                src={getImgPath(b.src || '')}
+                alt={b.caption || item.title}
+                fill
+                unoptimized
+                className='object-contain'
+              />
+            </div>
+            {b.caption && (
+              <figcaption className='text-xs text-gray-500 dark:text-gray-400 mt-1.5 text-center'>
+                {b.caption}
+              </figcaption>
+            )}
+          </figure>
+        )
+      case 'video':
+        return (
+          <div
+            key={b.id}
+            className='rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black'>
+            <video
+              src={getImgPath(b.src || '')}
+              poster={b.caption ? getImgPath(b.caption) : undefined}
+              controls
+              autoPlay={!!b.autoplay}
+              muted={!!b.autoplay}
+              loop={!!b.autoplay}
+              playsInline
+              className='w-full max-h-[480px] object-contain mx-auto bg-black'
+            />
+          </div>
+        )
+      case 'gallery':
+        return (
+          <div key={b.id}>
+            <div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
+              {(b.images || []).map((img, gi) => (
+                <div
+                  key={gi}
+                  className='relative rounded-xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode'
+                  style={{ aspectRatio: '4/3' }}>
+                  <Image
+                    src={getImgPath(img)}
+                    alt={`${item.title} ${gi + 1}`}
+                    fill
+                    unoptimized
+                    className='object-cover'
+                  />
+                </div>
+              ))}
+            </div>
+            {b.caption && (
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1.5 text-center'>
+                {b.caption}
+              </p>
+            )}
+          </div>
+        )
+      default:
+        return null
+    }
+  }
 
   return (
     <div
@@ -95,25 +214,14 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
           </div>
         </div>
 
-        {/* ── VIDEO PLAYER IN MODAL ───────────────────────── */}
-        {isVideo && videoSrc && (
-          <div className='mb-6 rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black shadow-lg'>
-            <video
-              src={getImgPath(videoSrc)}
-              poster={videoThumb ? getImgPath(videoThumb) : undefined}
-              controls
-              autoPlay
-              playsInline
-              className='w-full max-h-[500px] object-contain mx-auto bg-black'
-            />
-          </div>
-        )}
+        {/* ── CUSTOM WEB-PAGE-STYLE DETAIL (Page Builder blocks) ── */}
+        {hasCustomPage && <div className='space-y-5 mb-6'>{blocks.map(renderBlock)}</div>}
 
-        {/* View Mode Toggle for Photos (Fit vs Cover) */}
-        {nonVideoImages.length > 0 && (
+        {/* View Mode Toggle for Media (Fit vs Cover) */}
+        {!hasCustomPage && mediaTiles.length > 0 && (
           <div className='flex items-center justify-between gap-2 mb-3'>
             <span className='text-xs font-bold uppercase tracking-wider text-gray-400'>
-              Photos ({nonVideoImages.length})
+              Photos &amp; Videos ({mediaTiles.length})
             </span>
             <div className='flex items-center gap-1 bg-gray-100 dark:bg-darkmode p-0.5 rounded-lg border border-border/40 dark:border-dark_border/40 text-xs'>
               <button
@@ -140,39 +248,75 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
           </div>
         )}
 
-        {/* Images Showcase in Modal */}
-        {nonVideoImages.length > 0 && (
+        {/* Unified Media Grid: videos + photos as same-size tiles */}
+        {!hasCustomPage && mediaTiles.length > 0 && (
           <div className='mb-6'>
             <div
               className={`grid gap-3 ${
-                nonVideoImages.length === 1
+                mediaTiles.length === 1
                   ? 'grid-cols-1'
-                  : nonVideoImages.length === 2
+                  : mediaTiles.length === 2
                   ? 'grid-cols-1 sm:grid-cols-2'
-                  : nonVideoImages.length === 3
+                  : mediaTiles.length === 3
                   ? 'grid-cols-1 sm:grid-cols-3'
                   : 'grid-cols-1 sm:grid-cols-2'
               }`}>
-              {nonVideoImages.map((img, i) => (
+              {mediaTiles.map((tile, ti) => {
+                const tileH = mediaTiles.length === 1 ? 'h-80 sm:h-96' : 'h-72 sm:h-80'
+                if (tile.kind === 'video') {
+                  return (
+                    <div
+                      key={`v${ti}`}
+                      onClick={() => setActiveVideoIdx(tile.vi)}
+                      className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black group cursor-pointer ${tileH}`}>
+                      <video
+                        src={getImgPath(tile.src)}
+                        poster={tile.vi === 0 && videoThumb ? getImgPath(videoThumb) : undefined}
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                        preload='metadata'
+                        className='w-full h-full object-cover'
+                      />
+                      <div className='absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center'>
+                        <span className='px-3 py-1.5 rounded-xl bg-black/70 text-white text-xs font-semibold backdrop-blur-xs flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity'>
+                          <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'>
+                            <path d='M8 5v14l11-7z' />
+                          </svg>
+                          <span>Click for Full Screen</span>
+                        </span>
+                      </div>
+                      <span className='absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1 border border-white/20'>
+                        <svg className='w-2.5 h-2.5 text-red-500 fill-current' viewBox='0 0 24 24'>
+                          <path d='M8 5v14l11-7z' />
+                        </svg>
+                        VIDEO
+                      </span>
+                    </div>
+                  )
+                }
+                const c = cropFor(tile.src)
+                const pi = nonVideoImages.indexOf(tile.src)
+                return (
                 <div
-                  key={i}
-                  onClick={() => setActivePhotoIdx(i)}
-                  className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode group cursor-pointer ${
-                    nonVideoImages.length === 1
-                      ? 'h-80 sm:h-96'
-                      : 'h-72 sm:h-80'
-                  }`}>
-                  <Image
-                    src={getImgPath(img)}
-                    alt={`${item.title} Photo ${i + 1}`}
-                    fill
-                    unoptimized
-                    className={`${
-                      modalImageFit === 'contain'
-                        ? 'object-contain p-2'
-                        : 'object-cover object-top'
-                    } group-hover:scale-105 transition-transform duration-300`}
-                  />
+                  key={`i${ti}`}
+                  onClick={() => setActivePhotoIdx(pi)}
+                  className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode group cursor-pointer ${tileH}`}>
+                  <div className='absolute inset-0' style={cropWrapStyle(c)}>
+                    <Image
+                      src={getImgPath(tile.src)}
+                      alt={`${item.title} Photo ${pi + 1}`}
+                      fill
+                      unoptimized
+                      style={c ? { objectPosition: `${c.ox}% ${c.oy}%` } : undefined}
+                      className={`${
+                        modalImageFit === 'contain'
+                          ? 'object-contain p-2'
+                          : 'object-cover object-top'
+                      } group-hover:scale-105 transition-transform duration-300`}
+                    />
+                  </div>
                   <div className='absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100'>
                     <span className='px-3 py-1.5 rounded-xl bg-black/70 text-white text-xs font-semibold backdrop-blur-xs flex items-center gap-1.5'>
                       <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
@@ -182,16 +326,17 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
                     </span>
                   </div>
                   <span className='absolute bottom-2 right-2 bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full'>
-                    Photo #{i + 1}
+                    Photo #{pi + 1}
                   </span>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
 
         {/* Description / Overview & Details — Rich HTML Rendering */}
-        {item.description && (
+        {!hasCustomPage && item.description && (
           <div className='mb-6 bg-gray-50 dark:bg-darkmode/50 p-5 rounded-2xl border border-border/40 dark:border-dark_border/40'>
             <h4 className='text-xs font-bold uppercase tracking-wider text-gray-400 mb-2.5'>
               Overview &amp; Details
@@ -303,7 +448,7 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
       </div>
 
       {/* FULLSCREEN LIGHTBOX ENLARGED PHOTO MODAL */}
-      {activePhotoIdx !== null && images[activePhotoIdx] && (
+      {activePhotoIdx !== null && nonVideoImages[activePhotoIdx] && (
         <div
           onClick={() => setActivePhotoIdx(null)}
           className='fixed inset-0 z-60 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200'>
@@ -312,18 +457,31 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
             className='absolute top-5 right-5 text-white bg-white/20 hover:bg-white/30 p-3 rounded-full text-lg cursor-pointer transition z-10'>
             ✕
           </button>
-          <div className='relative w-full max-w-5xl h-[80vh] flex items-center justify-center'>
-            <Image
-              src={getImgPath(images[activePhotoIdx])}
-              alt='Enlarged Preview'
-              fill
-              unoptimized
-              className='object-contain'
-            />
+          <div className='relative w-full max-w-5xl h-[80vh] flex items-center justify-center overflow-hidden'>
+            <div
+              className='absolute inset-0'
+              style={cropWrapStyle(cropFor(nonVideoImages[activePhotoIdx]))}>
+              <Image
+                src={getImgPath(nonVideoImages[activePhotoIdx])}
+                alt='Enlarged Preview'
+                fill
+                unoptimized
+                style={
+                  cropFor(nonVideoImages[activePhotoIdx])
+                    ? {
+                        objectPosition: `${cropFor(nonVideoImages[activePhotoIdx])!.ox}% ${
+                          cropFor(nonVideoImages[activePhotoIdx])!.oy
+                        }%`,
+                      }
+                    : undefined
+                }
+                className='object-contain'
+              />
+            </div>
           </div>
-          {images.length > 1 && (
+          {nonVideoImages.length > 1 && (
             <div className='flex items-center gap-2 mt-4'>
-              {images.map((_, dotIdx) => (
+              {nonVideoImages.map((_, dotIdx) => (
                 <button
                   key={dotIdx}
                   onClick={(e) => {
@@ -332,6 +490,45 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
                   }}
                   className={`w-3 h-3 rounded-full transition cursor-pointer ${
                     activePhotoIdx === dotIdx ? 'bg-primary scale-125' : 'bg-white/40 hover:bg-white/70'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* FULLSCREEN VIDEO PLAYER MODAL */}
+      {activeVideoIdx !== null && videoSources[activeVideoIdx] && (
+        <div
+          onClick={() => setActiveVideoIdx(null)}
+          className='fixed inset-0 z-60 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200'>
+          <button
+            onClick={() => setActiveVideoIdx(null)}
+            className='absolute top-5 right-5 text-white bg-white/20 hover:bg-white/30 p-3 rounded-full text-lg cursor-pointer transition z-10'>
+            ✕
+          </button>
+          <div className='relative w-full max-w-5xl h-[80vh] flex items-center justify-center overflow-hidden'>
+            <video
+              src={getImgPath(videoSources[activeVideoIdx])}
+              controls
+              autoPlay
+              playsInline
+              onClick={(e) => e.stopPropagation()}
+              className='w-full h-full object-contain bg-black'
+            />
+          </div>
+          {videoSources.length > 1 && (
+            <div className='flex items-center gap-2 mt-4'>
+              {videoSources.map((_, dotIdx) => (
+                <button
+                  key={dotIdx}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setActiveVideoIdx(dotIdx)
+                  }}
+                  className={`w-3 h-3 rounded-full transition cursor-pointer ${
+                    activeVideoIdx === dotIdx ? 'bg-primary scale-125' : 'bg-white/40 hover:bg-white/70'
                   }`}
                 />
               ))}

@@ -18,6 +18,7 @@ import {
   PortfolioImageFit,
   PortfolioMediaType,
   PortfolioMediaCrop,
+  PortfolioBlock,
   defaultMediaCrop,
   VideoPlaybackMode,
   defaultPortfolioItems,
@@ -32,6 +33,7 @@ import { PortfolioDetailModal } from "@/components/portfolio/PortfolioDetailModa
 import { getImgPath } from "@/utils/image";
 import { generateImageAlt, generateSeoDescription, generateSeoKeywords } from "@/utils/seo";
 import { RichTextEditor } from "./RichTextEditor";
+import { PortfolioPageBuilder } from "./PortfolioPageBuilder";
 import {
   saveCustomPortfolioCategory,
   deleteCustomPortfolioCategory,
@@ -88,6 +90,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const [title, setTitle] = useState<string>("");
   const [subtitle, setSubtitle] = useState<string>("Events");
   const [description, setDescription] = useState<string>("");
+  const [contentBlocks, setContentBlocks] = useState<PortfolioBlock[]>([]);
   const [tagsInput, setTagsInput] = useState<string>("");
   const [projectUrl, setProjectUrl] = useState<string>("");
   const [githubUrl, setGithubUrl] = useState<string>("");
@@ -298,6 +301,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setTitle("");
     setSubtitle("Events");
     setDescription("");
+    setContentBlocks([]);
     setTagsInput("");
     setProjectUrl("");
     setGithubUrl("");
@@ -327,6 +331,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setTitle(item.title || "");
     setSubtitle(item.subtitle || "Events");
     setDescription(item.description || "");
+    setContentBlocks(item.contentBlocks ? item.contentBlocks.map((b) => ({ ...b })) : []);
     setTagsInput(item.tags ? item.tags.join(", ") : "");
     setProjectUrl(item.projectUrl || "");
     setGithubUrl(item.githubUrl || "");
@@ -502,6 +507,7 @@ export const PortfolioSectionManager: React.FC = () => {
       title: title.trim(),
       subtitle: subtitle.trim() || "Events",
       description: description.trim(),
+      contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       tags: cleanTags,
       projectUrl: projectUrl.trim(),
       githubUrl: githubUrl.trim(),
@@ -1072,6 +1078,24 @@ export const PortfolioSectionManager: React.FC = () => {
                   onChange={setDescription}
                   placeholder="Describe the project achievements, event context, or work details... (Bold, colors, fonts, lists & MS Word paste supported)"
                 />
+              </div>
+
+              {/* Row 2B: Custom Detail Page Builder (web-page-style, drag & drop) */}
+              <div className="rounded-2xl border border-border/60 dark:border-dark_border/60 bg-gray-50/60 dark:bg-darkmode/40 p-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider">
+                    Detail Page Builder (Custom Web-Page View)
+                  </label>
+                  <span className="text-[10px] text-gray-400">
+                    {contentBlocks.length} block{contentBlocks.length === 1 ? "" : "s"} · drag ⠿ to reorder
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3">
+                  Build a custom web-page-style detail view with headings, paragraphs, images,
+                  videos &amp; galleries. Paragraph blocks include a code/HTML view. If empty, the
+                  default detail layout is used.
+                </p>
+                <PortfolioPageBuilder blocks={contentBlocks} onChange={setContentBlocks} />
               </div>
 
               {/* Row 3: Tags & Display Order */}

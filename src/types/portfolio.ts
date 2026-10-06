@@ -18,6 +18,33 @@ export interface PortfolioVideoTrim {
   end: number; // 0 = until the real end
 }
 
+/** One block of the custom detail "web page" */
+export type PortfolioBlockType =
+  | "heading"
+  | "text"
+  | "image"
+  | "video"
+  | "gallery"
+  | "quote"
+  | "divider";
+
+export interface PortfolioBlock {
+  id: string;
+  type: PortfolioBlockType;
+  /** heading / quote plain text */
+  text?: string;
+  /** rich HTML for text blocks */
+  html?: string;
+  /** image / video primary src */
+  src?: string;
+  /** image caption / video poster */
+  caption?: string;
+  /** gallery image list */
+  images?: string[];
+  /** video autoplay loop muted on the page */
+  autoplay?: boolean;
+}
+
 export const isVideoUrl = (url?: string): boolean => {
   if (!url) return false;
   const clean = url.toLowerCase().split("?")[0];
@@ -52,6 +79,7 @@ export interface PortfolioItem {
   videoTrim?: PortfolioVideoTrim;
   videoCrop?: PortfolioMediaCrop;
   imageCrops?: (PortfolioMediaCrop | null)[]; // parallel to images[]
+  contentBlocks?: PortfolioBlock[]; // custom detail page (web-page-like), rendered in order
   displayOrder: number;
   featured?: boolean;
   altText?: string;
