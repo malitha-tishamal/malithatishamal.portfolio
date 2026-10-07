@@ -8,9 +8,10 @@ export interface PortfolioMediaCrop {
   zoom: number; // 1 = no zoom, up to 3
   ox: number; // focal point X (0-100 %)
   oy: number; // focal point Y (0-100 %)
+  fit?: "cover" | "contain"; // per-slot fit override: 'cover' (fill/crop - no gaps) or 'contain' (show whole photo)
 }
 
-export const defaultMediaCrop: PortfolioMediaCrop = { zoom: 1, ox: 50, oy: 50 };
+export const defaultMediaCrop: PortfolioMediaCrop = { zoom: 1, ox: 50, oy: 50, fit: "cover" };
 
 /** Video trim window (seconds) */
 export interface PortfolioVideoTrim {

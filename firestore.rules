@@ -1,0 +1,119 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Firestore Security Rules — Malitha Tishamal Portfolio
+//
+// Model:
+//   • Public content is readable by anyone (the site is public).
+//   • ALL content writes/deletes require an APPROVED ADMIN.
+//   • A few collections accept anonymous *create* only (contact inquiries,
+//     newsletter signups, visitor analytics, live visitor counter). Anonymous
+//     users can never read/update/delete those — only admins can.
+//   • The `users` collection is private (own profile + admins only).
+//
+// Deploy:  firebase deploy --only firestore:rules
+// ─────────────────────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Owner's super-admin email — guarantees you can never be locked out even
+    // if your /users profile doc is missing or misconfigured.
+    function isSuperAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'malithatishamal@gmail.com';
+    }
+
+    function isAdmin() {
+      return request.auth != null && (
+        isSuperAdmin() ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved' &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isApproved == true
+        )
+      );
+    }
+
+    // ── Public content: world-readable, admin-writable ──────────────────────
+    match /portfolio/{doc}        { allow read: if true; allow write: if isAdmin(); }
+    match /projects/{doc}         { allow read: if true; allow write: if isAdmin(); }
+    match /blogs/{doc}            { allow read: if true; allow write: if isAdmin(); }
+    match /certifications/{doc}   { allow read: if true; allow write: if isAdmin(); }
+    match /experiences/{doc}      { allow read: if true; allow write: if isAdmin(); }
+    match /services/{doc}         { allow read: if true; allow write: if isAdmin(); }
+    match /testimonials/{doc}     { allow read: if true; allow write: if isAdmin(); }
+    match /techCategories/{doc}   { allow read: if true; allow write: if isAdmin(); }
+    match /techItems/{doc}        { allow read: if true; allow write: if isAdmin(); }
+
+    // ── Site content (hero, footer, slider settings, categories, etc.) ──────
+    // The live visitor counter is incremented by anonymous visitors, so it gets
+    // a dedicated rule allowing public read + update (never public create/delete).
+    match /siteContent/visitorCounter {
+      allow read: if true;
+      allow update: if true;
+      allow create, delete: if isAdmin();
+    }
+    match /siteContent/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Anonymous-create collections (public submit, admin-only manage) ─────
+    match /inquiries/{doc} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /newsletterSubscribers/{doc} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /advancedAnalytics/{doc} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /visitors/{doc} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /techStackActivityLogs/{doc} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    // dailyStats is read publicly (to render counts) and written by the
+    // anonymous visitor hook; deletion stays admin-only.
+    match /dailyStats/{doc} {
+      allow read, create, update: if true;
+      allow delete: if isAdmin();
+    }
+
+    // ── Users: private ──────────────────────────────────────────────────────
+    match /users/{uid} {
+      // A signed-in user may read their own profile; admins may read any.
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+
+      // Signup creates your own doc, forced to a non-privileged pending state
+      // (unless you are the super admin). Blocks self-approval / role escalation.
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && (
+          isSuperAdmin() ||
+          (request.resource.data.status == 'pending'
+            && request.resource.data.isApproved == false)
+        );
+
+      // Admins manage everyone; the super admin may update their own doc
+      // (used by the auto-approve bootstrap in AuthContext).
+      allow update: if isAdmin()
+        || (request.auth != null && request.auth.uid == uid && isSuperAdmin());
+
+      allow delete: if isAdmin();
+    }
+
+    // ── Default deny: anything not explicitly listed above ──────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,17 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { sendNewsletterNotification, sendTestEmail } from '@/lib/email';
+import { sendNewsletterNotification } from '@/lib/email';
+import { isValidEmail, cleanString } from '@/utils/validation';
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
+    const ip = getClientIp(request);
+    const rl = rateLimit('newsletter', ip, 5, 10 * 60 * 1000);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
+    }
 
-    if (!email || !email.includes('@')) {
+    const body = await request.json();
+    const email = cleanString(body?.email, 254).toLowerCase();
+
+    if (!isValidEmail(email)) {
       return NextResponse.json(
         { error: 'Invalid email address' },
         { status: 400 }
       );
+    }
+
+    // De-duplicate: skip if this address is already an active subscriber.
+    try {
+      const q = query(
+        collection(db, 'newsletterSubscribers'),
+        where('email', '==', email),
+        limit(1)
+      );
+      const existing = await getDocs(q);
+      if (!existing.empty) {
+        return NextResponse.json(
+          { success: true, message: 'Successfully subscribed!' },
+          { status: 200 }
+        );
+      }
+    } catch {
+      // Query may fail if a composite index is missing — proceed to add.
     }
 
     // Add subscriber to Firestore

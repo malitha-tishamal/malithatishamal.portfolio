@@ -3,6 +3,7 @@
 import React from 'react';
 import Head from 'next/head';
 import { SEOContent, generateSEO } from '@/utils/seo/seoGenerator';
+import { safeJsonLd } from '@/utils/sanitize';
 
 interface DynamicSEOProps {
   content: SEOContent;
@@ -65,7 +66,7 @@ export const DynamicSEO: React.FC<DynamicSEOProps> = ({
       {/* Structured Data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(seo.structuredData) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(seo.structuredData) }}
       />
     </>
   );

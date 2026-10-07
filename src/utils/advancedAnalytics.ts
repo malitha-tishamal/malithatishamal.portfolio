@@ -221,13 +221,22 @@ const collectNetworkInfo = async () => {
     }
   }
 
-  // Fetch IP address
+  // Fetch IP address safely (silent fallback if offline or blocked by adblocker)
   try {
-    const response = await fetch('https://api.ipify.org?format=json');
-    const data = await response.json();
-    network.ip = data.ip;
-  } catch (error) {
-    console.error('Failed to fetch IP:', error);
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 2500) : null;
+    const response = await fetch('https://api.ipify.org?format=json', {
+      signal: controller?.signal,
+    }).catch(() => null);
+    if (timeoutId) clearTimeout(timeoutId);
+    if (response && response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data?.ip) {
+        network.ip = data.ip;
+      }
+    }
+  } catch {
+    // Silently continue without IP if blocked or offline
   }
 
   // Remove undefined values before returning
@@ -279,15 +288,24 @@ const collectLocationInfo = async () => {
     gpsPermission: 'unknown' as 'granted' | 'denied' | 'prompt' | 'unknown',
   };
 
-  // Fetch IP-based location
+  // Fetch IP-based location safely
   try {
-    const response = await fetch('https://ipapi.co/json/');
-    const data = await response.json();
-    location.country = data.country_name;
-    location.region = data.region;
-    location.city = data.city;
-  } catch (error) {
-    console.error('Failed to fetch location:', error);
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 2500) : null;
+    const response = await fetch('https://ipapi.co/json/', {
+      signal: controller?.signal,
+    }).catch(() => null);
+    if (timeoutId) clearTimeout(timeoutId);
+    if (response && response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data) {
+        location.country = data.country_name;
+        location.region = data.region;
+        location.city = data.city;
+      }
+    }
+  } catch {
+    // Silently continue without location if blocked or offline
   }
 
   // Try to get GPS coordinates (requires user permission)

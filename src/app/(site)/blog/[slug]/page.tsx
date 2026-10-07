@@ -12,6 +12,7 @@ import {
   generateBreadcrumbSchema,
   DEFAULT_SITE_URL,
 } from "@/utils/seo";
+import { safeJsonLd } from "@/utils/sanitize";
 import Link from "next/link";
 
 interface PageProps {
@@ -156,11 +157,11 @@ export default async function SingleBlogPostPage({ params }: PageProps) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(articleSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbsSchema) }}
       />
       <BlogDetailView post={post} relatedPosts={related} />
     </>

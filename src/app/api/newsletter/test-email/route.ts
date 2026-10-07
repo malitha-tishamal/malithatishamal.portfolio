@@ -2,15 +2,48 @@ import { NextRequest, NextResponse } from 'next/server';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { sendTestEmail } from '@/lib/email';
+import { getVerifiedAdminEmail } from '@/lib/adminAuth';
+import { isValidEmail, cleanString, isSafeHeaderValue } from '@/utils/validation';
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
+    const adminEmail = await getVerifiedAdminEmail(request);
+    if (!adminEmail) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const ip = getClientIp(request);
+    const rl = rateLimit('test-email', ip, 5, 10 * 60 * 1000);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
-    const { smtpUser, appPassword, recipientEmail } = body;
+    const smtpUser = cleanString(body?.smtpUser, 254);
+    const appPassword = cleanString(body?.appPassword, 64);
+    const recipientEmail = cleanString(body?.recipientEmail, 254).toLowerCase();
 
     if (!smtpUser || !appPassword || !recipientEmail) {
       return NextResponse.json(
         { error: 'Missing required fields: smtpUser, appPassword, recipientEmail' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(smtpUser) || !isValidEmail(recipientEmail)) {
+      return NextResponse.json(
+        { error: 'Invalid email address' },
+        { status: 400 }
+      );
+    }
+
+    if (!isSafeHeaderValue(smtpUser) || !isSafeHeaderValue(recipientEmail)) {
+      return NextResponse.json(
+        { error: 'Invalid input detected.' },
         { status: 400 }
       );
     }

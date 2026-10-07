@@ -11,6 +11,7 @@ import {
   defaultFooterContent, DEFAULT_SOCIAL_LINKS, DEFAULT_NAV_LINKS
 } from "@/types/footer";
 import toast from "react-hot-toast";
+import { useAuth } from "@/context/AuthContext";
 
 // Social platforms that can be added
 const ALL_PLATFORMS = ["LinkedIn", "GitHub", "Instagram", "Facebook", "X", "WhatsApp", "YouTube"];
@@ -19,6 +20,7 @@ const ALL_PLATFORMS = ["LinkedIn", "GitHub", "Instagram", "Facebook", "X", "What
 interface Subscriber { id: string; email: string; subscribedAt?: { seconds: number } }
 
 export const FooterManager: React.FC = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<FooterContent>(defaultFooterContent);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -555,10 +557,12 @@ export const FooterManager: React.FC = () => {
                     setTestEmailResult(null);
 
                     try {
+                      const token = await user?.getIdToken();
                       const response = await fetch('/api/newsletter/test-email', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
+                          ...(token ? { Authorization: `Bearer ${token}` } : {}),
                         },
                         body: JSON.stringify({
                           smtpUser,

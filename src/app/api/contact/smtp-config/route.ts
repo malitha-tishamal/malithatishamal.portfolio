@@ -2,8 +2,16 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
+import { getVerifiedAdminEmail } from "@/lib/adminAuth";
+import { isValidEmail, cleanString } from "@/utils/validation";
+import { rateLimit, getClientIp } from "@/utils/rateLimit";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const adminEmail = await getVerifiedAdminEmail(req);
+  if (!adminEmail) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const smtpUser = process.env.SMTP_USER || "malithatishamal@gmail.com";
   const receiverEmail = process.env.CONTACT_RECEIVER_EMAIL || "malithatishamal@gmail.com";
   const hasPass = Boolean(process.env.SMTP_PASS && process.env.SMTP_PASS.trim().length > 0);
@@ -17,14 +25,44 @@ export async function GET() {
   });
 }
 
+/** Only permit simple, single-line env values — blocks newline/env injection. */
+function safeEnvValue(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  return value.replace(/[\u0000-\u001F\u007F"']/g, "").slice(0, 254);
+}
+
 export async function POST(req: Request) {
   try {
+    const adminEmail = await getVerifiedAdminEmail(req);
+    if (!adminEmail) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip = getClientIp(req);
+    const rl = rateLimit("smtp-config", ip, 5, 10 * 60 * 1000);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
-    const { smtpUser, smtpPass, receiverEmail, testNow } = body;
+    const smtpUser = cleanString(body?.smtpUser, 254);
+    const smtpPass = cleanString(body?.smtpPass, 64);
+    const receiverEmail = cleanString(body?.receiverEmail, 254);
+    const testNow = Boolean(body?.testNow);
 
     const targetUser = (smtpUser || process.env.SMTP_USER || "malithatishamal@gmail.com").trim();
     const targetReceiver = (receiverEmail || process.env.CONTACT_RECEIVER_EMAIL || targetUser).trim();
     const cleanPass = (smtpPass || "").trim().replace(/\s+/g, "");
+
+    if (!isValidEmail(targetUser) || !isValidEmail(targetReceiver)) {
+      return NextResponse.json(
+        { error: "Please provide valid email addresses." },
+        { status: 400 }
+      );
+    }
 
     if (!cleanPass) {
       return NextResponse.json(
@@ -98,9 +136,9 @@ export async function POST(req: Request) {
       return `${content.trim()}\n${key}=${val}\n`;
     };
 
-    envContent = updateOrAppend(envContent, "SMTP_USER", targetUser);
-    envContent = updateOrAppend(envContent, "SMTP_PASS", cleanPass);
-    envContent = updateOrAppend(envContent, "CONTACT_RECEIVER_EMAIL", targetReceiver);
+    envContent = updateOrAppend(envContent, "SMTP_USER", safeEnvValue(targetUser));
+    envContent = updateOrAppend(envContent, "SMTP_PASS", safeEnvValue(cleanPass));
+    envContent = updateOrAppend(envContent, "CONTACT_RECEIVER_EMAIL", safeEnvValue(targetReceiver));
     envContent = updateOrAppend(envContent, "SMTP_HOST", "smtp.gmail.com");
     envContent = updateOrAppend(envContent, "SMTP_PORT", "465");
     envContent = updateOrAppend(envContent, "SMTP_SECURE", "true");

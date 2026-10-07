@@ -1,22 +1,56 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { isValidEmail, cleanString, isSafeHeaderValue } from "@/utils/validation";
+import { escapeHtml } from "@/utils/sanitize";
+import { rateLimit, getClientIp } from "@/utils/rateLimit";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { firstName, lastName, email, country, serviceCategory, message, notificationEmail } = body;
+    // Rate limit: 5 inquiries / 10 min per IP.
+    const ip = getClientIp(req);
+    const rl = rateLimit("contact", ip, 5, 10 * 60 * 1000);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
 
-    if (!firstName?.trim() || !email?.trim() || !message?.trim()) {
+    const body = await req.json();
+    const raw = body && typeof body === "object" ? body : {};
+
+    const firstName = cleanString(raw.firstName, 100);
+    const lastName = cleanString(raw.lastName, 100);
+    const email = cleanString(raw.email, 254);
+    const country = cleanString(raw.country, 100);
+    const serviceCategory = cleanString(raw.serviceCategory, 100);
+    const message = cleanString(raw.message, 5000);
+
+    if (!firstName || !email || !message) {
       return NextResponse.json(
         { error: "First name, email, and project message are required." },
         { status: 400 }
       );
     }
 
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Please provide a valid email address." },
+        { status: 400 }
+      );
+    }
+
+    // Reject any CR/LF/control chars in header-bound values (SMTP header injection).
+    if (!isSafeHeaderValue(email) || !isSafeHeaderValue(firstName)) {
+      return NextResponse.json(
+        { error: "Invalid input detected." },
+        { status: 400 }
+      );
+    }
+
+    // Server-controlled recipient only — never trust a client-supplied address.
     const recipient =
-      notificationEmail ||
-      process.env.CONTACT_RECEIVER_EMAIL ||
-      "malithatishamal@gmail.com";
+      process.env.CONTACT_RECEIVER_EMAIL || "malithatishamal@gmail.com";
 
     const smtpUser = (process.env.SMTP_USER || "").trim();
     const smtpPass = (process.env.SMTP_PASS || "").trim().replace(/\s+/g, "");
@@ -48,12 +82,22 @@ export async function POST(req: Request) {
                 },
               });
 
-        const fullName = `${firstName.trim()} ${lastName?.trim() || ""}`.trim();
+        const fullName = `${firstName} ${lastName || ""}`.trim();
         const dateStr = new Date().toLocaleString("en-US", {
           timeZone: "Asia/Colombo",
           dateStyle: "full",
           timeStyle: "short",
         });
+
+        // Escape every untrusted value before it touches HTML or a header.
+        const safeName = escapeHtml(fullName);
+        const safeEmail = escapeHtml(email);
+        const safeCountry = escapeHtml(country || "Not provided");
+        const safeService = escapeHtml(serviceCategory);
+        const safeMessage = escapeHtml(message);
+        const safeRecipient = escapeHtml(recipient);
+        const safeFirstName = escapeHtml(firstName);
+        const hasService = Boolean(serviceCategory);
 
         const htmlContent = `
           <!DOCTYPE html>
@@ -75,7 +119,7 @@ export async function POST(req: Request) {
                           🚀 New Portfolio Inquiry
                         </div>
                         <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #ffffff; line-height: 1.25;">
-                          ${fullName} wants to start a project!
+                          ${safeName} wants to start a project!
                         </h1>
                         <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255, 255, 255, 0.85);">
                           Received via the &quot;Start the project&quot; consultation form
@@ -90,21 +134,21 @@ export async function POST(req: Request) {
                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0f172a; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 24px; overflow: hidden;">
                           <tr>
                             <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 13px; color: #94a3b8; width: 120px;">Client Name</td>
-                            <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; font-weight: 700; color: #f8fafc;">${fullName}</td>
+                            <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; font-weight: 700; color: #f8fafc;">${safeName}</td>
                           </tr>
                           <tr>
                             <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 13px; color: #94a3b8;">Email Address</td>
                             <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; color: #38bdf8;">
-                              <a href="mailto:${email}" style="color: #38bdf8; text-decoration: none; font-weight: 600;">${email}</a>
+                              <a href="mailto:${safeEmail}" style="color: #38bdf8; text-decoration: none; font-weight: 600;">${safeEmail}</a>
                             </td>
                           </tr>
                           <tr>
                             <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 13px; color: #94a3b8;">Country</td>
-                            <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; color: #f8fafc;">${country || "Not provided"}</td>
+                            <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; color: #f8fafc;">${safeCountry}</td>
                           </tr>
-                          ${serviceCategory ? `<tr>
+                          ${hasService ? `<tr>
                             <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 13px; color: #94a3b8;">Service Category</td>
-                            <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; color: #a78bfa; font-weight: 600;">${serviceCategory}</td>
+                            <td style="padding: 14px 18px; border-bottom: 1px solid #1e293b; font-size: 14px; color: #a78bfa; font-weight: 600;">${safeService}</td>
                           </tr>` : ''}
                           <tr>
                             <td style="padding: 14px 18px; font-size: 13px; color: #94a3b8;">Date &amp; Time</td>
@@ -117,15 +161,15 @@ export async function POST(req: Request) {
                           <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 8px;">
                             💬 Project Overview &amp; Message:
                           </div>
-                          <div style="background-color: #0f172a; border-left: 4px solid #0a66c2; border-radius: 0 10px 10px 0; padding: 18px; font-size: 14px; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap;">${message.trim()}</div>
+                          <div style="background-color: #0f172a; border-left: 4px solid #0a66c2; border-radius: 0 10px 10px 0; padding: 18px; font-size: 14px; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap;">${safeMessage}</div>
                         </div>
 
                         <!-- CTA Actions -->
                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                           <tr>
                             <td align="center" style="padding-top: 10px;">
-                              <a href="mailto:${email}?subject=Re:%20Your%20Project%20Inquiry%20-%20Malitha%20Tishamal" style="display: inline-block; background: linear-gradient(135deg, #0a66c2 0%, #2563eb 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 14px 32px; border-radius: 10px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);">
-                                ✉️ Reply to ${firstName}
+                              <a href="mailto:${safeEmail}?subject=Re:%20Your%20Project%20Inquiry%20-%20Malitha%20Tishamal" style="display: inline-block; background: linear-gradient(135deg, #0a66c2 0%, #2563eb 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 14px 32px; border-radius: 10px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);">
+                                ✉️ Reply to ${safeFirstName}
                               </a>
                             </td>
                           </tr>
@@ -137,7 +181,7 @@ export async function POST(req: Request) {
                     <tr>
                       <td style="background-color: #0f172a; padding: 18px 28px; text-align: center; border-top: 1px solid #1e293b;">
                         <p style="margin: 0; font-size: 12px; color: #64748b;">
-                          This notification was automatically sent to <strong style="color: #94a3b8;">${recipient}</strong> from your portfolio website.
+                          This notification was automatically sent to <strong style="color: #94a3b8;">${safeRecipient}</strong> from your portfolio website.
                         </p>
                       </td>
                     </tr>

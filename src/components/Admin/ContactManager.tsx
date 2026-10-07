@@ -24,8 +24,10 @@ import {
 } from "@/types/contact";
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import toast from "react-hot-toast";
+import { useAuth } from "@/context/AuthContext";
 
 export const ContactManager: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"inquiries" | "settings">("inquiries");
 
   // Inquiries state
@@ -63,8 +65,12 @@ export const ContactManager: React.FC = () => {
   // Check SMTP configuration status on load
   useEffect(() => {
     const checkSmtp = async () => {
+      if (!user) return;
       try {
-        const res = await fetch("/api/contact/smtp-config");
+        const token = await user.getIdToken();
+        const res = await fetch("/api/contact/smtp-config", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (res.ok) {
           const data = await res.json();
           setSmtpConfigured(Boolean(data.configured));
@@ -78,7 +84,7 @@ export const ContactManager: React.FC = () => {
       }
     };
     checkSmtp();
-  }, []);
+  }, [user]);
 
   // Handle Save / Test SMTP
   const handleSaveSmtp = async (testNow: boolean) => {
@@ -104,9 +110,13 @@ export const ContactManager: React.FC = () => {
       );
 
       // Then call the API for SMTP configuration/testing
+      const token = await user?.getIdToken();
       const res = await fetch("/api/contact/smtp-config", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           smtpUser: smtpUser.trim(),
           smtpPass: smtpPass.trim(),
