@@ -34,6 +34,7 @@ import { getImgPath } from "@/utils/image";
 import { generateImageAlt, generateSeoDescription, generateSeoKeywords } from "@/utils/seo";
 import { RichTextEditor } from "./RichTextEditor";
 import { PortfolioPageBuilder } from "./PortfolioPageBuilder";
+import { PhotoCropModal } from "./PhotoCropModal";
 import {
   saveCustomPortfolioCategory,
   deleteCustomPortfolioCategory,
@@ -120,6 +121,23 @@ export const PortfolioSectionManager: React.FC = () => {
   const [videoTrimStart, setVideoTrimStart] = useState<number>(0);
   const [videoTrimEnd, setVideoTrimEnd] = useState<number>(0);
   const [videoDuration, setVideoDuration] = useState<number>(0);
+
+  // Interactive Photo Crop Modal State
+  const [cropModalState, setCropModalState] = useState<{
+    isOpen: boolean;
+    slotIndex: number;
+    imageUrl: string;
+    slotLabel: string;
+    targetAspectRatio: number;
+    targetRatioName: string;
+  }>({
+    isOpen: false,
+    slotIndex: 0,
+    imageUrl: "",
+    slotLabel: "",
+    targetAspectRatio: 1,
+    targetRatioName: "Card Slot",
+  });
 
   // Custom Categories State
   const [customCategories, setCustomCategories] = useState<string[]>([]);
@@ -442,6 +460,68 @@ export const PortfolioSectionManager: React.FC = () => {
     });
   };
 
+  // Exact slot dimensions & aspect ratio matching card layout & fit
+  const getSlotDimensions = (layout: PortfolioImageLayout, fit: PortfolioImageFit) => {
+    const baseCardW = 160;
+    const baseCardH = fit === "portrait_tall" ? 213 : fit === "contain" ? 160 : 140;
+
+    if (layout === "single") {
+      return { width: baseCardW, height: baseCardH, ratio: baseCardW / baseCardH, name: "Full Card Frame" };
+    }
+    if (layout === "split_vertical_2") {
+      const w = Math.round(baseCardW / 2);
+      const h = baseCardH;
+      return { width: Math.max(w, 85), height: h, ratio: w / h, name: "Side-by-Side (Tall)" };
+    }
+    if (layout === "split_horizontal_2") {
+      const w = baseCardW;
+      const h = Math.round(baseCardH / 2);
+      return { width: w, height: Math.max(h, 65), ratio: w / h, name: "Stacked (Wide)" };
+    }
+    // grid_4 (2x2)
+    const w = Math.round(baseCardW / 2);
+    const h = Math.round(baseCardH / 2);
+    return { width: Math.max(w, 90), height: Math.max(h, 75), ratio: w / h, name: "Quadrant (2x2)" };
+  };
+
+  const handleOpenCropModal = (slotIndex: number) => {
+    const url = images[slotIndex];
+    if (!url) {
+      toast.error("Please add an image to this slot first.");
+      return;
+    }
+    const dim = getSlotDimensions(imageLayout, imageFit);
+    let label = `Photo ${slotIndex + 1}`;
+    if (imageLayout === "grid_4") {
+      label = ["Quadrant 01 (Top-Left)", "Quadrant 02 (Top-Right)", "Quadrant 03 (Bottom-Left)", "Quadrant 04 (Bottom-Right)"][slotIndex] || label;
+    } else if (imageLayout === "split_vertical_2") {
+      label = slotIndex === 0 ? "Left Half" : "Right Half";
+    } else if (imageLayout === "split_horizontal_2") {
+      label = slotIndex === 0 ? "Top Half" : "Bottom Half";
+    }
+
+    setCropModalState({
+      isOpen: true,
+      slotIndex,
+      imageUrl: url,
+      slotLabel: label,
+      targetAspectRatio: dim.ratio,
+      targetRatioName: dim.name,
+    });
+  };
+
+  const handleApplyCropResult = (newUrl: string, cropData: PortfolioMediaCrop) => {
+    const idx = cropModalState.slotIndex;
+    if (newUrl && newUrl !== images[idx]) {
+      setImages((prev) => {
+        const next = [...prev];
+        next[idx] = newUrl;
+        return next;
+      });
+    }
+    updateImageCrop(idx, cropData);
+  };
+
   // Per-slot crop/zoom update (null = reset)
   const updateImageCrop = (idx: number, patch: Partial<PortfolioMediaCrop> | null) => {
     setImageCrops((prev) => {
@@ -461,7 +541,9 @@ export const PortfolioSectionManager: React.FC = () => {
     setLiveSaving(true);
     try {
       const payload: Record<string, any> = {
-        imageCrops: imageCrops.some((c) => c && c.zoom > 1) ? imageCrops : null,
+        imageCrops: imageCrops.some((c) => c && (c.zoom > 1 || c.fit || c.ox !== 50 || c.oy !== 50))
+          ? imageCrops
+          : null,
       };
       if (mediaType === "video") {
         payload.videoCrop = videoCrop.zoom > 1 ? videoCrop : null;
@@ -531,7 +613,7 @@ export const PortfolioSectionManager: React.FC = () => {
           ? { start: videoTrimStart, end: videoTrimEnd }
           : undefined,
       videoCrop: mediaType === "video" && videoCrop.zoom > 1 ? videoCrop : undefined,
-      imageCrops: imageCrops.some((c) => c && c.zoom > 1) ? imageCrops : undefined,
+      imageCrops: imageCrops.some((c) => c && (c.zoom > 1 || c.fit || c.ox !== 50 || c.oy !== 50)) ? imageCrops : undefined,
       displayOrder: Number(displayOrder) || 1,
       altText: generateImageAlt(title.trim(), subtitle.trim() || "Portfolio Showcase"),
       seoDescription: generateSeoDescription(description.trim(), title.trim()),
@@ -1674,277 +1756,750 @@ export const PortfolioSectionManager: React.FC = () => {
               ) : (
               <>
               {/* Multi-Image Cloudinary Upload Slots */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold uppercase tracking-wider">
-                    Card Photos ({images.length} slots)
-                  </label>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-dark dark:text-white">
+                      Card Photos ({images.length} slots)
+                    </label>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                      Configure individual framing and crop for each card slot.
+                    </span>
+                  </div>
                   {images.length < 4 && (
                     <button
                       type="button"
                       onClick={handleAddImageSlot}
-                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                     >
                       + Add Photo Slot
                     </button>
                   )}
                 </div>
 
-                {images.map((imgUrl, slotIdx) => (
-                  <div
-                    key={slotIdx}
-                    className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border/60 dark:border-dark_border/60 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-dark dark:text-white">
-                        {imageLayout === "split_vertical_2"
-                          ? slotIdx === 0
-                            ? "Photo 01 (Left Half)"
-                            : slotIdx === 1
-                            ? "Photo 02 (Right Half)"
-                            : `Photo 0${slotIdx + 1}`
-                          : imageLayout === "split_horizontal_2"
-                          ? slotIdx === 0
-                            ? "Photo 01 (Top Half)"
-                            : slotIdx === 1
-                            ? "Photo 02 (Bottom Half)"
-                            : `Photo 0${slotIdx + 1}`
-                          : imageLayout === "grid_4"
-                          ? `Quadrant 0${slotIdx + 1} (${
-                              slotIdx === 0
-                                ? "Top-Left"
-                                : slotIdx === 1
-                                ? "Top-Right"
-                                : slotIdx === 2
-                                ? "Bottom-Left"
-                                : "Bottom-Right"
-                            })`
-                          : `Photo 0${slotIdx + 1}`}
-                      </span>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          disabled={slotIdx === 0}
-                          onClick={() => handleMoveImage(slotIdx, "up")}
-                          className="p-1 text-xs text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer"
-                          title="Move Photo Up"
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          disabled={slotIdx === images.length - 1}
-                          onClick={() => handleMoveImage(slotIdx, "down")}
-                          className="p-1 text-xs text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer"
-                          title="Move Photo Down"
-                        >
-                          ▼
-                        </button>
-                        {images.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveImageSlot(slotIdx)}
-                            className="p-1 text-xs text-red-500 hover:text-red-700 cursor-pointer ml-1"
-                            title="Remove Photo Slot"
-                          >
-                            ✕
-                          </button>
-                        )}
+                {/* ── LIVE COMBINED CARD MEDIA FRAME PREVIEW ─────────────── */}
+                {images.filter(Boolean).length > 0 && (
+                  <div className="p-4 rounded-2xl bg-gray-900 border border-border/60 dark:border-dark_border/60 text-white">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold flex items-center gap-1.5 text-white">
+                          <span>📱</span>
+                          <span>
+                            Live Card Output (
+                            {imageLayout === "grid_4"
+                              ? "4-Quadrant Grid"
+                              : imageLayout === "split_vertical_2"
+                              ? "Side-by-Side 2 Columns"
+                              : imageLayout === "split_horizontal_2"
+                              ? "Stacked 2 Rows"
+                              : "1 Single Photo"}
+                            )
+                          </span>
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold">
+                          {imageFit === "contain"
+                            ? "Card Fit: Contain (Shows uncropped with gaps)"
+                            : imageFit === "portrait_tall"
+                            ? "Card Fit: Portrait Tall (3:4)"
+                            : "Card Fit: Cover (Fills card frame)"}
+                        </span>
                       </div>
+                      <span className="text-[10px] text-gray-400">
+                        Mirrors the website card 100% exactly
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      {/* Thumbnail (video URLs get a live video preview, not a broken image) */}
-                      {imgUrl ? (
-                        isVideoUrl(imgUrl) ? (
-                          <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black shrink-0 border border-border/60">
-                            <video
-                              src={getImgPath(imgUrl)}
-                              muted
-                              loop
-                              autoPlay
-                              playsInline
-                              preload="metadata"
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute bottom-0.5 right-0.5 px-1 py-px rounded bg-black/70 text-white text-[8px] font-bold border border-white/20">
-                              VIDEO
-                            </span>
+                    {/* The Frame itself, matching cardAspectClass */}
+                    <div className="flex justify-center">
+                      <div
+                        className={`relative w-full max-w-[320px] ${
+                          imageFit === "portrait_tall"
+                            ? "aspect-[3/4]"
+                            : imageFit === "contain"
+                            ? "aspect-[4/4]"
+                            : "aspect-[4/3.5]"
+                        } rounded-2xl overflow-hidden bg-gray-950 border-2 border-primary/50 shadow-2xl`}
+                      >
+                        {imageLayout === "grid_4" && images.length >= 3 ? (
+                          /* 4 Quadrants */
+                          <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60">
+                            {images.slice(0, 4).map((img, qi) => {
+                              const qCrop = imageCrops[qi];
+                              const qZoom = qCrop?.zoom || 1;
+                              const qOx = qCrop?.ox ?? 50;
+                              const qOy = qCrop?.oy ?? 50;
+                              const qFit = qCrop?.fit || imageFit;
+                              const isContain = qFit === "contain" && qZoom <= 1;
+
+                              return (
+                                <div
+                                  key={qi}
+                                  onClick={() => handleOpenCropModal(qi)}
+                                  className="relative w-full h-full overflow-hidden bg-gray-900 group cursor-pointer"
+                                  title={`Click to crop Quadrant 0${qi + 1}`}
+                                >
+                                  {img ? (
+                                    <div
+                                      className="absolute inset-0 w-full h-full"
+                                      style={
+                                        qZoom > 1
+                                          ? {
+                                              transform: `scale(${qZoom})`,
+                                              transformOrigin: `${qOx}% ${qOy}%`,
+                                            }
+                                          : undefined
+                                      }
+                                    >
+                                      <Image
+                                        src={getImgPath(img)}
+                                        alt={`Quadrant ${qi + 1}`}
+                                        fill
+                                        unoptimized
+                                        style={{ objectPosition: `${qOx}% ${qOy}%` }}
+                                        className={
+                                          isContain
+                                            ? "object-contain p-0.5 bg-gray-50/50 dark:bg-black/20"
+                                            : "object-cover object-top"
+                                        }
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500">
+                                      Empty
+                                    </div>
+                                  )}
+                                  <span className="absolute top-1 left-1 px-1 py-0.5 rounded bg-black/70 text-white text-[8px] font-bold">
+                                    Q{qi + 1}
+                                  </span>
+                                  <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="px-1.5 py-0.5 rounded bg-primary text-white text-[9px] font-bold shadow-xs">
+                                      ✂️ Crop
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : imageLayout === "split_vertical_2" && images.length >= 2 ? (
+                          /* 2 Columns Side-by-Side */
+                          <div className="grid grid-cols-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60">
+                            {[0, 1].map((ci) => {
+                              const cCrop = imageCrops[ci];
+                              const cZoom = cCrop?.zoom || 1;
+                              const cOx = cCrop?.ox ?? 50;
+                              const cOy = cCrop?.oy ?? 50;
+                              const cFit = cCrop?.fit || imageFit;
+                              const isContain = cFit === "contain" && cZoom <= 1;
+                              const img = images[ci];
+
+                              return (
+                                <div
+                                  key={ci}
+                                  onClick={() => handleOpenCropModal(ci)}
+                                  className="relative w-full h-full overflow-hidden bg-gray-900 group cursor-pointer"
+                                >
+                                  {img ? (
+                                    <div
+                                      className="absolute inset-0 w-full h-full"
+                                      style={
+                                        cZoom > 1
+                                          ? {
+                                              transform: `scale(${cZoom})`,
+                                              transformOrigin: `${cOx}% ${cOy}%`,
+                                            }
+                                          : undefined
+                                      }
+                                    >
+                                      <Image
+                                        src={getImgPath(img)}
+                                        alt={`Column ${ci + 1}`}
+                                        fill
+                                        unoptimized
+                                        style={{ objectPosition: `${cOx}% ${cOy}%` }}
+                                        className={
+                                          isContain
+                                            ? "object-contain p-0.5 bg-gray-50/50 dark:bg-black/20"
+                                            : "object-cover object-top"
+                                        }
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500">
+                                      Empty
+                                    </div>
+                                  )}
+                                  <span className="absolute top-1 left-1 px-1 py-0.5 rounded bg-black/70 text-white text-[8px] font-bold">
+                                    {ci === 0 ? "Left" : "Right"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : imageLayout === "split_horizontal_2" && images.length >= 2 ? (
+                          /* 2 Rows Stacked */
+                          <div className="grid grid-rows-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60">
+                            {[0, 1].map((ri) => {
+                              const rCrop = imageCrops[ri];
+                              const rZoom = rCrop?.zoom || 1;
+                              const rOx = rCrop?.ox ?? 50;
+                              const rOy = rCrop?.oy ?? 50;
+                              const rFit = rCrop?.fit || imageFit;
+                              const isContain = rFit === "contain" && rZoom <= 1;
+                              const img = images[ri];
+
+                              return (
+                                <div
+                                  key={ri}
+                                  onClick={() => handleOpenCropModal(ri)}
+                                  className="relative w-full h-full overflow-hidden bg-gray-900 group cursor-pointer"
+                                >
+                                  {img ? (
+                                    <div
+                                      className="absolute inset-0 w-full h-full"
+                                      style={
+                                        rZoom > 1
+                                          ? {
+                                              transform: `scale(${rZoom})`,
+                                              transformOrigin: `${rOx}% ${rOy}%`,
+                                            }
+                                          : undefined
+                                      }
+                                    >
+                                      <Image
+                                        src={getImgPath(img)}
+                                        alt={`Row ${ri + 1}`}
+                                        fill
+                                        unoptimized
+                                        style={{ objectPosition: `${rOx}% ${rOy}%` }}
+                                        className={
+                                          isContain
+                                            ? "object-contain p-0.5 bg-gray-50/50 dark:bg-black/20"
+                                            : "object-cover object-top"
+                                        }
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500">
+                                      Empty
+                                    </div>
+                                  )}
+                                  <span className="absolute top-1 left-1 px-1 py-0.5 rounded bg-black/70 text-white text-[8px] font-bold">
+                                    {ri === 0 ? "Top" : "Bottom"}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         ) : (
-                          <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-200 shrink-0 border border-border/60">
-                            <Image
-                              src={getImgPath(imgUrl)}
-                              alt={`Preview ${slotIdx + 1}`}
-                              fill
-                              unoptimized
-                              className="object-cover"
-                            />
-                          </div>
-                        )
-                      ) : (
-                        <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-darklight border border-dashed border-gray-400 flex items-center justify-center text-[10px] text-gray-400 shrink-0">
-                          Empty
-                        </div>
-                      )}
-
-                      {/* File Upload Input & Progress Bar */}
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="px-3 py-1.5 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer transition">
-                            Upload to Cloudinary
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => handleSlotImageUpload(e, slotIdx)}
-                            />
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="or paste Image URL directly"
-                            value={imgUrl}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setImages((prev) => {
-                                const next = [...prev];
-                                next[slotIdx] = val;
-                                return next;
-                              });
-                            }}
-                            className="flex-1 px-3 py-1 text-xs rounded-lg border border-border dark:border-dark_border bg-white dark:bg-darklight text-dark dark:text-white"
-                          />
-                        </div>
-
-                        {uploadProgress[slotIdx] !== undefined && (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-primary font-bold">
-                              <span>Uploading to Cloudinary...</span>
-                              <span>{uploadProgress[slotIdx]}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-darklight rounded-full h-1.5 overflow-hidden">
+                          /* 1 Single Photo */
+                          <div
+                            onClick={() => handleOpenCropModal(0)}
+                            className="relative w-full h-full overflow-hidden bg-gray-900 group cursor-pointer"
+                          >
+                            {images[0] ? (
                               <div
-                                className="bg-primary h-full transition-all duration-200"
-                                style={{ width: `${uploadProgress[slotIdx]}%` }}
-                              ></div>
-                            </div>
+                                className="absolute inset-0 w-full h-full"
+                                style={
+                                  (imageCrops[0]?.zoom || 1) > 1
+                                    ? {
+                                        transform: `scale(${imageCrops[0]!.zoom})`,
+                                        transformOrigin: `${imageCrops[0]!.ox}% ${imageCrops[0]!.oy}%`,
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <Image
+                                  src={getImgPath(images[0])}
+                                  alt="Single photo"
+                                  fill
+                                  unoptimized
+                                  style={{
+                                    objectPosition: `${imageCrops[0]?.ox ?? 50}% ${imageCrops[0]?.oy ?? 50}%`,
+                                  }}
+                                  className={
+                                    (imageCrops[0]?.fit || imageFit) === "contain" && (imageCrops[0]?.zoom || 1) <= 1
+                                      ? "object-contain p-1 bg-gray-50/50 dark:bg-black/20"
+                                      : "object-cover object-top"
+                                  }
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                                No image
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     </div>
+                  </div>
+                )}
 
-                    {/* Crop / Zoom controls for this photo (reflected on the card) */}
-                    {imgUrl && !isVideoUrl(imgUrl) && (
-                      <div className="space-y-1.5 pt-2 border-t border-border/40 dark:border-dark_border/40">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                            Crop / Zoom (as shown on card)
+                {/* ── INDIVIDUAL PHOTO SLOTS ────────────────────────────── */}
+                {images.map((imgUrl, slotIdx) => {
+                  const slotDim = getSlotDimensions(imageLayout, imageFit);
+                  const currentCrop = imageCrops[slotIdx];
+                  const currentZoom = currentCrop?.zoom || 1;
+                  const currentOx = currentCrop?.ox ?? 50;
+                  const currentOy = currentCrop?.oy ?? 50;
+                  const slotFit: "cover" | "contain" = currentCrop?.fit || (imageFit === "contain" ? "contain" : "cover");
+                  const hasEmptyMargins = slotFit === "contain" && currentZoom <= 1;
+
+                  return (
+                    <div
+                      key={slotIdx}
+                      className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border/60 dark:border-dark_border/60 space-y-3"
+                    >
+                      {/* Slot Header */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-dark dark:text-white flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-primary"></span>
+                          <span>
+                            {imageLayout === "split_vertical_2"
+                              ? slotIdx === 0
+                                ? "Photo 01 (Left Half Column)"
+                                : slotIdx === 1
+                                ? "Photo 02 (Right Half Column)"
+                                : `Photo 0${slotIdx + 1}`
+                              : imageLayout === "split_horizontal_2"
+                              ? slotIdx === 0
+                                ? "Photo 01 (Top Half Row)"
+                                : slotIdx === 1
+                                ? "Photo 02 (Bottom Half Row)"
+                                : `Photo 0${slotIdx + 1}`
+                              : imageLayout === "grid_4"
+                              ? `Quadrant 0${slotIdx + 1} (${
+                                  slotIdx === 0
+                                    ? "Top-Left"
+                                    : slotIdx === 1
+                                    ? "Top-Right"
+                                    : slotIdx === 2
+                                    ? "Bottom-Left"
+                                    : "Bottom-Right"
+                                })`
+                              : `Photo 0${slotIdx + 1}`}
                           </span>
-                          <div className="flex items-center gap-2">
-                            {(imageCrops[slotIdx]?.zoom || 1) > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => updateImageCrop(slotIdx, null)}
-                                className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
-                              >
-                                Reset
-                              </button>
-                            )}
+                        </span>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={slotIdx === 0}
+                            onClick={() => handleMoveImage(slotIdx, "up")}
+                            className="p-1 text-xs text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer"
+                            title="Move Photo Up"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            disabled={slotIdx === images.length - 1}
+                            onClick={() => handleMoveImage(slotIdx, "down")}
+                            className="p-1 text-xs text-gray-400 hover:text-primary disabled:opacity-20 cursor-pointer"
+                            title="Move Photo Down"
+                          >
+                            ▼
+                          </button>
+                          {images.length > 1 && (
                             <button
                               type="button"
-                              onClick={handleLiveSaveMedia}
-                              disabled={liveSaving || !editingId}
-                              title={editingId ? "Save crop to the live card now" : "Save the card once first"}
-                              className="px-2 py-0.5 rounded-md bg-primary hover:bg-blue-700 disabled:opacity-40 text-white text-[10px] font-bold cursor-pointer transition"
+                              onClick={() => handleRemoveImageSlot(slotIdx)}
+                              className="p-1 text-xs text-red-500 hover:text-red-700 cursor-pointer ml-1"
+                              title="Remove Photo Slot"
                             >
-                              {liveSaving ? "Saving..." : "💾 Live Save"}
+                              ✕
                             </button>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          {/* Live preview — mirrors the card crop/zoom exactly */}
-                          <div style={{ width: 160, height: 128 }} className="relative rounded-xl overflow-hidden bg-gray-900 border-2 border-primary/50 shrink-0">
-                            <div
-                              className="absolute inset-0"
-                              style={
-                                (imageCrops[slotIdx]?.zoom || 1) > 1
-                                  ? {
-                                      transform: `scale(${imageCrops[slotIdx]!.zoom})`,
-                                      transformOrigin: `${imageCrops[slotIdx]!.ox}% ${imageCrops[slotIdx]!.oy}%`,
-                                    }
-                                  : undefined
-                              }
-                            >
-                              <Image
-                                src={getImgPath(imgUrl)}
-                                alt="Card preview"
-                                fill
-                                unoptimized
-                                style={
-                                  imageCrops[slotIdx]
-                                    ? { objectPosition: `${imageCrops[slotIdx]!.ox}% ${imageCrops[slotIdx]!.oy}%` }
-                                    : undefined
-                                }
-                                className="object-cover object-top"
-                              />
-                            </div>
-                            <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[8px] font-bold tracking-wide">
-                              LIVE OUTPUT (CARD)
-                            </span>
-                          </div>
-                          <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <label className="space-y-0.5">
-                            <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                              <span>Zoom</span>
-                              <span className="font-bold">{Math.round((imageCrops[slotIdx]?.zoom || 1) * 100)}%</span>
-                            </span>
-                            <input
-                              type="range"
-                              min={1}
-                              max={3}
-                              step={0.05}
-                              value={imageCrops[slotIdx]?.zoom || 1}
-                              onChange={(e) => updateImageCrop(slotIdx, { zoom: Number(e.target.value) })}
-                              className="w-full accent-primary cursor-pointer"
-                            />
-                          </label>
-                          <label className="space-y-0.5">
-                            <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                              <span>Focus X</span>
-                              <span className="font-bold">{imageCrops[slotIdx]?.ox ?? 50}%</span>
-                            </span>
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              step={1}
-                              value={imageCrops[slotIdx]?.ox ?? 50}
-                              onChange={(e) => updateImageCrop(slotIdx, { ox: Number(e.target.value) })}
-                              className="w-full accent-primary cursor-pointer"
-                            />
-                          </label>
-                          <label className="space-y-0.5">
-                            <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                              <span>Focus Y</span>
-                              <span className="font-bold">{imageCrops[slotIdx]?.oy ?? 50}%</span>
-                            </span>
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              step={1}
-                              value={imageCrops[slotIdx]?.oy ?? 50}
-                              onChange={(e) => updateImageCrop(slotIdx, { oy: Number(e.target.value) })}
-                              className="w-full accent-primary cursor-pointer"
-                            />
-                          </label>
-                          </div>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {/* Upload / Image URL Row */}
+                      <div className="flex items-center gap-4">
+                        {imgUrl ? (
+                          isVideoUrl(imgUrl) ? (
+                            <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black shrink-0 border border-border/60">
+                              <video
+                                src={getImgPath(imgUrl)}
+                                muted
+                                loop
+                                autoPlay
+                                playsInline
+                                preload="metadata"
+                                className="w-full h-full object-cover"
+                              />
+                              <span className="absolute bottom-0.5 right-0.5 px-1 py-px rounded bg-black/70 text-white text-[8px] font-bold border border-white/20">
+                                VIDEO
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-200 shrink-0 border border-border/60">
+                              <Image
+                                src={getImgPath(imgUrl)}
+                                alt={`Preview ${slotIdx + 1}`}
+                                fill
+                                unoptimized
+                                className="object-cover"
+                              />
+                            </div>
+                          )
+                        ) : (
+                          <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-darklight border border-dashed border-gray-400 flex items-center justify-center text-[10px] text-gray-400 shrink-0">
+                            Empty
+                          </div>
+                        )}
+
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <label className="px-3 py-1.5 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer transition shrink-0">
+                              Upload to Cloudinary
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleSlotImageUpload(e, slotIdx)}
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="or paste Image URL directly"
+                              value={imgUrl}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setImages((prev) => {
+                                  const next = [...prev];
+                                  next[slotIdx] = val;
+                                  return next;
+                                });
+                              }}
+                              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-border dark:border-dark_border bg-white dark:bg-darklight text-dark dark:text-white"
+                            />
+                          </div>
+
+                          {uploadProgress[slotIdx] !== undefined && (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-primary font-bold">
+                                <span>Uploading to Cloudinary...</span>
+                                <span>{uploadProgress[slotIdx]}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-darklight rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className="bg-primary h-full transition-all duration-200"
+                                  style={{ width: `${uploadProgress[slotIdx]}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ── ACCURATE LIVE OUTPUT & CROP CONTROLS FOR THIS SLOT ── */}
+                      {imgUrl && !isVideoUrl(imgUrl) && (
+                        <div className="space-y-2.5 pt-3 border-t border-border/40 dark:border-dark_border/40">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-dark dark:text-white flex items-center gap-1">
+                                <span>🎯</span>
+                                <span>Live Output (Card Slot Thumbnail View)</span>
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold">
+                                {slotDim.name}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {((currentCrop?.zoom || 1) > 1 || currentCrop?.fit) && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateImageCrop(slotIdx, null)}
+                                  className="text-[10px] font-bold text-gray-400 hover:text-red-500 cursor-pointer"
+                                >
+                                  ↺ Reset
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCropModal(slotIdx)}
+                                className="px-2.5 py-1 rounded-lg bg-primary hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer transition shadow-xs flex items-center gap-1"
+                              >
+                                <span>✂️</span>
+                                <span>Crop Photo Tool</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleLiveSaveMedia}
+                                disabled={liveSaving || !editingId}
+                                title={editingId ? "Save crop to the live card now" : "Save the card once first"}
+                                className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-[11px] font-bold cursor-pointer transition shadow-xs"
+                              >
+                                {liveSaving ? "Saving..." : "💾 Live Save"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Live preview + controls row */}
+                          <div className="flex flex-col sm:flex-row items-start gap-4 p-3 rounded-2xl bg-white dark:bg-darklight border border-border/60 dark:border-dark_border/60">
+                            {/* Live Card Slot Preview Box */}
+                            <div className="flex flex-col items-center gap-1.5 shrink-0 mx-auto sm:mx-0">
+                              <div
+                                style={{
+                                  width: slotDim.width,
+                                  height: slotDim.height,
+                                }}
+                                className={`relative rounded-xl overflow-hidden border-2 border-primary/70 shrink-0 shadow-lg ${
+                                  hasEmptyMargins
+                                    ? "bg-gray-100 dark:bg-gray-900 ring-2 ring-amber-500/60"
+                                    : "bg-black"
+                                }`}
+                              >
+                                {/* Visual side-gap background markers matching real card gaps */}
+                                {hasEmptyMargins && (
+                                  <div className="absolute inset-0 flex justify-between pointer-events-none z-0">
+                                    <div className="w-5 h-full bg-amber-400/20 border-r border-amber-500/40 flex items-center justify-center">
+                                      <span className="text-[7px] font-black text-amber-600 dark:text-amber-400 -rotate-90 tracking-tighter">
+                                        GAP
+                                      </span>
+                                    </div>
+                                    <div className="w-5 h-full bg-amber-400/20 border-l border-amber-500/40 flex items-center justify-center">
+                                      <span className="text-[7px] font-black text-amber-600 dark:text-amber-400 -rotate-90 tracking-tighter">
+                                        GAP
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div
+                                  className="absolute inset-0 w-full h-full z-1"
+                                  style={
+                                    currentZoom > 1
+                                      ? {
+                                          transform: `scale(${currentZoom})`,
+                                          transformOrigin: `${currentOx}% ${currentOy}%`,
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  <Image
+                                    src={getImgPath(imgUrl)}
+                                    alt="Card slot preview"
+                                    fill
+                                    unoptimized
+                                    style={{
+                                      objectPosition: `${currentOx}% ${currentOy}%`,
+                                    }}
+                                    className={
+                                      hasEmptyMargins
+                                        ? "object-contain p-1 bg-gray-50/50 dark:bg-black/20"
+                                        : "object-cover object-top"
+                                    }
+                                  />
+                                </div>
+
+                                <span
+                                  className={`absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wide z-10 ${
+                                    hasEmptyMargins
+                                      ? "bg-amber-500 text-white shadow-xs"
+                                      : "bg-black/75 text-white"
+                                  }`}
+                                >
+                                  {hasEmptyMargins ? "⚠️ SIDE GAPS DETECTED" : "✨ FILLED (NO GAPS)"}
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-gray-400 font-semibold text-center">
+                                {slotDim.width}×{slotDim.height}px ({slotDim.name})
+                              </span>
+                            </div>
+
+                            {/* Slot Controls */}
+                            <div className="flex-1 w-full space-y-2.5">
+                              {/* Notice / Status pill */}
+                              {hasEmptyMargins ? (
+                                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-700 dark:text-amber-300 flex flex-wrap items-center justify-between gap-2">
+                                  <span>
+                                    ⚠️ <strong>Side margins (depathten his ida)</strong> appear because photo is uncropped.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateImageCrop(slotIdx, {
+                                        fit: "cover",
+                                        zoom: currentZoom > 1 ? currentZoom : 1.05,
+                                      })
+                                    }
+                                    className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold shrink-0 cursor-pointer shadow-xs"
+                                  >
+                                    ⚡ Fill Slot (Remove Side Gaps)
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="p-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-700 dark:text-emerald-300 flex items-center justify-between gap-2">
+                                  <span>
+                                    ✨ <strong>Slot is filled</strong> with zero empty gaps on the website card.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateImageCrop(slotIdx, {
+                                        fit: "contain",
+                                        zoom: 1,
+                                        ox: 50,
+                                        oy: 50,
+                                      })
+                                    }
+                                    className="px-2 py-0.5 rounded-md bg-gray-200 dark:bg-darkmode text-gray-700 dark:text-gray-300 text-[10px] font-semibold shrink-0 hover:bg-gray-300 cursor-pointer"
+                                  >
+                                    Switch to Contain
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Quick Crop / Fit buttons */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenCropModal(slotIdx)}
+                                  className="px-3 py-1.5 rounded-xl bg-primary hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1"
+                                >
+                                  <span>✂️</span>
+                                  <span>Interactive Crop Modal</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateImageCrop(slotIdx, {
+                                      fit: "cover",
+                                      zoom: currentZoom > 1 ? currentZoom : 1.05,
+                                    })
+                                  }
+                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                                    slotFit === "cover" || currentZoom > 1
+                                      ? "bg-primary/10 text-primary font-bold border border-primary/30"
+                                      : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300"
+                                  }`}
+                                >
+                                  Fill / Crop
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateImageCrop(slotIdx, {
+                                      fit: "contain",
+                                      zoom: 1,
+                                      ox: 50,
+                                      oy: 50,
+                                    })
+                                  }
+                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                                    slotFit === "contain" && currentZoom <= 1
+                                      ? "bg-primary/10 text-primary font-bold border border-primary/30"
+                                      : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300"
+                                  }`}
+                                >
+                                  Fit Whole (Contain)
+                                </button>
+
+                                {/* Focal alignments */}
+                                <div className="ml-auto flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-gray-400">Focus:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 15, fit: "cover" })}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                                    title="Focus Top (Heads/Faces)"
+                                  >
+                                    Top
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 50, fit: "cover" })}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                                    title="Center Focus"
+                                  >
+                                    Center
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 85, fit: "cover" })}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                                    title="Focus Bottom"
+                                  >
+                                    Bottom
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Sliders: Zoom, Focus X, Focus Y */}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-border/40 dark:border-dark_border/40">
+                                <label className="space-y-0.5">
+                                  <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                                    <span>Zoom</span>
+                                    <span className="font-bold text-primary">
+                                      {Math.round(currentZoom * 100)}%
+                                    </span>
+                                  </span>
+                                  <input
+                                    type="range"
+                                    min={1}
+                                    max={3}
+                                    step={0.05}
+                                    value={currentZoom}
+                                    onChange={(e) => {
+                                      const v = Number(e.target.value);
+                                      updateImageCrop(slotIdx, {
+                                        zoom: v,
+                                        fit: v > 1 ? "cover" : slotFit,
+                                      });
+                                    }}
+                                    className="w-full accent-primary cursor-pointer"
+                                  />
+                                </label>
+                                <label className="space-y-0.5">
+                                  <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                                    <span>Focus X</span>
+                                    <span className="font-bold text-primary">{currentOx}%</span>
+                                  </span>
+                                  <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={currentOx}
+                                    onChange={(e) =>
+                                      updateImageCrop(slotIdx, {
+                                        ox: Number(e.target.value),
+                                        fit: "cover",
+                                      })
+                                    }
+                                    className="w-full accent-primary cursor-pointer"
+                                  />
+                                </label>
+                                <label className="space-y-0.5">
+                                  <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                                    <span>Focus Y</span>
+                                    <span className="font-bold text-primary">{currentOy}%</span>
+                                  </span>
+                                  <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={currentOy}
+                                    onChange={(e) =>
+                                      updateImageCrop(slotIdx, {
+                                        oy: Number(e.target.value),
+                                        fit: "cover",
+                                      })
+                                    }
+                                    className="w-full accent-primary cursor-pointer"
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               </>
               )}
@@ -1969,6 +2524,23 @@ export const PortfolioSectionManager: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Interactive Photo Crop Modal */}
+      {cropModalState.isOpen && (
+        <PhotoCropModal
+          isOpen={cropModalState.isOpen}
+          imageUrl={cropModalState.imageUrl}
+          slotLabel={cropModalState.slotLabel}
+          targetAspectRatio={cropModalState.targetAspectRatio}
+          targetRatioName={cropModalState.targetRatioName}
+          initialCrop={imageCrops[cropModalState.slotIndex] || null}
+          onClose={() => setCropModalState((prev) => ({ ...prev, isOpen: false }))}
+          onApplyCrop={(newUrl, crop) => {
+            handleApplyCropResult(newUrl, crop);
+            setCropModalState((prev) => ({ ...prev, isOpen: false }));
+          }}
+        />
       )}
     </div>
   );

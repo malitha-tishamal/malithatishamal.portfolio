@@ -106,7 +106,15 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
   // Render one media slot: inline video for video URLs (no more broken image icons),
   // with the per-slot crop/zoom applied
   const renderMediaSlot = (src: string, alt: string, idx: number) => {
-    const wrapStyle = cropWrapStyle(item.imageCrops?.[idx])
+    const crop = item.imageCrops?.[idx]
+    const wrapStyle = cropWrapStyle(crop)
+    // Slot-level fit override ('cover' fills without gaps, 'contain' shows whole photo with borders)
+    const slotFit = crop?.fit || fit
+    const slotFitClass =
+      slotFit === 'contain'
+        ? 'object-contain p-1 bg-gray-50/50 dark:bg-black/20'
+        : 'object-cover object-top'
+
     return isVideoUrl(src) ? (
       <div className='absolute inset-0' style={wrapStyle}>
         <video
@@ -116,7 +124,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
           autoPlay
           playsInline
           preload='metadata'
-          className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-black' : 'object-cover'}`}
+          className={`w-full h-full ${slotFit === 'contain' ? 'object-contain bg-black' : 'object-cover'}`}
         />
       </div>
     ) : (
@@ -127,11 +135,11 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
           fill
           unoptimized
           style={
-            item.imageCrops?.[idx]
-              ? { objectPosition: `${item.imageCrops[idx]!.ox}% ${item.imageCrops[idx]!.oy}%` }
+            crop
+              ? { objectPosition: `${crop.ox}% ${crop.oy}%` }
               : undefined
           }
-          className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
+          className={`${slotFitClass} group-hover:scale-105 transition-transform duration-500`}
         />
       </div>
     )

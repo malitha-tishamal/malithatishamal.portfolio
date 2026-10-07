@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Image from 'next/image'
 import { PortfolioItem, PortfolioBlock, PortfolioMediaCrop, isVideoUrl } from '@/types/portfolio'
 import { getImgPath } from '@/utils/image'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface PortfolioDetailModalProps {
   item: PortfolioItem | null
@@ -13,7 +14,9 @@ interface PortfolioDetailModalProps {
 export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item, onClose }) => {
   const [activePhotoIdx, setActivePhotoIdx] = useState<number | null>(null)
   const [activeVideoIdx, setActiveVideoIdx] = useState<number | null>(null)
-  const [modalImageFit, setModalImageFit] = useState<'contain' | 'cover'>('contain')
+  const [modalImageFit, setModalImageFit] = useState<'contain' | 'cover'>(
+    item?.imageFit === 'contain' ? 'contain' : 'cover'
+  )
 
   if (!item) return null
 
@@ -87,7 +90,7 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
           <div
             key={b.id}
             className='text-sm sm:text-base leading-relaxed text-grey dark:text-gray-300 prose prose-sm sm:prose-base dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline'
-            dangerouslySetInnerHTML={{ __html: b.html || '' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(b.html || '') }}
           />
         )
       case 'quote':
@@ -343,7 +346,7 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
             </h4>
             <div
               className='text-sm sm:text-base leading-relaxed text-grey dark:text-gray-300 prose prose-sm sm:prose-base dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline'
-              dangerouslySetInnerHTML={{ __html: item.description }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
             />
           </div>
         )}
