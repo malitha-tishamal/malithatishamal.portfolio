@@ -4,6 +4,7 @@ import { db } from '@/lib/firebase';
 import { sendNewsletterNotification } from '@/lib/email';
 import { isValidEmail, cleanString } from '@/utils/validation';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { decrypt } from '@/lib/crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Send email notification using Gmail SMTP if enabled
     if (enableNotifications && enableGmailSmtp) {
       const smtpUser = footerData?.gmailSmtpUser || '';
-      const appPassword = footerData?.gmailSmtpAppPassword || '';
+      const appPassword = decrypt(footerData?.gmailSmtpAppPassword || '');
       const recipientEmail = footerData?.gmailNotificationRecipient || footerData?.newsletterNotificationEmail || 'malithatishamal@gmail.com';
       
       if (smtpUser && appPassword && recipientEmail) {

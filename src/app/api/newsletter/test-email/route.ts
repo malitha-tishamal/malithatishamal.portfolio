@@ -5,6 +5,7 @@ import { sendTestEmail } from '@/lib/email';
 import { getVerifiedAdminEmail } from '@/lib/adminAuth';
 import { isValidEmail, cleanString, isSafeHeaderValue } from '@/utils/validation';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { encrypt } from '@/lib/crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,11 +67,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (emailSent) {
-      // Save the configuration to Firestore if test was successful
+      // Save the configuration to Firestore if test was successful.
+      // The app password is encrypted at rest — never stored as plaintext.
       await updateDoc(doc(db, 'siteContent', 'footer'), {
         gmailSmtpEnabled: true,
         gmailSmtpUser: smtpUser,
-        gmailSmtpAppPassword: cleanAppPassword,
+        gmailSmtpAppPassword: encrypt(cleanAppPassword),
         gmailNotificationRecipient: recipientEmail,
         updatedAt: serverTimestamp(),
       });

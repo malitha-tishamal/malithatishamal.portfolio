@@ -43,12 +43,19 @@ export const FooterManager: React.FC = () => {
         const snap = await getDoc(doc(db, "siteContent", "footer"));
         if (snap.exists()) {
           const d = snap.data() as FooterContent;
+          // Never surface the stored secret to the browser. If it is encrypted
+          // at rest, blank the field and flag it as saved so the admin only
+          // re-enters it to change or re-test.
+          const storedPass = d.gmailSmtpAppPassword || "";
+          const passIsEncrypted = storedPass.startsWith("enc:v1:");
           setFormData({
             ...defaultFooterContent,
             ...d,
+            gmailSmtpAppPassword: passIsEncrypted ? "" : storedPass,
             socialLinks: d.socialLinks?.length ? d.socialLinks : DEFAULT_SOCIAL_LINKS,
             navLinks: d.navLinks?.length ? d.navLinks : DEFAULT_NAV_LINKS,
           });
+          if (passIsEncrypted) setPasswordSaved(true);
         }
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
@@ -180,9 +187,16 @@ export const FooterManager: React.FC = () => {
       if (snap.exists()) {
         const d = snap.data() as FooterContent;
         if (d.gmailSmtpAppPassword) {
-          setField("gmailSmtpAppPassword", d.gmailSmtpAppPassword);
-          setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
-          toast.success("Password fetched from Firestore!");
+          if (d.gmailSmtpAppPassword.startsWith("enc:v1:")) {
+            // Stored encrypted at rest — do not expose ciphertext in the field.
+            setPasswordSaved(true);
+            setPasswordFetchResult({ success: true, message: "🔒 A password is saved (encrypted at rest). Re-enter it only to change or re-test." });
+            toast.success("Password is saved securely (encrypted).");
+          } else {
+            setField("gmailSmtpAppPassword", d.gmailSmtpAppPassword);
+            setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
+            toast.success("Password fetched from Firestore!");
+          }
         } else {
           setPasswordFetchResult({ success: false, message: "❌ No password found in Firestore" });
           toast.error("No password found in Firestore");

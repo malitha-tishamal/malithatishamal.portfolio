@@ -97,13 +97,14 @@ export const ContactManager: React.FC = () => {
     else setSavingSmtp(true);
 
     try {
-      // First, save to Firestore
+      // First, save non-secret config to Firestore. The app password is NOT
+      // stored here in plaintext — it is persisted server-side (encrypted in
+      // .env.local) by the authenticated /api/contact/smtp-config call below.
       await setDoc(
         doc(db, "siteContent", "contact"),
         {
           gmailSmtpUser: smtpUser.trim(),
           gmailNotificationRecipient: receiverEmail.trim(),
-          gmailSmtpAppPassword: smtpPass.trim(),
           updatedAt: serverTimestamp(),
         },
         { merge: true }
@@ -170,9 +171,11 @@ export const ContactManager: React.FC = () => {
       if (snap.exists()) {
         const data = snap.data() as any;
         if (data.gmailSmtpAppPassword) {
-          setSmtpPass(data.gmailSmtpAppPassword);
-          setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
-          toast.success("Password fetched from Firestore!");
+          // Secret is never revealed back to the browser. Confirm it exists.
+          setSmtpConfigured(true);
+          setPasswordSaved(true);
+          setPasswordFetchResult({ success: true, message: "🔒 A password is saved securely. Re-enter it only to change or re-test." });
+          toast.success("Password is saved securely.");
         } else {
           setPasswordFetchResult({ success: false, message: "❌ No password found in Firestore" });
           toast.error("No password found in Firestore");
@@ -243,17 +246,21 @@ export const ContactManager: React.FC = () => {
         const snap = await getDoc(doc(db, "siteContent", "contact"));
         if (snap.exists()) {
           const data = snap.data() as Partial<ContactSectionContent>;
+          // Strip the stored secret from client state — never echo it back.
+          const { gmailSmtpAppPassword: _storedPass, ...safeData } = data as any;
           setFormData({
             ...defaultContactContent,
-            ...data,
+            ...safeData,
             partners: data.partners?.length ? data.partners : defaultContactPartners,
           });
           // Load SMTP settings if available
           if (data.gmailSmtpUser) setSmtpUser(data.gmailSmtpUser);
           if (data.gmailNotificationRecipient) setReceiverEmail(data.gmailNotificationRecipient);
-          if (data.gmailSmtpAppPassword) {
-            setSmtpPass(data.gmailSmtpAppPassword);
+          if (_storedPass) {
+            // A password exists (encrypted at rest or legacy) — reflect the
+            // configured state without exposing the value in the input.
             setSmtpConfigured(true);
+            setPasswordSaved(true);
           }
         }
       } catch (e) {
@@ -276,7 +283,6 @@ export const ContactManager: React.FC = () => {
           ...formData,
           gmailSmtpUser: smtpUser,
           gmailNotificationRecipient: receiverEmail,
-          gmailSmtpAppPassword: smtpPass || undefined,
           updatedAt: serverTimestamp(),
         },
         { merge: true }
