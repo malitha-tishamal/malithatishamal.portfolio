@@ -79,14 +79,17 @@ function isMalicious(input: string): boolean {
 
 /** Best-effort URL decode — attackers percent-encode payloads (%27, %3C, %2e). */
 function safeDecode(value: string): string {
+  // Next normalises query spaces to "+"; decodeURIComponent does not revert
+  // those, so convert form-encoded "+" to spaces first.
+  const normalized = value.replace(/\+/g, " ");
   try {
     // Decode twice to catch double-encoded payloads; ignore malformed input.
-    return decodeURIComponent(decodeURIComponent(value));
+    return decodeURIComponent(decodeURIComponent(normalized));
   } catch {
     try {
-      return decodeURIComponent(value);
+      return decodeURIComponent(normalized);
     } catch {
-      return value;
+      return normalized;
     }
   }
 }
