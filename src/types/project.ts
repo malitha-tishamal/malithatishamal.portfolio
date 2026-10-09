@@ -1,3 +1,5 @@
+import { PortfolioMediaCrop } from "./portfolio";
+
 export type ProjectImageFit = "cover" | "contain" | "portrait_tall";
 
 export interface ProjectItem {
@@ -10,6 +12,7 @@ export interface ProjectItem {
   coverImage: string; // Main card cover image
   images: string[]; // Gallery of up to 15+ screenshots/images
   imageFit?: ProjectImageFit; // cover | contain | portrait_tall
+  coverCrop?: PortfolioMediaCrop; // zoom, ox, oy, fit
   projectUrl?: string; // Live Project / Demo URL
   githubUrl?: string; // GitHub Repository URL
   linkedinUrl?: string; // LinkedIn URL

@@ -16,6 +16,7 @@ import {
   defaultProjects,
   PROJECT_CATEGORIES,
 } from "@/types/project";
+import { PortfolioMediaCrop, defaultMediaCrop } from "@/types/portfolio";
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import { ProjectCardItem } from "@/components/Projects/ProjectCardItem";
 import { ProjectDetailModal } from "@/components/Projects/ProjectDetailModal";
@@ -45,6 +46,7 @@ export const ProjectsSectionManager: React.FC = () => {
   const [coverImage, setCoverImage] = useState<string>("");
   const [images, setImages] = useState<string[]>([]);
   const [imageFit, setImageFit] = useState<ProjectImageFit>("cover");
+  const [coverCrop, setCoverCrop] = useState<PortfolioMediaCrop>(defaultMediaCrop);
   const [projectUrl, setProjectUrl] = useState<string>("");
   const [githubUrl, setGithubUrl] = useState<string>("");
   const [linkedinUrl, setLinkedinUrl] = useState<string>("");
@@ -115,7 +117,8 @@ export const ProjectsSectionManager: React.FC = () => {
     setTagsInput("");
     setCoverImage("");
     setImages([""]);
-    setImageFit("cover");
+    setImageFit("contain");
+    setCoverCrop({ ...defaultMediaCrop, fit: "contain" });
     setProjectUrl("");
     setGithubUrl("");
     setLinkedinUrl("");
@@ -143,6 +146,7 @@ export const ProjectsSectionManager: React.FC = () => {
     setCoverImage(item.coverImage || "");
     setImages(item.images && item.images.length > 0 ? item.images : [""]);
     setImageFit(item.imageFit || "cover");
+    setCoverCrop(item.coverCrop || { ...defaultMediaCrop, fit: (item.imageFit === "contain" ? "contain" : "cover") as "cover" | "contain" });
     setProjectUrl(item.projectUrl || "");
     setGithubUrl(item.githubUrl || "");
     setLinkedinUrl(item.linkedinUrl || "");
@@ -284,6 +288,7 @@ export const ProjectsSectionManager: React.FC = () => {
       coverImage: coverImage.trim() || validGallery[0] || "/images/portfolio/cozycasa.png",
       images: validGallery.length > 0 ? validGallery : [coverImage.trim() || "/images/portfolio/cozycasa.png"],
       imageFit,
+      coverCrop,
       projectUrl: projectUrl.trim(),
       githubUrl: githubUrl.trim(),
       linkedinUrl: linkedinUrl.trim(),
@@ -688,31 +693,83 @@ export const ProjectsSectionManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 5: Main Cover Image */}
-              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border/60 dark:border-dark_border/60 space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider">
-                  Main Card Cover Image *
-                </label>
-                <div className="flex items-center gap-3">
-                  {coverImage ? (
-                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-200 border border-border shrink-0">
-                      <Image
-                        src={getImgPath(coverImage)}
-                        alt="Cover Preview"
-                        fill
-                        unoptimized
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-darklight border border-dashed border-gray-400 flex items-center justify-center text-[10px] text-gray-400 shrink-0">
-                      Empty
-                    </div>
-                  )}
+              {/* Row 5: Main Cover Image with Live Card Preview & Fit Mode Controls */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border/60 dark:border-dark_border/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-dark dark:text-white">
+                    Main Card Cover Image *
+                  </label>
+                  <span className="text-[10px] text-gray-400">
+                    Displayed on Homepage &amp; Projects gallery
+                  </span>
+                </div>
 
-                  <div className="flex-1 space-y-1.5">
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  {/* Live Cover Preview Box */}
+                  <div className="flex flex-col items-center gap-1.5 shrink-0 mx-auto sm:mx-0">
+                    <div
+                      className={`relative w-[240px] ${
+                        imageFit === "portrait_tall" ? "aspect-[3/4]" : "aspect-[16/10]"
+                      } rounded-xl overflow-hidden border-2 border-primary/70 shrink-0 shadow-lg ${
+                        imageFit === "contain"
+                          ? "bg-black/90 ring-2 ring-emerald-500/40"
+                          : "bg-gray-200 dark:bg-darklight"
+                      }`}
+                    >
+                      {coverImage ? (
+                        <div
+                          className="absolute inset-0 w-full h-full"
+                          style={
+                            coverCrop.zoom > 1
+                              ? {
+                                  transform: `scale(${coverCrop.zoom})`,
+                                  transformOrigin: `${coverCrop.ox}% ${coverCrop.oy}%`,
+                                }
+                              : undefined
+                          }
+                        >
+                          <Image
+                            src={getImgPath(coverImage)}
+                            alt="Cover Preview"
+                            fill
+                            unoptimized
+                            style={{
+                              objectPosition: `${coverCrop.ox}% ${coverCrop.oy}%`,
+                            }}
+                            className={
+                              imageFit === "contain"
+                                ? "object-contain p-0.5"
+                                : "object-cover object-top"
+                            }
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                          Empty
+                        </div>
+                      )}
+
+                      <span
+                        className={`absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wide z-10 ${
+                          imageFit === "contain"
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "bg-amber-600 text-white shadow-xs"
+                        }`}
+                      >
+                        {imageFit === "contain"
+                          ? "✨ FIT WHOLE (NO SIDE CROP)"
+                          : "⚠️ COVER (MAY CROP SIDES)"}
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-gray-400 font-semibold text-center">
+                      Card Frame: {imageFit === "portrait_tall" ? "3:4 Tall" : "16:10 Ratio"}
+                    </span>
+                  </div>
+
+                  {/* Upload + Controls */}
+                  <div className="flex-1 w-full space-y-2.5">
                     <div className="flex items-center gap-2">
-                      <label className="px-3 py-1.5 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer transition">
+                      <label className="px-3 py-1.5 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer transition shrink-0">
                         Upload to Cloudinary
                         <input
                           type="file"
@@ -738,6 +795,164 @@ export const ProjectsSectionManager: React.FC = () => {
                         ></div>
                       </div>
                     )}
+
+                    {/* Mode Buttons */}
+                    <div className="pt-1 border-t border-border/40 dark:border-dark_border/40 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          Image Fit Mode:
+                        </span>
+                        {(coverCrop.zoom > 1 || coverCrop.ox !== 50 || coverCrop.oy !== 50) && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCoverCrop({
+                                ...defaultMediaCrop,
+                                fit: imageFit === "contain" ? "contain" : "cover",
+                              })
+                            }
+                            className="text-[10px] font-bold text-gray-400 hover:text-red-500 cursor-pointer"
+                          >
+                            ↺ Reset Zoom/Focus
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageFit("contain");
+                            setCoverCrop((p) => ({ ...p, fit: "contain" }));
+                          }}
+                          className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                            imageFit === "contain"
+                              ? "bg-emerald-500 text-white shadow-xs"
+                              : "bg-gray-100 dark:bg-darklight text-gray-600 dark:text-gray-300 hover:bg-gray-200"
+                          }`}
+                          title="Shows the complete screenshot with 0% side cropping"
+                        >
+                          🖼️ Fit Whole (Contain - No Side Crop)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageFit("cover");
+                            setCoverCrop((p) => ({ ...p, fit: "cover" }));
+                          }}
+                          className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                            imageFit === "cover"
+                              ? "bg-primary text-white shadow-xs"
+                              : "bg-gray-100 dark:bg-darklight text-gray-600 dark:text-gray-300 hover:bg-gray-200"
+                          }`}
+                          title="Fills the entire card slot"
+                        >
+                          ⚡ Fill / Crop (Cover)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageFit("portrait_tall");
+                            setCoverCrop((p) => ({ ...p, fit: "cover" }));
+                          }}
+                          className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                            imageFit === "portrait_tall"
+                              ? "bg-primary text-white shadow-xs"
+                              : "bg-gray-100 dark:bg-darklight text-gray-600 dark:text-gray-300 hover:bg-gray-200"
+                          }`}
+                          title="For mobile phone portrait screenshots (3:4)"
+                        >
+                          📱 Portrait Tall (3:4)
+                        </button>
+
+                        {/* Focus presets */}
+                        <div className="ml-auto flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-gray-400">Focus:</span>
+                          <button
+                            type="button"
+                            onClick={() => setCoverCrop((p) => ({ ...p, ox: 50, oy: 15 }))}
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                            title="Focus Top"
+                          >
+                            Top
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCoverCrop((p) => ({ ...p, ox: 50, oy: 50 }))}
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                            title="Center Focus"
+                          >
+                            Center
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCoverCrop((p) => ({ ...p, ox: 50, oy: 85 }))}
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                            title="Focus Bottom"
+                          >
+                            Bottom
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Sliders */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-border/40 dark:border-dark_border/40">
+                        <label className="space-y-0.5">
+                          <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                            <span>Zoom</span>
+                            <span className="font-bold text-primary">
+                              {Math.round(coverCrop.zoom * 100)}%
+                            </span>
+                          </span>
+                          <input
+                            type="range"
+                            min={1}
+                            max={3}
+                            step={0.05}
+                            value={coverCrop.zoom}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setCoverCrop((p) => ({ ...p, zoom: v }));
+                            }}
+                            className="w-full accent-primary cursor-pointer"
+                          />
+                        </label>
+                        <label className="space-y-0.5">
+                          <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                            <span>Focus X</span>
+                            <span className="font-bold text-primary">{coverCrop.ox}%</span>
+                          </span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={coverCrop.ox}
+                            onChange={(e) =>
+                              setCoverCrop((p) => ({ ...p, ox: Number(e.target.value) }))
+                            }
+                            className="w-full accent-primary cursor-pointer"
+                          />
+                        </label>
+                        <label className="space-y-0.5">
+                          <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                            <span>Focus Y</span>
+                            <span className="font-bold text-primary">{coverCrop.oy}%</span>
+                          </span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={coverCrop.oy}
+                            onChange={(e) =>
+                              setCoverCrop((p) => ({ ...p, oy: Number(e.target.value) }))
+                            }
+                            className="w-full accent-primary cursor-pointer"
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -32,11 +32,17 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
     project.coverImage ||
     (project.images && project.images.length > 0 ? project.images[0] : '/images/portfolio/cozycasa.png')
 
-  const fit = project.imageFit || 'cover'
-  const imgFitClass =
-    fit === 'contain'
-      ? 'object-contain p-2 bg-gray-100 dark:bg-darkmode'
-      : 'object-cover object-top'
+  const crop = project.coverCrop
+  const zoom = crop?.zoom || 1
+  const ox = crop?.ox ?? 50
+  const oy = crop?.oy ?? 50
+  const fit = crop?.fit || project.imageFit || 'cover'
+  const isContain = fit === 'contain'
+
+  const cardAspectClass =
+    fit === 'portrait_tall'
+      ? 'aspect-[3/4]'
+      : 'aspect-[16/10]'
 
   return (
     <div
@@ -44,14 +50,32 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
       className='w-full group cursor-pointer bg-white dark:bg-darklight rounded-3xl border border-border/70 dark:border-dark_border p-4 sm:p-5 shadow-xs hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 flex flex-col justify-between'>
       <div>
         {/* Main Image Frame with Category Pill Badge */}
-        <div className='relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gray-100 dark:bg-darkmode border border-border/40 dark:border-dark_border/40 shadow-xs mb-4'>
-          <Image
-            src={getImgPath(cover)}
-            alt={project.altText || `${project.title} – Software & Engineering by Malitha Tishamal`}
-            fill
-            unoptimized
-            className={`${imgFitClass} group-hover:scale-105 transition-transform duration-500`}
-          />
+        <div className={`relative w-full ${cardAspectClass} rounded-2xl overflow-hidden ${isContain ? 'bg-black/90 dark:bg-black/95' : 'bg-gray-100 dark:bg-darkmode'} border border-border/40 dark:border-dark_border/40 shadow-xs mb-4`}>
+          <div
+            className='absolute inset-0 w-full h-full'
+            style={
+              zoom > 1
+                ? {
+                    transform: `scale(${zoom})`,
+                    transformOrigin: `${ox}% ${oy}%`,
+                  }
+                : undefined
+            }>
+            <Image
+              src={getImgPath(cover)}
+              alt={project.altText || `${project.title} – Software & Engineering by Malitha Tishamal`}
+              fill
+              unoptimized
+              style={{
+                objectPosition: `${ox}% ${oy}%`,
+              }}
+              className={`${
+                isContain
+                  ? 'object-contain'
+                  : 'object-cover object-top'
+              } group-hover:scale-105 transition-transform duration-500`}
+            />
+          </div>
 
           {/* Category Pill Badge on top-left (as shown in reference image!) */}
           <div className='absolute top-3 left-3 z-10'>
