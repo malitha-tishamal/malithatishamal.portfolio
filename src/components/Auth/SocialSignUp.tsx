@@ -27,14 +27,17 @@ const SocialSignUp: React.FC<SocialSignUpProps> = ({ onSuccess, onError }) => {
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
         return;
       }
-      const msg = err.message || "Failed to sign up with Google.";
+      let msg = err.message || "Failed to sign up with Google.";
+      if (err.code === "auth/internal-error" || err.message?.includes("internal-error")) {
+        msg = "Firebase internal error (auth/internal-error): The sign-in popup or iframe was blocked. Please ensure popups are allowed or use Email/Password sign-up.";
+      }
       if (msg.includes("pending administrator approval")) {
         toast(msg, { icon: "⏳", duration: 6000 });
         if (onSuccess) onSuccess();
         return;
       }
       console.error("Google sign up error:", err);
-      toast.error(msg, { duration: 5000 });
+      toast.error(msg, { duration: 6000 });
       if (onError) onError(msg);
     } finally {
       setLoadingProvider(null);
@@ -53,14 +56,17 @@ const SocialSignUp: React.FC<SocialSignUpProps> = ({ onSuccess, onError }) => {
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
         return;
       }
-      const msg = err.message || "Failed to sign up with GitHub.";
+      let msg = err.message || "Failed to sign up with GitHub.";
+      if (err.code === "auth/internal-error" || err.message?.includes("internal-error")) {
+        msg = "Firebase internal error (auth/internal-error): The sign-in popup or iframe was blocked. Please ensure popups are allowed or use Email/Password sign-up.";
+      }
       if (msg.includes("pending administrator approval")) {
         toast(msg, { icon: "⏳", duration: 6000 });
         if (onSuccess) onSuccess();
         return;
       }
       console.error("GitHub sign up error:", err);
-      toast.error(msg, { duration: 5000 });
+      toast.error(msg, { duration: 6000 });
       if (onError) onError(msg);
     } finally {
       setLoadingProvider(null);

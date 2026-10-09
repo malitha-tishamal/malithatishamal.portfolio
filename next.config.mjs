@@ -7,18 +7,18 @@ const isDev = process.env.NODE_ENV !== "production";
 // primary XSS defence; CSP is defence-in-depth.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://apis.google.com https://*.firebaseapp.com https://*.googleapis.com https://accounts.google.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
   "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
   "img-src 'self' data: blob: https:",
   "media-src 'self' https: blob:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://*.cloudinary.com https://api.ipify.org https://ipapi.co wss:",
-  "frame-src 'self' https://*.firebaseapp.com",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://*.cloudinary.com https://api.ipify.org https://ipapi.co https://accounts.google.com wss:",
+  "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://*.firebaseio.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'self'",
-  "upgrade-insecure-requests",
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 const securityHeaders = [

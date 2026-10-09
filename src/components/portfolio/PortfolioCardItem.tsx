@@ -40,7 +40,13 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
   const playbackMode = item.videoPlaybackMode || 'autoplay_loop'
   const trimStart = item.videoTrim?.start || 0
   const trimEnd = item.videoTrim?.end || 0
-  const videoCrop = item.videoCrop && item.videoCrop.zoom > 1 ? item.videoCrop : null
+  const videoCrop =
+    item.videoCrop &&
+    (item.videoCrop.zoom > 1 || item.videoCrop.fit || item.videoCrop.ox !== 50 || item.videoCrop.oy !== 50)
+      ? item.videoCrop
+      : null
+  const videoSlotFit = videoCrop?.fit || fit
+  const isVideoContain = videoSlotFit === 'contain'
 
   // Zoom into a focal point without re-encoding the media
   const cropWrapStyle = (crop: PortfolioMediaCrop | null | undefined) =>
@@ -238,8 +244,8 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
                       preload='metadata'
                       onLoadedMetadata={handleLoadedMetadata}
                       onTimeUpdate={handleTimeUpdate}
-                      onEnded={() => setVideoEnded(true)}
-                      className='w-full h-full object-cover'
+                      style={videoCrop ? { objectPosition: `${videoCrop.ox}% ${videoCrop.oy}%` } : undefined}
+                      className={`w-full h-full ${isVideoContain ? 'object-contain bg-black' : 'object-cover'}`}
                     />
                   </div>
                   {/* Replay overlay once the video finishes (non-looping modes) */}

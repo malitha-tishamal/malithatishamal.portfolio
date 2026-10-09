@@ -28,8 +28,11 @@ const SocialSignIn: React.FC<SocialSignInProps> = ({ onSuccess, onError }) => {
         return;
       }
       console.error("Google sign in error:", err);
-      const msg = err.message || "Failed to sign in with Google.";
-      toast.error(msg, { duration: 5000 });
+      let msg = err.message || "Failed to sign in with Google.";
+      if (err.code === "auth/internal-error" || err.message?.includes("internal-error")) {
+        msg = "Firebase internal error (auth/internal-error): The sign-in popup or iframe was blocked or could not communicate. Please ensure popups are allowed, disable adblockers, or use Email/Password sign-in.";
+      }
+      toast.error(msg, { duration: 6000 });
       if (onError) onError(msg);
     } finally {
       setLoadingProvider(null);
@@ -49,8 +52,11 @@ const SocialSignIn: React.FC<SocialSignInProps> = ({ onSuccess, onError }) => {
         return;
       }
       console.error("GitHub sign in error:", err);
-      const msg = err.message || "Failed to sign in with GitHub.";
-      toast.error(msg, { duration: 5000 });
+      let msg = err.message || "Failed to sign in with GitHub.";
+      if (err.code === "auth/internal-error" || err.message?.includes("internal-error")) {
+        msg = "Firebase internal error (auth/internal-error): The sign-in popup or iframe was blocked. Please ensure popups are allowed or use Email/Password sign-in.";
+      }
+      toast.error(msg, { duration: 6000 });
       if (onError) onError(msg);
     } finally {
       setLoadingProvider(null);

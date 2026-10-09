@@ -546,7 +546,9 @@ export const PortfolioSectionManager: React.FC = () => {
           : null,
       };
       if (mediaType === "video") {
-        payload.videoCrop = videoCrop.zoom > 1 ? videoCrop : null;
+        const hasVideoCrop =
+          videoCrop.zoom > 1 || !!videoCrop.fit || videoCrop.ox !== 50 || videoCrop.oy !== 50;
+        payload.videoCrop = hasVideoCrop ? videoCrop : null;
         payload.videoTrim =
           videoTrimStart > 0 || videoTrimEnd > 0
             ? { start: videoTrimStart, end: videoTrimEnd }
@@ -612,7 +614,11 @@ export const PortfolioSectionManager: React.FC = () => {
         mediaType === "video" && (videoTrimStart > 0 || videoTrimEnd > 0)
           ? { start: videoTrimStart, end: videoTrimEnd }
           : undefined,
-      videoCrop: mediaType === "video" && videoCrop.zoom > 1 ? videoCrop : undefined,
+      videoCrop:
+        mediaType === "video" &&
+        (videoCrop.zoom > 1 || !!videoCrop.fit || videoCrop.ox !== 50 || videoCrop.oy !== 50)
+          ? videoCrop
+          : undefined,
       imageCrops: imageCrops.some((c) => c && (c.zoom > 1 || c.fit || c.ox !== 50 || c.oy !== 50)) ? imageCrops : undefined,
       displayOrder: Number(displayOrder) || 1,
       altText: generateImageAlt(title.trim(), subtitle.trim() || "Portfolio Showcase"),
@@ -1608,84 +1614,416 @@ export const PortfolioSectionManager: React.FC = () => {
                     </p>
                   )}
 
-                  <div className="flex flex-col gap-2">
-                    {/* Live preview — mirrors the card video crop/zoom exactly */}
-                    {videoUrl && (
-                      <div style={{ width: 160, height: 128 }} className="relative rounded-xl overflow-hidden bg-black border-2 border-primary/50 shrink-0">
-                        <div
-                          className="absolute inset-0"
-                          style={
-                            videoCrop.zoom > 1
-                              ? {
-                                  transform: `scale(${videoCrop.zoom})`,
-                                  transformOrigin: `${videoCrop.ox}% ${videoCrop.oy}%`,
+                  {/* ── VIDEO LIVE OUTPUT & CROP / ALIGNMENT CONTROLS ── */}
+                  {videoUrl && (() => {
+                    const videoDim = getSlotDimensions("single", imageFit);
+                    const currentVideoZoom = videoCrop.zoom || 1;
+                    const currentVideoOx = videoCrop.ox ?? 50;
+                    const currentVideoOy = videoCrop.oy ?? 50;
+                    const videoSlotFit: "cover" | "contain" = videoCrop.fit || (imageFit === "contain" ? "contain" : "cover");
+                    const videoHasEmptyMargins = videoSlotFit === "contain";
+
+                    return (
+                      <div className="space-y-4 pt-2">
+                        {/* Live Combined Card Frame for Video */}
+                        <div className="p-4 rounded-2xl bg-gray-900 border border-border/60 dark:border-dark_border/60 text-white">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-white">
+                                <span>🎬</span>
+                                <span>Live Card Video Output</span>
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold">
+                                {imageFit === "contain"
+                                  ? "Card Fit: Contain (Shows uncropped with gaps)"
+                                  : imageFit === "portrait_tall"
+                                  ? "Card Fit: Portrait Tall (3:4)"
+                                  : "Card Fit: Cover (Fills card frame)"}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-gray-400">
+                              Mirrors the website card video 100% exactly
+                            </span>
+                          </div>
+
+                          <div className="flex justify-center">
+                            <div
+                              className={`relative w-full max-w-[320px] ${
+                                imageFit === "portrait_tall"
+                                  ? "aspect-[3/4]"
+                                  : imageFit === "contain"
+                                  ? "aspect-[4/4]"
+                                  : "aspect-[4/3.5]"
+                              } rounded-2xl overflow-hidden bg-gray-950 border-2 border-primary/50 shadow-2xl`}
+                            >
+                              <div
+                                className="absolute inset-0 w-full h-full"
+                                style={
+                                  currentVideoZoom > 1
+                                    ? {
+                                        transform: `scale(${currentVideoZoom})`,
+                                        transformOrigin: `${currentVideoOx}% ${currentVideoOy}%`,
+                                      }
+                                    : undefined
                                 }
-                              : undefined
-                          }
-                        >
-                          <video
-                            src={getImgPath(videoUrl)}
-                            muted
-                            loop
-                            autoPlay
-                            playsInline
-                            preload="metadata"
-                            className="w-full h-full object-cover"
-                          />
+                              >
+                                <video
+                                  src={getImgPath(videoUrl)}
+                                  muted
+                                  loop
+                                  autoPlay
+                                  playsInline
+                                  preload="metadata"
+                                  style={{
+                                    objectPosition: `${currentVideoOx}% ${currentVideoOy}%`,
+                                  }}
+                                  className={
+                                    videoSlotFit === "contain"
+                                      ? "w-full h-full object-contain p-1 bg-gray-50/50 dark:bg-black/20"
+                                      : "w-full h-full object-cover"
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[8px] font-bold tracking-wide">
-                          LIVE OUTPUT (CARD)
-                        </span>
+
+                        {/* Individual Slot Thumbnail View */}
+                        <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border/60 dark:border-dark_border/60 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-dark dark:text-white flex items-center gap-1">
+                                <span>🎯</span>
+                                <span>Live Output (Card Video Slot Thumbnail View)</span>
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold">
+                                {videoDim.name}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {(currentVideoZoom > 1 || videoCrop.fit || currentVideoOx !== 50 || currentVideoOy !== 50) && (
+                                <button
+                                  type="button"
+                                  onClick={() => setVideoCrop({ ...defaultMediaCrop })}
+                                  className="text-[10px] font-bold text-gray-400 hover:text-red-500 cursor-pointer"
+                                >
+                                  ↺ Reset
+                                </button>
+                              )}
+                              {videoThumbnail && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const dim = getSlotDimensions("single", imageFit);
+                                    setCropModalState({
+                                      isOpen: true,
+                                      slotIndex: 0,
+                                      imageUrl: videoThumbnail,
+                                      slotLabel: "Video Thumbnail",
+                                      targetAspectRatio: dim.ratio,
+                                      targetRatioName: dim.name,
+                                    });
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-primary hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer transition shadow-xs flex items-center gap-1"
+                                >
+                                  <span>✂️</span>
+                                  <span>Crop Thumbnail Tool</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={handleLiveSaveMedia}
+                                disabled={liveSaving || !editingId}
+                                title={editingId ? "Save crop to the live card now" : "Save the card once first"}
+                                className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-[11px] font-bold cursor-pointer transition shadow-xs"
+                              >
+                                {liveSaving ? "Saving..." : "💾 Live Save"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Live preview + controls row */}
+                          <div className="flex flex-col sm:flex-row items-start gap-4 p-3 rounded-2xl bg-white dark:bg-darklight border border-border/60 dark:border-dark_border/60">
+                            {/* Live Video Slot Preview Box */}
+                            <div className="flex flex-col items-center gap-1.5 shrink-0 mx-auto sm:mx-0">
+                              <div
+                                style={{
+                                  width: videoDim.width,
+                                  height: videoDim.height,
+                                }}
+                                className={`relative rounded-xl overflow-hidden border-2 border-primary/70 shrink-0 shadow-lg ${
+                                  videoHasEmptyMargins
+                                    ? "bg-gray-100 dark:bg-gray-900 ring-2 ring-amber-500/60"
+                                    : "bg-black"
+                                }`}
+                              >
+                                {videoHasEmptyMargins && (
+                                  <div className="absolute inset-0 flex justify-between pointer-events-none z-0">
+                                    <div className="w-5 h-full bg-amber-400/20 border-r border-amber-500/40 flex items-center justify-center">
+                                      <span className="text-[7px] font-black text-amber-600 dark:text-amber-400 -rotate-90 tracking-tighter">
+                                        GAP
+                                      </span>
+                                    </div>
+                                    <div className="w-5 h-full bg-amber-400/20 border-l border-amber-500/40 flex items-center justify-center">
+                                      <span className="text-[7px] font-black text-amber-600 dark:text-amber-400 -rotate-90 tracking-tighter">
+                                        GAP
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div
+                                  className="absolute inset-0 w-full h-full z-1"
+                                  style={
+                                    currentVideoZoom > 1
+                                      ? {
+                                          transform: `scale(${currentVideoZoom})`,
+                                          transformOrigin: `${currentVideoOx}% ${currentVideoOy}%`,
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  <video
+                                    src={getImgPath(videoUrl)}
+                                    muted
+                                    loop
+                                    autoPlay
+                                    playsInline
+                                    preload="metadata"
+                                    style={{
+                                      objectPosition: `${currentVideoOx}% ${currentVideoOy}%`,
+                                    }}
+                                    className={
+                                      videoSlotFit === "contain"
+                                        ? "w-full h-full object-contain p-1 bg-gray-50/50 dark:bg-black/20"
+                                        : "w-full h-full object-cover"
+                                    }
+                                  />
+                                </div>
+
+                                <span
+                                  className={`absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wide z-10 ${
+                                    videoSlotFit === "contain"
+                                      ? currentVideoZoom <= 1
+                                        ? "bg-amber-500 text-white shadow-xs"
+                                        : "bg-blue-600 text-white shadow-xs"
+                                      : "bg-black/75 text-white"
+                                  }`}
+                                >
+                                  {videoSlotFit === "contain"
+                                    ? currentVideoZoom <= 1
+                                      ? "⚠️ SIDE GAPS DETECTED"
+                                      : `🔍 ZOOM ${Math.round(currentVideoZoom * 100)}%`
+                                    : "✨ FILLED (NO GAPS)"}
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-gray-400 font-semibold text-center">
+                                {videoDim.width}×{videoDim.height}px ({videoDim.name})
+                              </span>
+                            </div>
+
+                            {/* Slot Controls */}
+                            <div className="flex-1 w-full space-y-2.5">
+                              {/* Notice / Status pill */}
+                              {videoSlotFit === "contain" ? (
+                                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-700 dark:text-amber-300 flex flex-wrap items-center justify-between gap-2">
+                                  <span>
+                                    {currentVideoZoom <= 1 ? (
+                                      <>⚠️ <strong>Contain Mode (depathten his ida):</strong> Video has side margins. Zoom in to reduce gaps smoothly, or click &apos;⚡ Fill Slot&apos;.</>
+                                    ) : (
+                                      <>🔍 <strong>Contain Mode (Zoom {Math.round(currentVideoZoom * 100)}%):</strong> Gaps are reducing live as you zoom in.</>
+                                    )}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setVideoCrop((prev) => ({
+                                        ...prev,
+                                        fit: "cover",
+                                      }))
+                                    }
+                                    className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold shrink-0 cursor-pointer shadow-xs"
+                                  >
+                                    ⚡ Fill Slot (Switch to Cover)
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="p-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-700 dark:text-emerald-300 flex items-center justify-between gap-2">
+                                  <span>
+                                    ✨ <strong>Cover Mode:</strong> Video slot is filled with zero empty gaps on the website card.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setVideoCrop((prev) => ({
+                                        ...prev,
+                                        fit: "contain",
+                                        zoom: 1,
+                                        ox: 50,
+                                        oy: 50,
+                                      }))
+                                    }
+                                    className="px-2 py-0.5 rounded-md bg-gray-200 dark:bg-darkmode text-gray-700 dark:text-gray-300 text-[10px] font-semibold shrink-0 hover:bg-gray-300 cursor-pointer"
+                                  >
+                                    Switch to Contain
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Quick Crop / Fit buttons */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setVideoCrop((prev) => ({
+                                      ...prev,
+                                      fit: "cover",
+                                    }))
+                                  }
+                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                                    videoSlotFit === "cover"
+                                      ? "bg-primary/10 text-primary font-bold border border-primary/30"
+                                      : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300"
+                                  }`}
+                                >
+                                  Fill / Crop Video (Cover)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setVideoCrop((prev) => ({
+                                      ...prev,
+                                      fit: "contain",
+                                    }))
+                                  }
+                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                                    videoSlotFit === "contain"
+                                      ? "bg-primary/10 text-primary font-bold border border-primary/30"
+                                      : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300"
+                                  }`}
+                                >
+                                  Fit Whole (Contain)
+                                </button>
+
+                                {/* Focal alignments */}
+                                <div className="ml-auto flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-gray-400">Focus:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setVideoCrop((p) => ({ ...p, ox: 50, oy: 15 }))}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                                    title="Focus Top (Heads/Faces)"
+                                  >
+                                    Top
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setVideoCrop((p) => ({ ...p, ox: 50, oy: 50 }))}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                                    title="Center Focus"
+                                  >
+                                    Center
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setVideoCrop((p) => ({ ...p, ox: 50, oy: 85 }))}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                                    title="Focus Bottom"
+                                  >
+                                    Bottom
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setVideoCrop((p) => ({ ...p, ox: 15, oy: 50 }))}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                                    title="Focus Left"
+                                  >
+                                    Left
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setVideoCrop((p) => ({ ...p, ox: 85, oy: 50 }))}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
+                                    title="Focus Right"
+                                  >
+                                    Right
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Sliders: Zoom, Focus X, Focus Y */}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-border/40 dark:border-dark_border/40">
+                                <label className="space-y-0.5">
+                                  <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                                    <span>Zoom</span>
+                                    <span className="font-bold text-primary">
+                                      {Math.round(currentVideoZoom * 100)}%
+                                    </span>
+                                  </span>
+                                  <input
+                                    type="range"
+                                    min={1}
+                                    max={3}
+                                    step={0.05}
+                                    value={currentVideoZoom}
+                                    onChange={(e) => {
+                                      const v = Number(e.target.value);
+                                      setVideoCrop((p) => ({
+                                        ...p,
+                                        zoom: v,
+                                      }));
+                                    }}
+                                    className="w-full accent-primary cursor-pointer"
+                                  />
+                                </label>
+                                <label className="space-y-0.5">
+                                  <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                                    <span>Focus X</span>
+                                    <span className="font-bold text-primary">{currentVideoOx}%</span>
+                                  </span>
+                                  <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={currentVideoOx}
+                                    onChange={(e) =>
+                                      setVideoCrop((p) => ({
+                                        ...p,
+                                        ox: Number(e.target.value),
+                                      }))
+                                    }
+                                    className="w-full accent-primary cursor-pointer"
+                                  />
+                                </label>
+                                <label className="space-y-0.5">
+                                  <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                                    <span>Focus Y</span>
+                                    <span className="font-bold text-primary">{currentVideoOy}%</span>
+                                  </span>
+                                  <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={currentVideoOy}
+                                    onChange={(e) =>
+                                      setVideoCrop((p) => ({
+                                        ...p,
+                                        oy: Number(e.target.value),
+                                      }))
+                                    }
+                                    className="w-full accent-primary cursor-pointer"
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <label className="space-y-0.5">
-                      <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                        <span>Zoom</span>
-                        <span className="font-bold">{Math.round(videoCrop.zoom * 100)}%</span>
-                      </span>
-                      <input
-                        type="range"
-                        min={1}
-                        max={3}
-                        step={0.05}
-                        value={videoCrop.zoom}
-                        onChange={(e) => setVideoCrop((p) => ({ ...p, zoom: Number(e.target.value) }))}
-                        className="w-full accent-primary cursor-pointer"
-                      />
-                    </label>
-                    <label className="space-y-0.5">
-                      <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                        <span>Focus X</span>
-                        <span className="font-bold">{videoCrop.ox}%</span>
-                      </span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={videoCrop.ox}
-                        onChange={(e) => setVideoCrop((p) => ({ ...p, ox: Number(e.target.value) }))}
-                        className="w-full accent-primary cursor-pointer"
-                      />
-                    </label>
-                    <label className="space-y-0.5">
-                      <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                        <span>Focus Y</span>
-                        <span className="font-bold">{videoCrop.oy}%</span>
-                      </span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={videoCrop.oy}
-                        onChange={(e) => setVideoCrop((p) => ({ ...p, oy: Number(e.target.value) }))}
-                        className="w-full accent-primary cursor-pointer"
-                      />
-                    </label>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Thumbnail preview / hint */}
@@ -2043,7 +2381,7 @@ export const PortfolioSectionManager: React.FC = () => {
                   const currentOx = currentCrop?.ox ?? 50;
                   const currentOy = currentCrop?.oy ?? 50;
                   const slotFit: "cover" | "contain" = currentCrop?.fit || (imageFit === "contain" ? "contain" : "cover");
-                  const hasEmptyMargins = slotFit === "contain" && currentZoom <= 1;
+                  const hasEmptyMargins = slotFit === "contain";
 
                   return (
                     <div
@@ -2287,8 +2625,8 @@ export const PortfolioSectionManager: React.FC = () => {
                                       objectPosition: `${currentOx}% ${currentOy}%`,
                                     }}
                                     className={
-                                      hasEmptyMargins
-                                        ? "object-contain p-1 bg-gray-50/50 dark:bg-black/20"
+                                      slotFit === "contain"
+                                        ? "object-contain p-0.5"
                                         : "object-cover object-top"
                                     }
                                   />
@@ -2296,12 +2634,18 @@ export const PortfolioSectionManager: React.FC = () => {
 
                                 <span
                                   className={`absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wide z-10 ${
-                                    hasEmptyMargins
-                                      ? "bg-amber-500 text-white shadow-xs"
+                                    slotFit === "contain"
+                                      ? currentZoom <= 1
+                                        ? "bg-amber-500 text-white shadow-xs"
+                                        : "bg-blue-600 text-white shadow-xs"
                                       : "bg-black/75 text-white"
                                   }`}
                                 >
-                                  {hasEmptyMargins ? "⚠️ SIDE GAPS DETECTED" : "✨ FILLED (NO GAPS)"}
+                                  {slotFit === "contain"
+                                    ? currentZoom <= 1
+                                      ? "⚠️ SIDE GAPS DETECTED"
+                                      : `🔍 ZOOM ${Math.round(currentZoom * 100)}%`
+                                    : "✨ FILLED (NO GAPS)"}
                                 </span>
                               </div>
                               <span className="text-[9px] text-gray-400 font-semibold text-center">
@@ -2312,28 +2656,31 @@ export const PortfolioSectionManager: React.FC = () => {
                             {/* Slot Controls */}
                             <div className="flex-1 w-full space-y-2.5">
                               {/* Notice / Status pill */}
-                              {hasEmptyMargins ? (
+                              {slotFit === "contain" ? (
                                 <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-700 dark:text-amber-300 flex flex-wrap items-center justify-between gap-2">
                                   <span>
-                                    ⚠️ <strong>Side margins (depathten his ida)</strong> appear because photo is uncropped.
+                                    {currentZoom <= 1 ? (
+                                      <>⚠️ <strong>Contain Mode (depathten his ida):</strong> Photo has side margins. Zoom in to reduce gaps smoothly, or click &apos;⚡ Fill Slot&apos;.</>
+                                    ) : (
+                                      <>🔍 <strong>Contain Mode (Zoom {Math.round(currentZoom * 100)}%):</strong> Gaps are reducing live as you zoom in.</>
+                                    )}
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() =>
                                       updateImageCrop(slotIdx, {
                                         fit: "cover",
-                                        zoom: currentZoom > 1 ? currentZoom : 1.05,
                                       })
                                     }
                                     className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold shrink-0 cursor-pointer shadow-xs"
                                   >
-                                    ⚡ Fill Slot (Remove Side Gaps)
+                                    ⚡ Fill Slot (Switch to Cover)
                                   </button>
                                 </div>
                               ) : (
                                 <div className="p-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-700 dark:text-emerald-300 flex items-center justify-between gap-2">
                                   <span>
-                                    ✨ <strong>Slot is filled</strong> with zero empty gaps on the website card.
+                                    ✨ <strong>Cover Mode:</strong> Slot is filled with zero empty gaps on the website card.
                                   </span>
                                   <button
                                     type="button"
@@ -2367,29 +2714,25 @@ export const PortfolioSectionManager: React.FC = () => {
                                   onClick={() =>
                                     updateImageCrop(slotIdx, {
                                       fit: "cover",
-                                      zoom: currentZoom > 1 ? currentZoom : 1.05,
                                     })
                                   }
                                   className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                                    slotFit === "cover" || currentZoom > 1
+                                    slotFit === "cover"
                                       ? "bg-primary/10 text-primary font-bold border border-primary/30"
                                       : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300"
                                   }`}
                                 >
-                                  Fill / Crop
+                                  Fill / Crop (Cover)
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() =>
                                     updateImageCrop(slotIdx, {
                                       fit: "contain",
-                                      zoom: 1,
-                                      ox: 50,
-                                      oy: 50,
                                     })
                                   }
                                   className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                                    slotFit === "contain" && currentZoom <= 1
+                                    slotFit === "contain"
                                       ? "bg-primary/10 text-primary font-bold border border-primary/30"
                                       : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300"
                                   }`}
@@ -2402,7 +2745,7 @@ export const PortfolioSectionManager: React.FC = () => {
                                   <span className="text-[10px] font-bold text-gray-400">Focus:</span>
                                   <button
                                     type="button"
-                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 15, fit: "cover" })}
+                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 15 })}
                                     className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
                                     title="Focus Top (Heads/Faces)"
                                   >
@@ -2410,7 +2753,7 @@ export const PortfolioSectionManager: React.FC = () => {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 50, fit: "cover" })}
+                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 50 })}
                                     className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
                                     title="Center Focus"
                                   >
@@ -2418,7 +2761,7 @@ export const PortfolioSectionManager: React.FC = () => {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 85, fit: "cover" })}
+                                    onClick={() => updateImageCrop(slotIdx, { ox: 50, oy: 85 })}
                                     className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-darkmode hover:bg-primary hover:text-white transition cursor-pointer"
                                     title="Focus Bottom"
                                   >
@@ -2446,7 +2789,6 @@ export const PortfolioSectionManager: React.FC = () => {
                                       const v = Number(e.target.value);
                                       updateImageCrop(slotIdx, {
                                         zoom: v,
-                                        fit: v > 1 ? "cover" : slotFit,
                                       });
                                     }}
                                     className="w-full accent-primary cursor-pointer"
@@ -2466,7 +2808,6 @@ export const PortfolioSectionManager: React.FC = () => {
                                     onChange={(e) =>
                                       updateImageCrop(slotIdx, {
                                         ox: Number(e.target.value),
-                                        fit: "cover",
                                       })
                                     }
                                     className="w-full accent-primary cursor-pointer"
@@ -2486,7 +2827,6 @@ export const PortfolioSectionManager: React.FC = () => {
                                     onChange={(e) =>
                                       updateImageCrop(slotIdx, {
                                         oy: Number(e.target.value),
-                                        fit: "cover",
                                       })
                                     }
                                     className="w-full accent-primary cursor-pointer"
