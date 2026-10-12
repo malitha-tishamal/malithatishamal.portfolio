@@ -86,7 +86,7 @@ const Certifications: React.FC = () => {
 
   const sliderSettings = {
     dots: false,
-    arrows: true,
+    arrows: false,
     infinite: items.length > 3,
     speed: settings.transitionSpeed,
     autoplay: settings.autoplay,
@@ -94,12 +94,28 @@ const Certifications: React.FC = () => {
     pauseOnHover: settings.pauseOnHover,
     slidesToShow: Math.min(items.length, 3),
     slidesToScroll: 1,
+    swipe: true,
+    swipeToSlide: true,
+    draggable: true,
+    touchMove: true,
+    touchThreshold: 8,
+    cssEase: "ease-out",
+    waitForAnimate: false,
+    beforeChange: () => {
+      isDraggingRef.current = true;
+    },
+    afterChange: () => {
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 80);
+    },
     responsive: [
       {
         breakpoint: 1280,
         settings: {
           slidesToShow: Math.min(items.length, 3),
           slidesToScroll: 1,
+          swipeToSlide: true,
         },
       },
       {
@@ -107,6 +123,7 @@ const Certifications: React.FC = () => {
         settings: {
           slidesToShow: Math.min(items.length, 2),
           slidesToScroll: 1,
+          swipeToSlide: true,
         },
       },
       {
@@ -114,7 +131,7 @@ const Certifications: React.FC = () => {
         settings: {
           slidesToShow: 1,
           slidesToScroll: 1,
-          arrows: false,
+          swipeToSlide: true,
         },
       },
     ],
@@ -195,13 +212,49 @@ const Certifications: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="certifications-slider -mx-3">
-            <Slider {...sliderSettings}>
+          <div className="relative lg:px-12 md:px-10 sm:px-8 px-4 slider-container select-none group">
+            {/* LEFT SCROLL ARROW BUTTON */}
+            <button
+              type="button"
+              onClick={() => sliderRef.current?.slickPrev()}
+              aria-label="Scroll Left"
+              className="absolute left-0 sm:left-1 md:left-2 lg:left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95"
+              title="Scroll Left"
+            >
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 stroke-current stroke-[2.5] -translate-x-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* RIGHT SCROLL ARROW BUTTON */}
+            <button
+              type="button"
+              onClick={() => sliderRef.current?.slickNext()}
+              aria-label="Scroll Right"
+              className="absolute right-0 sm:right-1 md:right-2 lg:right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95"
+              title="Scroll Right"
+            >
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 stroke-current stroke-[2.5] translate-x-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <Slider ref={sliderRef} {...sliderSettings}>
               {items.map((item) => (
                 <div key={item.id} className="px-3 pb-4 h-full">
                   <CertificationCardItem
                     item={item}
-                    onPreview={(it) => setSelectedItem(it)}
+                    onPreview={(it) => {
+                      if (!isDraggingRef.current) setSelectedItem(it);
+                    }}
                   />
                 </div>
               ))}

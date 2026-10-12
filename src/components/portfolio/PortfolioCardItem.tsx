@@ -42,15 +42,15 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
   const trimEnd = item.videoTrim?.end || 0
   const videoCrop =
     item.videoCrop &&
-    (item.videoCrop.zoom > 1 || item.videoCrop.fit || item.videoCrop.ox !== 50 || item.videoCrop.oy !== 50)
+    (item.videoCrop.zoom !== 1 || item.videoCrop.fit || item.videoCrop.ox !== 50 || item.videoCrop.oy !== 50)
       ? item.videoCrop
       : null
   const videoSlotFit = videoCrop?.fit || fit
   const isVideoContain = videoSlotFit === 'contain'
 
-  // Zoom into a focal point without re-encoding the media
+  // Zoom into a focal point without re-encoding the media (supports zoom > 1 and zoom < 1)
   const cropWrapStyle = (crop: PortfolioMediaCrop | null | undefined) =>
-    crop && crop.zoom > 1
+    crop && crop.zoom && crop.zoom !== 1
       ? { transform: `scale(${crop.zoom})`, transformOrigin: `${crop.ox}% ${crop.oy}%` }
       : undefined
 
@@ -116,10 +116,8 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
     const wrapStyle = cropWrapStyle(crop)
     // Slot-level fit override ('cover' fills without gaps, 'contain' shows whole photo with borders)
     const slotFit = crop?.fit || fit
-    const slotFitClass =
-      slotFit === 'contain'
-        ? 'object-contain p-1 bg-gray-50/50 dark:bg-black/20'
-        : 'object-cover object-top'
+    const isContain = slotFit === 'contain' && (!crop?.zoom || crop.zoom <= 1)
+    const slotFitClass = isContain ? 'object-contain' : 'object-cover object-top'
 
     return isVideoUrl(src) ? (
       <div className='absolute inset-0' style={wrapStyle}>
@@ -142,7 +140,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = ({
           unoptimized
           style={
             crop
-              ? { objectPosition: `${crop.ox}% ${crop.oy}%` }
+              ? { objectPosition: isContain ? 'center center' : `${crop.ox}% ${crop.oy}%` }
               : undefined
           }
           className={`${slotFitClass} group-hover:scale-105 transition-transform duration-500`}

@@ -545,13 +545,13 @@ export const PortfolioSectionManager: React.FC = () => {
     try {
       const payload: Record<string, any> = {
         detailViewFit,
-        imageCrops: imageCrops.some((c) => c && (c.zoom > 1 || c.fit || c.ox !== 50 || c.oy !== 50))
+        imageCrops: imageCrops.some((c) => c && (c.zoom !== 1 || c.fit || c.ox !== 50 || c.oy !== 50))
           ? imageCrops
           : null,
       };
       if (mediaType === "video") {
         const hasVideoCrop =
-          videoCrop.zoom > 1 || !!videoCrop.fit || videoCrop.ox !== 50 || videoCrop.oy !== 50;
+          videoCrop.zoom !== 1 || !!videoCrop.fit || videoCrop.ox !== 50 || videoCrop.oy !== 50;
         payload.videoCrop = hasVideoCrop ? videoCrop : null;
         payload.videoTrim =
           videoTrimStart > 0 || videoTrimEnd > 0
@@ -621,10 +621,10 @@ export const PortfolioSectionManager: React.FC = () => {
           : undefined,
       videoCrop:
         mediaType === "video" &&
-        (videoCrop.zoom > 1 || !!videoCrop.fit || videoCrop.ox !== 50 || videoCrop.oy !== 50)
+        (videoCrop.zoom !== 1 || !!videoCrop.fit || videoCrop.ox !== 50 || videoCrop.oy !== 50)
           ? videoCrop
           : undefined,
-      imageCrops: imageCrops.some((c) => c && (c.zoom > 1 || c.fit || c.ox !== 50 || c.oy !== 50)) ? imageCrops : undefined,
+      imageCrops: imageCrops.some((c) => c && (c.zoom !== 1 || c.fit || c.ox !== 50 || c.oy !== 50)) ? imageCrops : undefined,
       displayOrder: Number(displayOrder) || 1,
       altText: generateImageAlt(title.trim(), subtitle.trim() || "Portfolio Showcase"),
       seoDescription: generateSeoDescription(description.trim(), title.trim()),
@@ -2011,25 +2011,51 @@ export const PortfolioSectionManager: React.FC = () => {
                                 <label className="space-y-0.5">
                                   <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
                                     <span>Zoom</span>
-                                    <span className="font-bold text-primary">
-                                      {Math.round(currentVideoZoom * 100)}%
+                                    <span className={`font-bold font-mono ${currentVideoZoom < 1 ? "text-orange-500" : "text-primary"}`}>
+                                      {currentVideoZoom < 1
+                                        ? `−${Math.round((1 - currentVideoZoom) * 100)}%`
+                                        : `${Math.round(currentVideoZoom * 100)}%`}
                                     </span>
                                   </span>
-                                  <input
-                                    type="range"
-                                    min={1}
-                                    max={3}
-                                    step={0.05}
-                                    value={currentVideoZoom}
-                                    onChange={(e) => {
-                                      const v = Number(e.target.value);
-                                      setVideoCrop((p) => ({
-                                        ...p,
-                                        zoom: v,
-                                      }));
-                                    }}
-                                    className="w-full accent-primary cursor-pointer"
-                                  />
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      title="Zoom out"
+                                      onClick={() => {
+                                        const next = Math.max(0.5, Math.round((currentVideoZoom - 0.05) * 100) / 100);
+                                        setVideoCrop((p) => ({ ...p, zoom: next }));
+                                      }}
+                                      className="w-5 h-5 shrink-0 rounded bg-gray-200 dark:bg-darklight text-gray-700 dark:text-gray-200 hover:bg-orange-500 hover:text-white font-bold text-xs flex items-center justify-center transition cursor-pointer select-none"
+                                    >
+                                      −
+                                    </button>
+                                    <input
+                                      type="range"
+                                      min={0.5}
+                                      max={3}
+                                      step={0.01}
+                                      value={currentVideoZoom}
+                                      onChange={(e) => {
+                                        const v = Number(e.target.value);
+                                        setVideoCrop((p) => ({
+                                          ...p,
+                                          zoom: v,
+                                        }));
+                                      }}
+                                      className="w-full accent-primary cursor-pointer"
+                                    />
+                                    <button
+                                      type="button"
+                                      title="Zoom in"
+                                      onClick={() => {
+                                        const next = Math.min(3, Math.round((currentVideoZoom + 0.05) * 100) / 100);
+                                        setVideoCrop((p) => ({ ...p, zoom: next }));
+                                      }}
+                                      className="w-5 h-5 shrink-0 rounded bg-gray-200 dark:bg-darklight text-gray-700 dark:text-gray-200 hover:bg-primary hover:text-white font-bold text-xs flex items-center justify-center transition cursor-pointer select-none"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
                                 </label>
                                 <label className="space-y-0.5">
                                   <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
@@ -2234,7 +2260,7 @@ export const PortfolioSectionManager: React.FC = () => {
                                     <div
                                       className="absolute inset-0 w-full h-full"
                                       style={
-                                        qZoom > 1
+                                        qZoom !== 1
                                           ? {
                                               transform: `scale(${qZoom})`,
                                               transformOrigin: `${qOx}% ${qOy}%`,
@@ -2247,10 +2273,10 @@ export const PortfolioSectionManager: React.FC = () => {
                                         alt={`Quadrant ${qi + 1}`}
                                         fill
                                         unoptimized
-                                        style={{ objectPosition: `${qOx}% ${qOy}%` }}
+                                        style={{ objectPosition: isContain ? "center center" : `${qOx}% ${qOy}%` }}
                                         className={
                                           isContain
-                                            ? "object-contain p-0.5 bg-gray-50/50 dark:bg-black/20"
+                                            ? "object-contain"
                                             : "object-cover object-top"
                                         }
                                       />
@@ -2294,7 +2320,7 @@ export const PortfolioSectionManager: React.FC = () => {
                                     <div
                                       className="absolute inset-0 w-full h-full"
                                       style={
-                                        cZoom > 1
+                                        cZoom !== 1
                                           ? {
                                               transform: `scale(${cZoom})`,
                                               transformOrigin: `${cOx}% ${cOy}%`,
@@ -2307,10 +2333,10 @@ export const PortfolioSectionManager: React.FC = () => {
                                         alt={`Column ${ci + 1}`}
                                         fill
                                         unoptimized
-                                        style={{ objectPosition: `${cOx}% ${cOy}%` }}
+                                        style={{ objectPosition: isContain ? "center center" : `${cOx}% ${cOy}%` }}
                                         className={
                                           isContain
-                                            ? "object-contain p-0.5 bg-gray-50/50 dark:bg-black/20"
+                                            ? "object-contain"
                                             : "object-cover object-top"
                                         }
                                       />
@@ -2349,7 +2375,7 @@ export const PortfolioSectionManager: React.FC = () => {
                                     <div
                                       className="absolute inset-0 w-full h-full"
                                       style={
-                                        rZoom > 1
+                                        rZoom !== 1
                                           ? {
                                               transform: `scale(${rZoom})`,
                                               transformOrigin: `${rOx}% ${rOy}%`,
@@ -2362,10 +2388,10 @@ export const PortfolioSectionManager: React.FC = () => {
                                         alt={`Row ${ri + 1}`}
                                         fill
                                         unoptimized
-                                        style={{ objectPosition: `${rOx}% ${rOy}%` }}
+                                        style={{ objectPosition: isContain ? "center center" : `${rOx}% ${rOy}%` }}
                                         className={
                                           isContain
-                                            ? "object-contain p-0.5 bg-gray-50/50 dark:bg-black/20"
+                                            ? "object-contain"
                                             : "object-cover object-top"
                                         }
                                       />
@@ -2392,7 +2418,7 @@ export const PortfolioSectionManager: React.FC = () => {
                               <div
                                 className="absolute inset-0 w-full h-full"
                                 style={
-                                  (imageCrops[0]?.zoom || 1) > 1
+                                  (imageCrops[0]?.zoom || 1) !== 1
                                     ? {
                                         transform: `scale(${imageCrops[0]!.zoom})`,
                                         transformOrigin: `${imageCrops[0]!.ox}% ${imageCrops[0]!.oy}%`,
@@ -2406,11 +2432,11 @@ export const PortfolioSectionManager: React.FC = () => {
                                   fill
                                   unoptimized
                                   style={{
-                                    objectPosition: `${imageCrops[0]?.ox ?? 50}% ${imageCrops[0]?.oy ?? 50}%`,
+                                    objectPosition: (imageCrops[0]?.fit || imageFit) === "contain" && (imageCrops[0]?.zoom || 1) <= 1 ? "center center" : `${imageCrops[0]?.ox ?? 50}% ${imageCrops[0]?.oy ?? 50}%`,
                                   }}
                                   className={
                                     (imageCrops[0]?.fit || imageFit) === "contain" && (imageCrops[0]?.zoom || 1) <= 1
-                                      ? "object-contain p-1 bg-gray-50/50 dark:bg-black/20"
+                                      ? "object-contain"
                                       : "object-cover object-top"
                                   }
                                 />
@@ -2676,7 +2702,7 @@ export const PortfolioSectionManager: React.FC = () => {
                                     fill
                                     unoptimized
                                     style={{
-                                      objectPosition: `${currentOx}% ${currentOy}%`,
+                                      objectPosition: slotFit === "contain" && currentZoom <= 1 ? "center center" : `${currentOx}% ${currentOy}%`,
                                     }}
                                     className={
                                       slotFit === "contain"
@@ -2829,24 +2855,50 @@ export const PortfolioSectionManager: React.FC = () => {
                                 <label className="space-y-0.5">
                                   <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
                                     <span>Zoom</span>
-                                    <span className="font-bold text-primary">
-                                      {Math.round(currentZoom * 100)}%
+                                    <span className={`font-bold font-mono ${currentZoom < 1 ? "text-orange-500" : "text-primary"}`}>
+                                      {currentZoom < 1
+                                        ? `−${Math.round((1 - currentZoom) * 100)}%`
+                                        : `${Math.round(currentZoom * 100)}%`}
                                     </span>
                                   </span>
-                                  <input
-                                    type="range"
-                                    min={1}
-                                    max={3}
-                                    step={0.05}
-                                    value={currentZoom}
-                                    onChange={(e) => {
-                                      const v = Number(e.target.value);
-                                      updateImageCrop(slotIdx, {
-                                        zoom: v,
-                                      });
-                                    }}
-                                    className="w-full accent-primary cursor-pointer"
-                                  />
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      title="Zoom out"
+                                      onClick={() => {
+                                        const next = Math.max(0.5, Math.round((currentZoom - 0.05) * 100) / 100);
+                                        updateImageCrop(slotIdx, { zoom: next });
+                                      }}
+                                      className="w-5 h-5 shrink-0 rounded bg-gray-200 dark:bg-darklight text-gray-700 dark:text-gray-200 hover:bg-orange-500 hover:text-white font-bold text-xs flex items-center justify-center transition cursor-pointer select-none"
+                                    >
+                                      −
+                                    </button>
+                                    <input
+                                      type="range"
+                                      min={0.5}
+                                      max={3}
+                                      step={0.01}
+                                      value={currentZoom}
+                                      onChange={(e) => {
+                                        const v = Number(e.target.value);
+                                        updateImageCrop(slotIdx, {
+                                          zoom: v,
+                                        });
+                                      }}
+                                      className="w-full accent-primary cursor-pointer"
+                                    />
+                                    <button
+                                      type="button"
+                                      title="Zoom in"
+                                      onClick={() => {
+                                        const next = Math.min(3, Math.round((currentZoom + 0.05) * 100) / 100);
+                                        updateImageCrop(slotIdx, { zoom: next });
+                                      }}
+                                      className="w-5 h-5 shrink-0 rounded bg-gray-200 dark:bg-darklight text-gray-700 dark:text-gray-200 hover:bg-primary hover:text-white font-bold text-xs flex items-center justify-center transition cursor-pointer select-none"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
                                 </label>
                                 <label className="space-y-0.5">
                                   <span className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">

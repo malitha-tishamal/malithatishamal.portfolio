@@ -1589,7 +1589,7 @@ export const ProjectsSectionManager: React.FC = () => {
                                       <div
                                         className="absolute inset-0 w-full h-full z-1"
                                         style={
-                                          currentZoom > 1
+                                          currentZoom !== 1
                                             ? {
                                                 transform: `scale(${currentZoom})`,
                                                 transformOrigin: `${currentOx}% ${currentOy}%`,
@@ -1603,7 +1603,7 @@ export const ProjectsSectionManager: React.FC = () => {
                                           fill
                                           unoptimized
                                           style={{
-                                            objectPosition: `${currentOx}% ${currentOy}%`,
+                                            objectPosition: slotFit === "contain" && currentZoom <= 1 ? "center center" : `${currentOx}% ${currentOy}%`,
                                           }}
                                           className={
                                             slotFit === "contain"
@@ -1831,7 +1831,7 @@ export const ProjectsSectionManager: React.FC = () => {
                             <div
                               className="absolute inset-0 w-full h-full"
                               style={
-                                (videoCrop.zoom || 1) > 1
+                                (videoCrop.zoom || 1) !== 1
                                   ? {
                                       transform: `scale(${videoCrop.zoom})`,
                                       transformOrigin: `${videoCrop.ox}% ${videoCrop.oy}%`,

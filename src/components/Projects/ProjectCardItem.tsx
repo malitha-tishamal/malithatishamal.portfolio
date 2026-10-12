@@ -60,7 +60,7 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
   const videoCrop = project.videoCrop
 
   const cropWrapStyle = (c?: PortfolioMediaCrop | null) =>
-    c && c.zoom > 1
+    c && c.zoom && c.zoom !== 1
       ? { transform: `scale(${c.zoom})`, transformOrigin: `${c.ox}% ${c.oy}%` }
       : undefined
 
@@ -73,6 +73,7 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
     const slotCrop = idx === 0 ? (crop || project.imageCrops?.[idx]) : project.imageCrops?.[idx]
     const wrapStyle = cropWrapStyle(slotCrop)
     const slotFit = slotCrop?.fit || fit
+    const isSlotContain = slotFit === 'contain' && (!slotCrop?.zoom || slotCrop.zoom <= 1)
 
     return isVideoUrl(src) ? (
       <div className='absolute inset-0' style={wrapStyle}>
@@ -94,11 +95,11 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
           fill
           unoptimized
           style={{
-            objectPosition: `${slotCrop?.ox ?? 50}% ${slotCrop?.oy ?? 50}%`,
+            objectPosition: isSlotContain ? 'center center' : `${slotCrop?.ox ?? 50}% ${slotCrop?.oy ?? 50}%`,
           }}
           className={`${
-            slotFit === 'contain'
-              ? 'object-contain p-1 bg-black/90'
+            isSlotContain
+              ? 'object-contain'
               : 'object-cover object-top'
           } group-hover:scale-105 transition-transform duration-500`}
         />
