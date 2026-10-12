@@ -152,6 +152,7 @@ export const CertificationsList: React.FC = () => {
 
   return (
     <section className="pt-8 pb-20 dark:bg-darkmode">
+      {/* ── Search / filter area — constrained width ── */}
       <div className="container mx-auto max-w-6xl px-4">
 
         {/* Search & Counter Bar */}
@@ -188,7 +189,7 @@ export const CertificationsList: React.FC = () => {
         </div>
 
         {/* Category Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-10 no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
           {categories.map((cat) => {
             const isActive = selectedCategory === cat;
             return (
@@ -206,9 +207,11 @@ export const CertificationsList: React.FC = () => {
             );
           })}
         </div>
+      </div>
 
-        {/* Certifications Slider */}
-        {loading ? (
+      {/* ── Certifications Slider — full-width like Portfolio ── */}
+      {loading ? (
+        <div className="container mx-auto max-w-6xl px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
@@ -233,57 +236,60 @@ export const CertificationsList: React.FC = () => {
               </div>
             ))}
           </div>
-        ) : filtered.length > 0 ? (
-          <div className="relative px-14 sm:px-16 md:px-20 select-none">
+        </div>
+      ) : filtered.length > 0 ? (
+        /* Matches Portfolio: relative container with side padding for arrows */
+        <div className="relative lg:px-12 md:px-10 sm:px-8 px-6 m-auto max-w-[1400px] pb-4 select-none">
 
-            {/* LEFT ARROW */}
-            <button
-              type="button"
-              onClick={() => sliderRef.current?.slickPrev()}
-              aria-label="Scroll Left"
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-30 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-xl shadow-red-500/30 hover:shadow-2xl hover:shadow-red-500/50 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-90"
-              title="Scroll Left"
+          {/* LEFT ARROW — identical to Portfolio */}
+          <button
+            type="button"
+            onClick={() => sliderRef.current?.slickPrev()}
+            aria-label="Scroll Left"
+            className="absolute left-0 sm:left-1 md:left-2 lg:left-3 top-1/2 -translate-y-1/2 z-30 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-xl shadow-red-500/30 hover:shadow-2xl hover:shadow-red-500/50 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-90"
+            title="Scroll Left"
+          >
+            <svg
+              className="w-7 h-7 sm:w-8 sm:h-8 stroke-current stroke-[3] -translate-x-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-7 h-7 sm:w-8 sm:h-8 stroke-current stroke-[3] -translate-x-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
 
-            {/* RIGHT ARROW */}
-            <button
-              type="button"
-              onClick={() => sliderRef.current?.slickNext()}
-              aria-label="Scroll Right"
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-30 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-xl shadow-red-500/30 hover:shadow-2xl hover:shadow-red-500/50 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-90"
-              title="Scroll Right"
+          {/* RIGHT ARROW — identical to Portfolio */}
+          <button
+            type="button"
+            onClick={() => sliderRef.current?.slickNext()}
+            aria-label="Scroll Right"
+            className="absolute right-0 sm:right-1 md:right-2 lg:right-3 top-1/2 -translate-y-1/2 z-30 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-xl shadow-red-500/30 hover:shadow-2xl hover:shadow-red-500/50 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-90"
+            title="Scroll Right"
+          >
+            <svg
+              className="w-7 h-7 sm:w-8 sm:h-8 stroke-current stroke-[3] translate-x-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-7 h-7 sm:w-8 sm:h-8 stroke-current stroke-[3] translate-x-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
-            <Slider ref={sliderRef} {...sliderSettings}>
-              {filtered.map((item) => (
-                <div key={item.id} className="px-3 py-2 h-full">
-                  <CertificationCardItem
-                    item={item}
-                    onPreview={(it) => {
-                      if (!isDraggingRef.current) setSelectedItem(it);
-                    }}
-                  />
-                </div>
-              ))}
-            </Slider>
-          </div>
-        ) : (
+          <Slider ref={sliderRef} {...sliderSettings}>
+            {filtered.map((item) => (
+              <div key={item.id} className="px-3 py-2">
+                <CertificationCardItem
+                  item={item}
+                  onPreview={(it) => {
+                    if (!isDraggingRef.current) setSelectedItem(it);
+                  }}
+                />
+              </div>
+            ))}
+          </Slider>
+        </div>
+      ) : (
+        <div className="container mx-auto max-w-6xl px-4">
           <div className="text-center py-20 bg-white dark:bg-darklight rounded-2xl border border-gray-100 dark:border-dark_border">
             <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
               🎓
@@ -304,9 +310,8 @@ export const CertificationsList: React.FC = () => {
               Reset Filters
             </button>
           </div>
-        )}
-
-      </div>
+        </div>
+      )}
 
       {/* Detail / Preview Modal */}
       <CertificationDetailModal
