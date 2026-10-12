@@ -110,39 +110,50 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   }, [handleMouseMove, handleMouseUp]);
 
   // Mouse-wheel zoom — cursor-centered, { passive: false } to allow preventDefault
+  // deps include [isOpen]: the modal returns null when closed so containerRef.current
+  // is null on first mount. Re-run when modal opens so listener attaches correctly.
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    if (!isOpen) return;
+    // Small delay so the DOM has finished rendering the preview container
+    const attach = () => {
+      const el = containerRef.current;
+      if (!el) return;
 
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
+      const handleWheel = (e: WheelEvent) => {
+        e.preventDefault();
 
-      const sensitivity = 0.0012; // lower = smoother/slower
-      const delta = e.deltaY * sensitivity;        // positive = scroll down = zoom out
-      const prevZoom = zoomRef.current;
-      const newZoom = Math.min(3.5, Math.max(1, prevZoom - delta));
+        const sensitivity = 0.002; // higher = faster zoom per scroll tick
+        const delta = e.deltaY * sensitivity; // positive = scroll down = zoom out
+        const prevZoom = zoomRef.current;
+        const newZoom = Math.min(3.5, Math.max(1, prevZoom - delta));
 
-      if (newZoom === prevZoom) return;
+        if (newZoom === prevZoom) return;
 
-      // Cursor position as % of the container
-      const rect = el.getBoundingClientRect();
-      const mouseX = ((e.clientX - rect.left) / rect.width) * 100;
-      const mouseY = ((e.clientY - rect.top) / rect.height) * 100;
+        // Cursor position as % of the container
+        const rect = el.getBoundingClientRect();
+        const mouseX = ((e.clientX - rect.left) / rect.width) * 100;
+        const mouseY = ((e.clientY - rect.top) / rect.height) * 100;
 
-      // Pull focal point toward cursor proportionally to zoom change
-      const zoomRatio = (newZoom - prevZoom) / prevZoom;
-      const newOx = Math.min(100, Math.max(0, oxRef.current + (mouseX - oxRef.current) * zoomRatio));
-      const newOy = Math.min(100, Math.max(0, oyRef.current + (mouseY - oyRef.current) * zoomRatio));
+        // Pull focal point toward the cursor (cursor-centered zoom)
+        const zoomRatio = (newZoom - prevZoom) / prevZoom;
+        const newOx = Math.min(100, Math.max(0, oxRef.current + (mouseX - oxRef.current) * zoomRatio));
+        const newOy = Math.min(100, Math.max(0, oyRef.current + (mouseY - oyRef.current) * zoomRatio));
 
-      setZoom(newZoom);
-      setOx(Math.round(newOx * 10) / 10);
-      setOy(Math.round(newOy * 10) / 10);
-      if (newZoom > 1) setFitMode("cover");
+        setZoom(newZoom);
+        setOx(Math.round(newOx * 10) / 10);
+        setOy(Math.round(newOy * 10) / 10);
+        if (newZoom > 1) setFitMode("cover");
+      };
+
+      el.addEventListener("wheel", handleWheel, { passive: false });
+      return () => el.removeEventListener("wheel", handleWheel);
     };
 
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => el.removeEventListener("wheel", handleWheel);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // rAF ensures the element is in the DOM after the conditional render
+    let cleanup: (() => void) | undefined;
+    const raf = requestAnimationFrame(() => { cleanup = attach(); });
+    return () => { cancelAnimationFrame(raf); cleanup?.(); };
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Touch drag for mobile/tablets
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -475,7 +486,19 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
               <span className="text-primary font-mono">{Math.round(zoom * 100)}%</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-400">100%</span>
+              {/* − button */}
+              <button
+                type="button"
+                title="Zoom out"
+                onClick={() => {
+                  const next = Math.max(1, Math.round((zoom - 0.05) * 100) / 100);
+                  setZoom(next);
+                }}
+                className="w-7 h-7 shrink-0 rounded-lg bg-gray-200 dark:bg-darklight text-gray-700 dark:text-gray-200 hover:bg-red-500 hover:text-white font-bold text-base flex items-center justify-center transition cursor-pointer select-none"
+              >
+                −
+              </button>
+              <span className="text-[10px] text-gray-400 shrink-0">100%</span>
               <input
                 type="range"
                 min={1}
@@ -490,7 +513,20 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                 }}
                 className="w-full accent-primary cursor-pointer"
               />
-              <span className="text-[10px] text-gray-400">350%</span>
+              <span className="text-[10px] text-gray-400 shrink-0">350%</span>
+              {/* + button */}
+              <button
+                type="button"
+                title="Zoom in"
+                onClick={() => {
+                  const next = Math.min(3.5, Math.round((zoom + 0.05) * 100) / 100);
+                  setZoom(next);
+                  if (next > 1) setFitMode("cover");
+                }}
+                className="w-7 h-7 shrink-0 rounded-lg bg-gray-200 dark:bg-darklight text-gray-700 dark:text-gray-200 hover:bg-primary hover:text-white font-bold text-base flex items-center justify-center transition cursor-pointer select-none"
+              >
+                +
+              </button>
             </div>
           </div>
 
