@@ -421,9 +421,10 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
           >
             {/* The Image inside the crop window */}
             <div
-              className="absolute inset-0 w-full h-full pointer-events-none"
+              className="absolute inset-0 w-full h-full pointer-events-none flex items-center justify-center bg-gray-900"
               style={{
-                transform: zoom > 1 ? `scale(${zoom})` : undefined,
+                // Always apply scale — zoom < 1 zooms OUT showing more context
+                transform: `scale(${zoom})`,
                 transformOrigin: `${ox}% ${oy}%`,
                 transition: isDraggingRef.current ? "none" : "transform 0.15s ease-out",
               }}
@@ -434,11 +435,12 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                 fill
                 unoptimized
                 style={{
-                  objectPosition: `${ox}% ${oy}%`,
+                  // In contain mode always center; focal point only applies in cover/crop
+                  objectPosition: fitMode === "contain" && zoom <= 1 ? "center center" : `${ox}% ${oy}%`,
                 }}
                 className={`w-full h-full pointer-events-none ${
-                  fitMode === "contain" && zoom === 1
-                    ? "object-contain p-1 bg-gray-900"
+                  fitMode === "contain" && zoom <= 1
+                    ? "object-contain"
                     : "object-cover"
                 }`}
               />
@@ -483,33 +485,37 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
           <div>
             <div className="flex items-center justify-between text-xs font-bold mb-1">
               <span className="text-gray-700 dark:text-gray-200">🔍 Zoom / Crop Level</span>
-              <span className="text-primary font-mono">{Math.round(zoom * 100)}%</span>
+              <span className={`font-mono ${zoom < 1 ? "text-orange-500" : "text-primary"}`}>
+                {zoom < 1
+                  ? `−${Math.round((1 - zoom) * 100)}%`
+                  : `${Math.round(zoom * 100)}%`}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               {/* − button */}
               <button
                 type="button"
-                title="Zoom out"
+                title="Zoom out (below 100% shows more context)"
                 onClick={() => {
-                  const next = Math.max(1, Math.round((zoom - 0.05) * 100) / 100);
+                  const next = Math.max(0.5, Math.round((zoom - 0.05) * 100) / 100);
                   setZoom(next);
+                  if (next >= 1) setFitMode("cover");
                 }}
-                className="w-7 h-7 shrink-0 rounded-lg bg-gray-200 dark:bg-darklight text-gray-700 dark:text-gray-200 hover:bg-red-500 hover:text-white font-bold text-base flex items-center justify-center transition cursor-pointer select-none"
+                className="w-7 h-7 shrink-0 rounded-lg bg-gray-200 dark:bg-darklight text-gray-700 dark:text-gray-200 hover:bg-orange-500 hover:text-white font-bold text-base flex items-center justify-center transition cursor-pointer select-none"
               >
                 −
               </button>
-              <span className="text-[10px] text-gray-400 shrink-0">100%</span>
+              <span className="text-[10px] text-orange-400 shrink-0 font-mono">−50%</span>
               <input
                 type="range"
-                min={1}
+                min={0.5}
                 max={3.5}
                 step={0.01}
                 value={zoom}
                 onChange={(e) => {
-                  setZoom(Number(e.target.value));
-                  if (Number(e.target.value) > 1) {
-                    setFitMode("cover");
-                  }
+                  const v = Number(e.target.value);
+                  setZoom(v);
+                  if (v > 1) setFitMode("cover");
                 }}
                 className="w-full accent-primary cursor-pointer"
               />
@@ -528,6 +534,11 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                 +
               </button>
             </div>
+            {zoom < 1 && (
+              <p className="text-[10px] text-orange-400 mt-1">
+                ⚠️ Zoomed out below 100% — image smaller than slot (context view only; crop saves at 100%)
+              </p>
+            )}
           </div>
 
           {/* Fit Mode Toggle & Auto-Fill button */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -21,6 +21,9 @@ const Certifications: React.FC = () => {
   const [settings, setSettings] = useState<CertificationSettings>(defaultCertificationSettings);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedItem, setSelectedItem] = useState<CertificationItem | null>(null);
+
+  const sliderRef = useRef<Slider | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
 
   useEffect(() => {
     let unsubItems = () => {};
