@@ -15,8 +15,17 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
   const [activePhotoIdx, setActivePhotoIdx] = useState<number | null>(null)
   const [activeVideoIdx, setActiveVideoIdx] = useState<number | null>(null)
   const [modalImageFit, setModalImageFit] = useState<'contain' | 'cover'>(
-    item?.imageFit === 'contain' ? 'contain' : 'cover'
+    item?.detailViewFit || (item?.imageFit === 'contain' ? 'contain' : 'contain')
   )
+
+  // Re-sync modalImageFit whenever a different item is viewed
+  React.useEffect(() => {
+    if (item) {
+      setModalImageFit(
+        item.detailViewFit || (item.imageFit === 'contain' ? 'contain' : 'contain')
+      )
+    }
+  }, [item?.id, item?.detailViewFit])
 
   if (!item) return null
 
