@@ -73,6 +73,7 @@ export interface PortfolioItem {
   images: string[]; // List of Cloudinary image URLs (1, 2, or 4 images)
   imageLayout?: PortfolioImageLayout;
   imageFit?: PortfolioImageFit; // Cover (Fill), Contain (Full Uncropped), Portrait Tall (Tall 3:4)
+  detailViewFit?: 'contain' | 'cover'; // Default view in detail modal: contain (Full View / No Crop) vs cover (Fill Grid)
   mediaType?: PortfolioMediaType;
   videoUrl?: string;
   videoThumbnail?: string;

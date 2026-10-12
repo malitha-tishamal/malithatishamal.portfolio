@@ -3,7 +3,9 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import { ProjectItem } from '@/types/project'
+import { PortfolioBlock, isVideoUrl } from '@/types/portfolio'
 import { getImgPath } from '@/utils/image'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface ProjectDetailModalProps {
   project: ProjectItem | null
@@ -15,7 +17,17 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onClose,
 }) => {
   const [activePhotoIdx, setActivePhotoIdx] = useState<number | null>(null)
-  const [galleryFit, setGalleryFit] = useState<'contain' | 'cover'>('contain')
+  const [activeVideoIdx, setActiveVideoIdx] = useState<number | null>(null)
+  const [galleryFit, setGalleryFit] = useState<'contain' | 'cover'>(
+    project?.detailViewFit || 'contain'
+  )
+
+  // Re-sync galleryFit whenever a different project is viewed
+  React.useEffect(() => {
+    if (project) {
+      setGalleryFit(project.detailViewFit || 'contain')
+    }
+  }, [project?.id, project?.detailViewFit])
 
   if (!project) return null
 
@@ -33,13 +45,31 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     return 'Recently'
   }
 
-  // Combine cover image and gallery images (up to 15+ images)
+  // Combine cover image and gallery images
   const allImages = Array.from(
     new Set([
       ...(project.coverImage ? [project.coverImage] : []),
       ...(project.images || []),
     ])
   ).filter((img) => img && img.trim().length > 0)
+
+  // Every video on the item: explicit videoUrl + any video URLs stored in image slots
+  const videoSources = [
+    project.videoUrl,
+    ...allImages.filter((img) => isVideoUrl(img)),
+  ].filter((v): v is string => !!v)
+
+  const isVideo = project.mediaType === 'video' || videoSources.length > 0
+  const nonVideoImages = allImages.filter((img) => !isVideoUrl(img))
+
+  type MediaTile =
+    | { kind: 'video'; src: string; vi: number }
+    | { kind: 'image'; src: string }
+
+  const mediaTiles: MediaTile[] = [
+    ...videoSources.map((src, vi) => ({ kind: 'video' as const, src, vi })),
+    ...nonVideoImages.map((src) => ({ kind: 'image' as const, src })),
+  ]
 
   const hasLinks = !!(
     project.projectUrl ||
@@ -49,6 +79,114 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     project.instagramUrl ||
     project.youtubeUrl
   )
+
+  const blocks = project.contentBlocks || []
+  const hasCustomPage = blocks.length > 0
+
+  const renderBlock = (b: PortfolioBlock) => {
+    switch (b.type) {
+      case 'heading':
+        return (
+          <h3 key={b.id} className='text-xl sm:text-2xl font-bold text-midnight_text dark:text-white'>
+            {b.text}
+          </h3>
+        )
+      case 'text':
+        return (
+          <div
+            key={b.id}
+            className='text-sm sm:text-base leading-relaxed text-grey dark:text-gray-300 prose prose-sm sm:prose-base dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline'
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(b.html || '') }}
+          />
+        )
+      case 'quote':
+        return (
+          <blockquote
+            key={b.id}
+            className='border-l-4 border-primary/60 pl-4 italic text-grey dark:text-gray-300'>
+            <p className='text-base sm:text-lg font-medium'>"{b.text}"</p>
+            {b.caption && (
+              <cite className='block text-xs not-italic text-gray-500 dark:text-gray-400 mt-1'>
+                — {b.caption}
+              </cite>
+            )}
+          </blockquote>
+        )
+      case 'divider':
+        return (
+          <hr
+            key={b.id}
+            className='my-6 border-0 h-px bg-linear-to-r from-transparent via-border dark:via-dark_border to-transparent'
+          />
+        )
+      case 'image':
+        return (
+          <div key={b.id} className='space-y-1.5'>
+            <div className='relative w-full rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode'>
+              {b.src ? (
+                <Image
+                  src={getImgPath(b.src)}
+                  alt={b.caption || project.title}
+                  width={1200}
+                  height={800}
+                  unoptimized
+                  className='w-full h-auto object-cover max-h-[500px]'
+                />
+              ) : null}
+            </div>
+            {b.caption && (
+              <p className='text-xs text-gray-500 dark:text-gray-400 text-center italic'>
+                {b.caption}
+              </p>
+            )}
+          </div>
+        )
+      case 'video':
+        return (
+          <div
+            key={b.id}
+            className='relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black'>
+            <video
+              src={getImgPath(b.src || '')}
+              controls
+              autoPlay={b.autoplay}
+              muted={b.autoplay}
+              loop
+              playsInline
+              className='w-full max-h-[480px] object-contain mx-auto bg-black'
+            />
+          </div>
+        )
+      case 'gallery':
+        return (
+          <div key={b.id}>
+            <div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
+              {(b.images || []).map((img, gi) => (
+                <div
+                  key={gi}
+                  className='relative rounded-xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode'
+                  style={{ aspectRatio: '4/3' }}>
+                  <Image
+                    src={getImgPath(img)}
+                    alt={`${project.title} ${gi + 1}`}
+                    fill
+                    unoptimized
+                    className='object-cover'
+                  />
+                </div>
+              ))}
+            </div>
+            {b.caption && (
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1.5 text-center'>
+                {b.caption}
+              </p>
+            )}
+          </div>
+        )
+      default:
+        return null
+    }
+  }
 
   return (
     <div
@@ -73,6 +211,14 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             <span className='px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide'>
               {project.subtitle || 'Project'}
             </span>
+            {isVideo && (
+              <span className='px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20 flex items-center gap-1'>
+                <svg className='w-3 h-3 fill-current' viewBox='0 0 24 24'>
+                  <path d='M8 5v14l11-7z' />
+                </svg>
+                <span>Video Showcase</span>
+              </span>
+            )}
             {project.displayOrder && (
               <span className='px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-400'>
                 Project #{project.displayOrder}
@@ -85,13 +231,104 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           <div className='flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1.5'>
             <span>Last Updated: {formatDate(project.updatedAt || project.createdAt)}</span>
           </div>
+
+          {/* Social & Project Links (shown right under the header for quick access) */}
+          {hasLinks && (
+            <div className='mt-4 p-3.5 rounded-2xl bg-linear-to-br from-primary/5 to-blue-50 dark:from-primary/10 dark:to-blue-950/20 border border-primary/15 dark:border-primary/20'>
+              <div className='flex flex-wrap items-center gap-2 mb-2.5'>
+                <svg className='w-3.5 h-3.5 text-primary shrink-0' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' />
+                </svg>
+                <span className='text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  View on Social Media for More Details &amp; Live Repositories
+                </span>
+              </div>
+              <div className='flex flex-wrap items-center gap-2'>
+                {project.projectUrl && project.projectUrl.trim().length > 0 && (
+                  <a
+                    href={project.projectUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='px-3.5 py-1.5 rounded-xl bg-primary hover:bg-blue-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5 cursor-pointer'>
+                    <svg className='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14' />
+                    </svg>
+                    <span>Live Project Demo</span>
+                  </a>
+                )}
+                {project.githubUrl && project.githubUrl.trim().length > 0 && (
+                  <a
+                    href={project.githubUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='px-3.5 py-1.5 rounded-xl bg-[#24292e] hover:bg-black text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5 cursor-pointer'>
+                    <svg className='w-3.5 h-3.5' fill='currentColor' viewBox='0 0 24 24'>
+                      <path fillRule='evenodd' clipRule='evenodd' d='M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z' />
+                    </svg>
+                    <span>GitHub Repository</span>
+                  </a>
+                )}
+                {project.linkedinUrl && project.linkedinUrl.trim().length > 0 && (
+                  <a
+                    href={project.linkedinUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='px-3.5 py-1.5 rounded-xl bg-[#0A66C2] hover:bg-[#084e96] text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5 cursor-pointer'>
+                    <svg className='w-3.5 h-3.5' fill='currentColor' viewBox='0 0 24 24'>
+                      <path d='M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z' />
+                    </svg>
+                    <span>LinkedIn</span>
+                  </a>
+                )}
+                {project.facebookUrl && project.facebookUrl.trim().length > 0 && (
+                  <a
+                    href={project.facebookUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='px-3.5 py-1.5 rounded-xl bg-[#1877F2] hover:bg-[#0d65d9] text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5 cursor-pointer'>
+                    <svg className='w-3.5 h-3.5' fill='currentColor' viewBox='0 0 24 24'>
+                      <path d='M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z' />
+                    </svg>
+                    <span>Facebook</span>
+                  </a>
+                )}
+                {project.instagramUrl && project.instagramUrl.trim().length > 0 && (
+                  <a
+                    href={project.instagramUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5 cursor-pointer'>
+                    <svg className='w-3.5 h-3.5' fill='currentColor' viewBox='0 0 24 24'>
+                      <path d='M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z' />
+                    </svg>
+                    <span>Instagram</span>
+                  </a>
+                )}
+                {project.youtubeUrl && project.youtubeUrl.trim().length > 0 && (
+                  <a
+                    href={project.youtubeUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='px-3.5 py-1.5 rounded-xl bg-[#FF0000] hover:bg-[#d60000] text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5 cursor-pointer'>
+                    <svg className='w-3.5 h-3.5' fill='currentColor' viewBox='0 0 24 24'>
+                      <path d='M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z' />
+                    </svg>
+                    <span>YouTube</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* ── CUSTOM WEB-PAGE DETAIL (Page Builder blocks) ── */}
+        {hasCustomPage && <div className='space-y-5 mb-6'>{blocks.map(renderBlock)}</div>}
+
         {/* Gallery Mode Switch & Count */}
-        {allImages.length > 0 && (
+        {!hasCustomPage && mediaTiles.length > 0 && (
           <div className='flex items-center justify-between gap-2 mb-3'>
             <span className='text-xs font-bold uppercase tracking-wider text-gray-400'>
-              Screenshots &amp; Photos ({allImages.length})
+              Screenshots &amp; Media ({mediaTiles.length})
             </span>
             <div className='flex items-center gap-1 bg-gray-100 dark:bg-darkmode p-0.5 rounded-lg border border-border/40 dark:border-dark_border/40 text-xs'>
               <button
@@ -118,65 +355,93 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
         )}
 
-        {/* Multi-Image Gallery Showcase (Supports up to 15+ images!) */}
-        {allImages.length > 0 && (
+        {/* Media Grid Showcase */}
+        {!hasCustomPage && mediaTiles.length > 0 && (
           <div className='mb-6'>
             <div
               className={`grid gap-3 ${
-                allImages.length === 1
+                mediaTiles.length === 1
                   ? 'grid-cols-1'
-                  : allImages.length === 2
+                  : mediaTiles.length === 2
                   ? 'grid-cols-1 sm:grid-cols-2'
-                  : allImages.length === 3
+                  : mediaTiles.length === 3
                   ? 'grid-cols-1 sm:grid-cols-3'
                   : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
               }`}>
-              {allImages.map((img, i) => (
-                <div
-                  key={i}
-                  onClick={() => setActivePhotoIdx(i)}
-                  className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode group cursor-pointer ${
-                    allImages.length === 1
-                      ? 'h-80 sm:h-96'
-                      : 'h-60 sm:h-64'
-                  }`}>
-                  <Image
-                    src={getImgPath(img)}
-                    alt={`${project.title} Screenshot ${i + 1}`}
-                    fill
-                    unoptimized
-                    className={`${
-                      galleryFit === 'contain'
-                        ? 'object-contain p-2'
-                        : 'object-cover object-top'
-                    } group-hover:scale-105 transition-transform duration-300`}
-                  />
-                  <div className='absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100'>
-                    <span className='px-3 py-1.5 rounded-xl bg-black/75 text-white text-xs font-semibold backdrop-blur-xs flex items-center gap-1.5 shadow-lg'>
-                      <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7' />
-                      </svg>
-                      <span>Click to Enlarge</span>
+              {mediaTiles.map((tile, ti) => {
+                const tileH = mediaTiles.length === 1 ? 'h-80 sm:h-96' : 'h-60 sm:h-64'
+                if (tile.kind === 'video') {
+                  return (
+                    <div
+                      key={`v${ti}`}
+                      onClick={() => setActiveVideoIdx(tile.vi)}
+                      className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black group cursor-pointer ${tileH}`}>
+                      <video
+                        src={getImgPath(tile.src)}
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                        className='w-full h-full object-contain'
+                      />
+                      <div className='absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center'>
+                        <span className='w-12 h-12 rounded-full bg-white/90 text-dark flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform'>
+                          ▶
+                        </span>
+                      </div>
+                      <span className='absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-bold'>
+                        Video Showcase
+                      </span>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div
+                    key={`p${ti}`}
+                    onClick={() => setActivePhotoIdx(nonVideoImages.indexOf(tile.src))}
+                    className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode group cursor-pointer ${tileH}`}>
+                    <Image
+                      src={getImgPath(tile.src)}
+                      alt={`${project.title} Screenshot ${ti + 1}`}
+                      fill
+                      unoptimized
+                      className={`${
+                        galleryFit === 'contain'
+                          ? 'object-contain p-2'
+                          : 'object-cover object-top'
+                      } group-hover:scale-105 transition-transform duration-300`}
+                    />
+                    <div className='absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100'>
+                      <span className='px-3 py-1.5 rounded-xl bg-black/75 text-white text-xs font-semibold backdrop-blur-xs flex items-center gap-1.5 shadow-lg'>
+                        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                          <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7' />
+                        </svg>
+                        <span>Click to Enlarge</span>
+                      </span>
+                    </div>
+                    <span className='absolute bottom-2 right-2 bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full'>
+                      Photo #{ti + 1}
                     </span>
                   </div>
-                  <span className='absolute bottom-2 right-2 bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full'>
-                    Photo #{i + 1}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
 
         {/* Detailed Description Paragraph */}
-        {(project.description || project.summary) && (
+        {!hasCustomPage && (project.description || project.summary) && (
           <div className='mb-6 bg-gray-50 dark:bg-darkmode/50 p-5 rounded-2xl border border-border/40 dark:border-dark_border/40'>
             <h4 className='text-xs font-bold uppercase tracking-wider text-gray-400 mb-2'>
               Project Overview &amp; Architecture
             </h4>
-            <div className='text-sm sm:text-base text-grey dark:text-gray-300 leading-relaxed whitespace-pre-line space-y-3 font-normal'>
-              {project.description || project.summary}
-            </div>
+            <div
+              className='text-sm sm:text-base text-grey dark:text-gray-300 leading-relaxed prose prose-sm sm:prose-base dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline'
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHtml(project.description || `<p>${project.summary}</p>`),
+              }}
+            />
           </div>
         )}
 
@@ -197,104 +462,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </div>
           </div>
         )}
-
-        {/* Action & Social Media Links */}
-        {hasLinks && (
-          <div className='pt-4 border-t border-border/40 dark:border-dark_border/40'>
-            <h4 className='text-xs font-bold uppercase tracking-wider text-gray-400 mb-3'>
-              Project Links &amp; Repository
-            </h4>
-            <div className='flex flex-wrap items-center gap-2.5'>
-              {/* 1. Live Project / Demo Button */}
-              {project.projectUrl && project.projectUrl.trim().length > 0 && (
-                <a
-                  href={project.projectUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='px-4 py-2.5 rounded-xl bg-primary hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer'>
-                  <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14' />
-                  </svg>
-                  <span>Live Project Demo</span>
-                </a>
-              )}
-
-              {/* 2. GitHub Repository Button */}
-              {project.githubUrl && project.githubUrl.trim().length > 0 && (
-                <a
-                  href={project.githubUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='px-4 py-2.5 rounded-xl bg-[#24292e] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer'>
-                  <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'>
-                    <path fillRule='evenodd' clipRule='evenodd' d='M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z' />
-                  </svg>
-                  <span>GitHub Repository</span>
-                </a>
-              )}
-
-              {/* 3. LinkedIn Button */}
-              {project.linkedinUrl && project.linkedinUrl.trim().length > 0 && (
-                <a
-                  href={project.linkedinUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='px-4 py-2.5 rounded-xl bg-[#0A66C2] hover:bg-[#084e96] text-white text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer'>
-                  <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'>
-                    <path d='M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z' />
-                  </svg>
-                  <span>LinkedIn</span>
-                </a>
-              )}
-
-              {/* 4. Facebook Button */}
-              {project.facebookUrl && project.facebookUrl.trim().length > 0 && (
-                <a
-                  href={project.facebookUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='px-4 py-2.5 rounded-xl bg-[#1877F2] hover:bg-[#0d65d9] text-white text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer'>
-                  <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'>
-                    <path d='M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z' />
-                  </svg>
-                  <span>Facebook</span>
-                </a>
-              )}
-
-              {/* 5. Instagram Button */}
-              {project.instagramUrl && project.instagramUrl.trim().length > 0 && (
-                <a
-                  href={project.instagramUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] text-white text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer'>
-                  <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'>
-                    <path d='M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z' />
-                  </svg>
-                  <span>Instagram</span>
-                </a>
-              )}
-
-              {/* 6. YouTube Button */}
-              {project.youtubeUrl && project.youtubeUrl.trim().length > 0 && (
-                <a
-                  href={project.youtubeUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='px-4 py-2.5 rounded-xl bg-[#FF0000] hover:bg-[#d60000] text-white text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer'>
-                  <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'>
-                    <path d='M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z' />
-                  </svg>
-                  <span>YouTube</span>
-                </a>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* FULLSCREEN LIGHTBOX PHOTO MODAL */}
-      {activePhotoIdx !== null && allImages[activePhotoIdx] && (
+      {activePhotoIdx !== null && nonVideoImages[activePhotoIdx] && (
         <div
           onClick={() => setActivePhotoIdx(null)}
           className='fixed inset-0 z-60 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200'>
@@ -305,16 +476,16 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </button>
           <div className='relative w-full max-w-5xl h-[80vh] flex items-center justify-center'>
             <Image
-              src={getImgPath(allImages[activePhotoIdx])}
+              src={getImgPath(nonVideoImages[activePhotoIdx])}
               alt='Enlarged Screenshot'
               fill
               unoptimized
               className='object-contain'
             />
           </div>
-          {allImages.length > 1 && (
+          {nonVideoImages.length > 1 && (
             <div className='flex items-center gap-2 mt-4'>
-              {allImages.map((_, dotIdx) => (
+              {nonVideoImages.map((_, dotIdx) => (
                 <button
                   key={dotIdx}
                   onClick={(e) => {
@@ -328,6 +499,28 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* FULLSCREEN LIGHTBOX VIDEO MODAL */}
+      {activeVideoIdx !== null && videoSources[activeVideoIdx] && (
+        <div
+          onClick={() => setActiveVideoIdx(null)}
+          className='fixed inset-0 z-60 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200'>
+          <button
+            onClick={() => setActiveVideoIdx(null)}
+            className='absolute top-5 right-5 text-white bg-white/20 hover:bg-white/30 p-3 rounded-full text-lg cursor-pointer transition z-10'>
+            ✕
+          </button>
+          <div className='relative w-full max-w-5xl h-[80vh] flex items-center justify-center'>
+            <video
+              src={getImgPath(videoSources[activeVideoIdx])}
+              controls
+              autoPlay
+              playsInline
+              className='max-w-full max-h-full object-contain rounded-2xl shadow-2xl'
+            />
+          </div>
         </div>
       )}
     </div>

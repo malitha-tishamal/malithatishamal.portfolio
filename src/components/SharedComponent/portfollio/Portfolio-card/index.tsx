@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
 import 'slick-carousel/slick/slick-theme.css'
@@ -21,7 +21,13 @@ const PortfolioCard: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
   const [sliderSettings, setSliderSettings] = useState<PortfolioSliderSettings>(defaultPortfolioSliderSettings)
 
-  // Real-time Firestore sync for portfolio items
+  const sliderRef = useRef<Slider | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const isDraggingRef = useRef<boolean>(false)
+  const [isInView, setIsInView] = useState<boolean>(false)
+  const hasEnteredViewRef = useRef<boolean>(false)
+
+  // Real-time Firestore sync for portfolio items (sorted strictly by displayOrder)
   useEffect(() => {
     try {
       const unsubscribe = onSnapshot(
@@ -35,7 +41,8 @@ const PortfolioCard: React.FC = () => {
                 id: docSnap.id,
               })
             })
-            fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+            // Strict numerical ascending sort by displayOrder (#1 first)
+            fetched.sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0))
             setItems(fetched)
           } else {
             setItems(defaultPortfolioItems)
@@ -80,33 +87,85 @@ const PortfolioCard: React.FC = () => {
     }
   }, [])
 
+  // IntersectionObserver: Ensure when the user scrolls down to portfolio section,
+  // card order #1 is always displayed first and autoplay only starts when visible.
+  useEffect(() => {
+    const target = containerRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true)
+            if (!hasEnteredViewRef.current) {
+              hasEnteredViewRef.current = true
+              // Always show Order #1 when user reaches this section from above
+              sliderRef.current?.slickGoTo(0, true)
+            }
+          } else {
+            // Pause autoplay when section is scrolled out of view
+            setIsInView(false)
+          }
+        })
+      },
+      { threshold: 0.15 }
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [items.length])
+
   const settings = {
-    autoplay: sliderSettings.autoplay,
+    autoplay: isInView && sliderSettings.autoplay,
     autoplaySpeed: sliderSettings.autoplaySpeed,
     speed: sliderSettings.transitionSpeed,
     pauseOnHover: sliderSettings.pauseOnHover,
     dots: false,
-    arrows: false,
+    arrows: false, // Using our prominent custom left/right arrow buttons
     infinite: items.length > 2,
+    initialSlide: 0,
     slidesToShow: Math.min(items.length, 4),
     slidesToScroll: 1,
+    swipe: true,             // Touch swipe enabled
+    swipeToSlide: true,      // Free hand-drag / flicking to slide
+    draggable: true,         // Mouse drag on desktop enabled
+    touchMove: true,         // Touch move tracking
+    touchThreshold: 8,       // Super responsive to finger drag
+    cssEase: 'ease-out',
+    waitForAnimate: false,
+    accessibility: true,
+    beforeChange: () => {
+      isDraggingRef.current = true
+    },
+    afterChange: () => {
+      setTimeout(() => {
+        isDraggingRef.current = false
+      }, 80)
+    },
     responsive: [
       {
         breakpoint: 1280,
         settings: {
           slidesToShow: Math.min(items.length, 3),
+          slidesToScroll: 1,
+          swipeToSlide: true,
         },
       },
       {
         breakpoint: 840,
         settings: {
           slidesToShow: Math.min(items.length, 2),
+          slidesToScroll: 1,
+          swipeToSlide: true,
         },
       },
       {
         breakpoint: 540,
         settings: {
           slidesToShow: 1,
+          slidesToScroll: 1,
+          swipeToSlide: true,
         },
       },
     ],
@@ -137,15 +196,57 @@ const PortfolioCard: React.FC = () => {
 
   return (
     <div id='portfolio' className='dark:bg-darkmode'>
-      <div className='lg:px-9 m-auto px-2 max-w-[1600px] slider-container pb-12'>
-        <Slider {...settings}>
+      <div
+        ref={containerRef}
+        className='relative lg:px-12 md:px-10 sm:px-8 px-4 m-auto max-w-[1600px] slider-container pb-12 select-none group'
+      >
+        {/* LEFT SCROLL ARROW BUTTON */}
+        <button
+          type='button'
+          onClick={() => sliderRef.current?.slickPrev()}
+          aria-label='Scroll Left'
+          className='absolute left-1 sm:left-2 md:left-3 lg:left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white dark:bg-darklight text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white border-2 border-red-500/40 hover:border-red-600 shadow-xl shadow-red-500/25 hover:shadow-2xl hover:shadow-red-500/50 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-90 backdrop-blur-md'
+          title='Scroll Left'
+        >
+          <svg
+            className='w-6 h-6 sm:w-7 sm:h-7 stroke-current stroke-[3.5] -translate-x-0.5'
+            fill='none'
+            viewBox='0 0 24 24'
+          >
+            <path strokeLinecap='round' strokeLinejoin='round' d='M15 19l-7-7 7-7' />
+          </svg>
+        </button>
+
+        {/* RIGHT SCROLL ARROW BUTTON */}
+        <button
+          type='button'
+          onClick={() => sliderRef.current?.slickNext()}
+          aria-label='Scroll Right'
+          className='absolute right-1 sm:right-2 md:right-3 lg:right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white dark:bg-darklight text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white border-2 border-red-500/40 hover:border-red-600 shadow-xl shadow-red-500/25 hover:shadow-2xl hover:shadow-red-500/50 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-90 backdrop-blur-md'
+          title='Scroll Right'
+        >
+          <svg
+            className='w-6 h-6 sm:w-7 sm:h-7 stroke-current stroke-[3.5] translate-x-0.5'
+            fill='none'
+            viewBox='0 0 24 24'
+          >
+            <path strokeLinecap='round' strokeLinejoin='round' d='M9 5l7 7-7 7' />
+          </svg>
+        </button>
+
+        {/* SLIDER CAROUSEL */}
+        <Slider ref={sliderRef} {...settings}>
           {items.map((item, index) => (
-            <div key={item.id || index} className='px-3 sm:px-5 py-5'>
+            <div key={item.id || index} className='px-2.5 sm:px-4 py-5'>
               <PortfolioCardItem
                 item={item}
                 index={index}
                 isStaggered={false}
-                onClick={() => setSelectedItem(item)}
+                onClick={() => {
+                  if (!isDraggingRef.current) {
+                    setSelectedItem(item)
+                  }
+                }}
               />
             </div>
           ))}

@@ -1,4 +1,11 @@
-import { PortfolioMediaCrop } from "./portfolio";
+import {
+  PortfolioMediaCrop,
+  PortfolioImageLayout,
+  PortfolioMediaType,
+  PortfolioBlock,
+  VideoPlaybackMode,
+  PortfolioVideoTrim,
+} from "./portfolio";
 
 export type ProjectImageFit = "cover" | "contain" | "portrait_tall";
 
@@ -7,12 +14,22 @@ export interface ProjectItem {
   title: string;
   subtitle: string; // Category (e.g. Mobile App, Full Stack Web, DevOps & Cloud, AI & Machine Learning, IoT Systems, Cybersecurity)
   summary?: string; // Short summary displayed on card
-  description?: string; // Full detailed paragraph / architecture description
+  description?: string; // Full detailed paragraph / architecture description (supports Rich Text HTML)
   tags: string[]; // Tech stack tags (Flutter, React, Node.js, Kubernetes, etc.)
   coverImage: string; // Main card cover image
-  images: string[]; // Gallery of up to 15+ screenshots/images
+  images: string[]; // Gallery / screenshot slots
+  imageLayout?: PortfolioImageLayout; // single, split_horizontal_2, split_vertical_2, grid_4
   imageFit?: ProjectImageFit; // cover | contain | portrait_tall
+  detailViewFit?: 'contain' | 'cover'; // Default view in detail modal: contain (Full View / No Crop) vs cover (Fill Grid)
   coverCrop?: PortfolioMediaCrop; // zoom, ox, oy, fit
+  imageCrops?: (PortfolioMediaCrop | null)[]; // per-slot crops parallel to images[]
+  contentBlocks?: PortfolioBlock[]; // custom detail page builder blocks
+  mediaType?: PortfolioMediaType; // image | video
+  videoUrl?: string;
+  videoThumbnail?: string;
+  videoPlaybackMode?: VideoPlaybackMode;
+  videoTrim?: PortfolioVideoTrim;
+  videoCrop?: PortfolioMediaCrop;
   projectUrl?: string; // Live Project / Demo URL
   githubUrl?: string; // GitHub Repository URL
   linkedinUrl?: string; // LinkedIn URL
