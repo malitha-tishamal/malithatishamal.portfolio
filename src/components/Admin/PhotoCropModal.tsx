@@ -46,6 +46,14 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     startOy: 50,
   });
 
+  // Mirrors for wheel handler — avoids stale closure values
+  const zoomRef = useRef<number>(zoom);
+  const oxRef = useRef<number>(ox);
+  const oyRef = useRef<number>(oy);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { oxRef.current = ox; }, [ox]);
+  useEffect(() => { oyRef.current = oy; }, [oy]);
+
   // Sync initial values when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -100,6 +108,41 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [handleMouseMove, handleMouseUp]);
+
+  // Mouse-wheel zoom — cursor-centered, { passive: false } to allow preventDefault
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      const sensitivity = 0.0012; // lower = smoother/slower
+      const delta = e.deltaY * sensitivity;        // positive = scroll down = zoom out
+      const prevZoom = zoomRef.current;
+      const newZoom = Math.min(3.5, Math.max(1, prevZoom - delta));
+
+      if (newZoom === prevZoom) return;
+
+      // Cursor position as % of the container
+      const rect = el.getBoundingClientRect();
+      const mouseX = ((e.clientX - rect.left) / rect.width) * 100;
+      const mouseY = ((e.clientY - rect.top) / rect.height) * 100;
+
+      // Pull focal point toward cursor proportionally to zoom change
+      const zoomRatio = (newZoom - prevZoom) / prevZoom;
+      const newOx = Math.min(100, Math.max(0, oxRef.current + (mouseX - oxRef.current) * zoomRatio));
+      const newOy = Math.min(100, Math.max(0, oyRef.current + (mouseY - oyRef.current) * zoomRatio));
+
+      setZoom(newZoom);
+      setOx(Math.round(newOx * 10) / 10);
+      setOy(Math.round(newOy * 10) / 10);
+      if (newZoom > 1) setFitMode("cover");
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Touch drag for mobile/tablets
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -437,7 +480,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                 type="range"
                 min={1}
                 max={3.5}
-                step={0.05}
+                step={0.01}
                 value={zoom}
                 onChange={(e) => {
                   setZoom(Number(e.target.value));

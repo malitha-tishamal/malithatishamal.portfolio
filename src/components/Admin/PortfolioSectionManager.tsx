@@ -101,6 +101,7 @@ export const PortfolioSectionManager: React.FC = () => {
   const [displayOrder, setDisplayOrder] = useState<number>(1);
   const [imageLayout, setImageLayout] = useState<PortfolioImageLayout>("single");
   const [imageFit, setImageFit] = useState<PortfolioImageFit>("cover");
+  const [detailViewFit, setDetailViewFit] = useState<"contain" | "cover">("contain");
   const [images, setImages] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -329,6 +330,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setDisplayOrder(items.length > 0 ? Math.max(...items.map((i) => i.displayOrder || 0)) + 1 : 1);
     setImageLayout("single");
     setImageFit("cover");
+    setDetailViewFit("contain");
     setImages([""]);
     setImageCrops([null]);
     setMediaType("image");
@@ -359,6 +361,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setDisplayOrder(item.displayOrder || 1);
     setImageLayout(item.imageLayout || "single");
     setImageFit(item.imageFit || "cover");
+    setDetailViewFit(item.detailViewFit || (item.imageFit === "contain" ? "contain" : "contain"));
     const loadedImages = item.images && item.images.length > 0 ? item.images : [""];
     setImages(loadedImages);
     setImageCrops(loadedImages.map((_, i) => item.imageCrops?.[i] ?? null));
@@ -541,6 +544,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setLiveSaving(true);
     try {
       const payload: Record<string, any> = {
+        detailViewFit,
         imageCrops: imageCrops.some((c) => c && (c.zoom > 1 || c.fit || c.ox !== 50 || c.oy !== 50))
           ? imageCrops
           : null,
@@ -606,6 +610,7 @@ export const PortfolioSectionManager: React.FC = () => {
           : ["/images/portfolio/cozycasa.png"],
       imageLayout,
       imageFit,
+      detailViewFit,
       mediaType,
       videoUrl: mediaType === "video" ? videoUrl.trim() : undefined,
       videoThumbnail: mediaType === "video" ? videoThumbnail.trim() : undefined,
@@ -1251,6 +1256,55 @@ export const PortfolioSectionManager: React.FC = () => {
                       <div className="text-[10px] text-gray-500 dark:text-gray-400">{mode.desc}</div>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Detail Modal Default Photo View (Popup View Style) */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border/60 dark:border-dark_border/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-dark dark:text-white">
+                    Detail Modal Default Photo View (Popup View Style)
+                  </label>
+                  <span className="text-[10px] text-gray-400">
+                    Controls default view when visitor clicks card
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setDetailViewFit("contain")}
+                    className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                      detailViewFit === "contain"
+                        ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-2 ring-primary/20"
+                        : "border-border dark:border-dark_border hover:border-gray-400 text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">🖼️</span>
+                      <span className="text-xs font-bold text-midnight_text dark:text-white">Full View (No Crop)</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                      Shows 100% of entire photo without cutting edges (Contain mode).
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDetailViewFit("cover")}
+                    className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                      detailViewFit === "cover"
+                        ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-2 ring-primary/20"
+                        : "border-border dark:border-dark_border hover:border-gray-400 text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">📐</span>
+                      <span className="text-xs font-bold text-midnight_text dark:text-white">Fill Grid (Crop View)</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                      Fills the modal gallery tiles edge-to-edge (Cover mode).
+                    </div>
+                  </button>
                 </div>
               </div>
 
