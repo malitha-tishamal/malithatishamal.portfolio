@@ -11,14 +11,15 @@ import {
 } from "@/types/techstack";
 import { TechDetailModal } from "./TechDetailModal";
 import { trackTechStackHover, trackTechStackClick } from "@/utils/techStackAnalytics";
-import { getTechInfo } from "@/data/techDescriptions";
+import { getTechInfo, getTechBrandColor } from "@/data/techDescriptions";
+import { useTheme } from "next-themes";
 
 // ── Icon renderer ─────────────────────────────────────────────────────────────
-function TechIcon({ item }: { item: TechItem }) {
+function TechIcon({ item, color }: { item: TechItem; color?: string }) {
   if (item.iconType === "devicon") {
     return (
       <i
-        className={`${item.iconValue} text-4xl`}
+        className={`${item.iconValue} text-4xl transition-transform duration-300 group-hover:scale-110`}
         aria-label={item.name}
       />
     );
@@ -29,7 +30,7 @@ function TechIcon({ item }: { item: TechItem }) {
       <img
         src={item.iconValue}
         alt={item.name}
-        className="w-10 h-10 object-contain"
+        className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
         onError={(e) => {
           (e.currentTarget as HTMLImageElement).style.display = "none";
         }}
@@ -38,23 +39,42 @@ function TechIcon({ item }: { item: TechItem }) {
   }
   // emoji
   return (
-    <span className="text-4xl leading-none" role="img" aria-label={item.name}>
+    <span
+      className="text-4xl leading-none transition-transform duration-300 group-hover:scale-110"
+      role="img"
+      aria-label={item.name}
+    >
       {item.iconValue}
     </span>
   );
 }
 
 // ── Proficiency dots ──────────────────────────────────────────────────────────
-function ProficiencyDots({ level }: { level?: number }) {
+function ProficiencyDots({
+  level,
+  color,
+  isDark,
+}: {
+  level?: number;
+  color?: string;
+  isDark?: boolean;
+}) {
   if (!level) return null;
   return (
-    <div className="flex gap-0.5 mt-1 justify-center">
+    <div className="flex gap-1 mt-1 justify-center">
       {[1, 2, 3, 4, 5].map((i) => (
         <span
           key={i}
-          className={`w-1.5 h-1.5 rounded-full ${
-            i <= level ? "bg-primary" : "bg-gray-300 dark:bg-gray-600"
-          }`}
+          className="w-1.5 h-1.5 rounded-full transition-all duration-200"
+          style={{
+            backgroundColor:
+              i <= level
+                ? color || "#2F73F2"
+                : isDark
+                ? "rgba(255, 255, 255, 0.15)"
+                : "rgba(0, 0, 0, 0.12)",
+            boxShadow: i <= level && color ? `0 0 5px ${color}80` : undefined,
+          }}
         />
       ))}
     </div>
@@ -63,6 +83,13 @@ function ProficiencyDots({ level }: { level?: number }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function TechStack() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const isDark = mounted ? resolvedTheme === "dark" : false;
+
   const [sectionContent, setSectionContent] = useState<TechStackSection>(
     defaultTechStackSection
   );
@@ -111,8 +138,15 @@ export default function TechStack() {
       : items.filter((item) => item.categoryId === activeCategory);
 
   return (
-    <section className="py-20 bg-white dark:bg-blacksection">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section
+      id="tech-stack"
+      className="py-20 bg-white dark:bg-darkmode transition-colors duration-300 relative overflow-hidden"
+    >
+      {/* Ambient background glows */}
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none -z-0" />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl pointer-events-none -z-0" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* Section Header */}
         <div className="text-center mb-12" data-aos="fade-up">
@@ -122,7 +156,7 @@ export default function TechStack() {
               {sectionContent.badge}
             </span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-dark dark:text-white mb-3">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-midnight_text dark:text-white mb-3">
             {sectionContent.heading}
           </h2>
           <p className="text-base text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
@@ -135,10 +169,10 @@ export default function TechStack() {
           <div className="flex flex-wrap justify-center gap-2 mb-10" data-aos="fade-up" data-aos-delay="100">
             <button
               onClick={() => setActiveCategory("all")}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all cursor-pointer ${
                 activeCategory === "all"
-                  ? "bg-primary text-white border-primary shadow-md"
-                  : "bg-gray-50 dark:bg-white/[0.05] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:border-primary/50 hover:text-primary"
+                  ? "bg-primary text-white border-primary shadow-md shadow-primary/25"
+                  : "bg-gray-50 dark:bg-darklight border-gray-200 dark:border-dark_border text-gray-600 dark:text-gray-300 hover:border-primary/50 hover:text-primary"
               }`}
             >
               All
@@ -152,10 +186,10 @@ export default function TechStack() {
                     ? { backgroundColor: cat.color, borderColor: cat.color }
                     : {}
                 }
-                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
+                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all cursor-pointer ${
                   activeCategory === cat.id
                     ? "text-white shadow-md"
-                    : "bg-gray-50 dark:bg-white/[0.05] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:border-primary/50 hover:text-primary"
+                    : "bg-gray-50 dark:bg-darklight border-gray-200 dark:border-dark_border text-gray-600 dark:text-gray-300 hover:border-primary/50 hover:text-primary"
                 }`}
               >
                 {cat.name}
@@ -169,13 +203,13 @@ export default function TechStack() {
           <p className="text-center text-gray-400 py-12">No technologies found.</p>
         ) : (
           <div
-            className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3"
+            className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3.5"
             data-aos="fade-up"
             data-aos-delay="150"
           >
             {filteredItems.map((item) => {
               const cat = categories.find((c) => c.id === item.categoryId);
-              const cardColor = cat?.color ?? "#0a66c2";
+              const cardColor = getTechBrandColor(item.name, cat?.color);
               const fallback = getTechInfo(item.name);
               const hoverDesc = item.shortDescription || fallback.shortDescription;
               const displayExp = item.experienceYears || fallback.experienceYears;
@@ -190,23 +224,32 @@ export default function TechStack() {
                   onMouseEnter={() => {
                     trackTechStackHover(item);
                   }}
+                  style={{
+                    background: isDark
+                      ? `linear-gradient(145deg, ${cardColor}18 0%, rgba(13, 22, 44, 0.85) 100%)`
+                      : `linear-gradient(145deg, ${cardColor}0f 0%, #ffffff 100%)`,
+                    borderColor: isDark ? `${cardColor}38` : `${cardColor}30`,
+                    boxShadow: isDark
+                      ? `0 4px 16px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)`
+                      : `0 2px 10px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px ${cardColor}12`,
+                  }}
                   className="group relative flex flex-col items-center justify-center gap-2 p-4 rounded-2xl
-                    bg-gray-50 dark:bg-[#141b2d]
-                    border border-gray-200 dark:border-white/[0.08]
-                    hover:shadow-xl hover:-translate-y-1.5
-                    transition-all duration-200 cursor-pointer text-center select-none"
+                    border hover:shadow-xl hover:-translate-y-1.5
+                    transition-all duration-300 cursor-pointer text-center select-none"
                 >
-                  <TechIcon item={item} />
-                  <span className="text-xs font-semibold text-center text-gray-700 dark:text-gray-200 leading-tight">
+                  <TechIcon item={item} color={cardColor} />
+                  <span className="text-xs font-bold text-center text-midnight_text dark:text-gray-100 leading-tight">
                     {item.name}
                   </span>
-                  <ProficiencyDots level={item.proficiency} />
+                  <ProficiencyDots level={item.proficiency} color={cardColor} isDark={isDark} />
 
                   {/* Hover accent border glow */}
                   <span
-                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                     style={{
-                      boxShadow: `inset 0 0 0 1.5px ${cardColor}99, 0 8px 28px -6px ${cardColor}40`,
+                      boxShadow: isDark
+                        ? `inset 0 0 0 1.5px ${cardColor}cc, 0 12px 30px -6px ${cardColor}55`
+                        : `inset 0 0 0 1.5px ${cardColor}aa, 0 12px 28px -6px ${cardColor}40`,
                     }}
                   />
 
@@ -216,30 +259,34 @@ export default function TechStack() {
                       invisible opacity-0 -translate-y-1
                       group-hover:visible group-hover:opacity-100 group-hover:translate-y-0
                       transition-all duration-200 ease-out
-                      z-50 pointer-events-none w-56"
+                      z-50 pointer-events-none w-60"
                   >
                     {/* Glass panel */}
                     <div
                       className="relative rounded-2xl overflow-hidden text-left px-3.5 pt-3.5 pb-3"
                       style={{
-                        background: `linear-gradient(135deg, ${cardColor}1a 0%, rgba(8,14,28,0.86) 70%)`,
-                        border: `1px solid ${cardColor}50`,
-                        backdropFilter: "blur(22px) saturate(200%)",
-                        WebkitBackdropFilter: "blur(22px) saturate(200%)",
-                        boxShadow: `0 20px 60px -10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)`,
+                        background: isDark
+                          ? `linear-gradient(140deg, rgba(22, 35, 65, 0.94) 0%, rgba(12, 19, 36, 0.97) 100%)`
+                          : `linear-gradient(140deg, #ffffff 0%, rgba(248, 250, 252, 0.98) 100%)`,
+                        border: `1px solid ${isDark ? `${cardColor}65` : `${cardColor}45`}`,
+                        backdropFilter: "blur(20px) saturate(180%)",
+                        WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                        boxShadow: isDark
+                          ? `0 20px 50px -10px rgba(0,0,0,0.65), 0 0 25px -5px ${cardColor}35, inset 0 1px 0 rgba(255,255,255,0.1)`
+                          : `0 20px 45px -10px rgba(15,23,42,0.14), 0 0 20px -5px ${cardColor}25, inset 0 1px 0 rgba(255,255,255,0.8)`,
                       }}
                     >
                       {/* Top shimmer line */}
                       <div
                         className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl"
                         style={{
-                          background: `linear-gradient(90deg, transparent, ${cardColor}cc 40%, ${cardColor} 50%, ${cardColor}cc 60%, transparent)`,
+                          background: `linear-gradient(90deg, transparent, ${cardColor}dd 40%, ${cardColor} 50%, ${cardColor}dd 60%, transparent)`,
                         }}
                       />
 
                       {/* Corner radial glow */}
                       <div
-                        className="absolute top-0 right-0 w-16 h-16 pointer-events-none opacity-25"
+                        className="absolute top-0 right-0 w-20 h-20 pointer-events-none opacity-20"
                         style={{
                           background: `radial-gradient(circle at top right, ${cardColor}, transparent 70%)`,
                         }}
@@ -251,10 +298,12 @@ export default function TechStack() {
                           className="w-2 h-2 rounded-full shrink-0"
                           style={{
                             backgroundColor: cardColor,
-                            boxShadow: `0 0 7px ${cardColor}`,
+                            boxShadow: `0 0 8px ${cardColor}`,
                           }}
                         />
-                        <span className="font-bold text-[12.5px] text-white leading-none">{item.name}</span>
+                        <span className="font-bold text-[12.5px] text-midnight_text dark:text-white leading-none">
+                          {item.name}
+                        </span>
                         {displayExp && (
                           <span
                             className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
@@ -273,14 +322,14 @@ export default function TechStack() {
                       {cat && (
                         <div
                           className="relative z-10 text-[9px] font-bold uppercase tracking-widest mb-1.5"
-                          style={{ color: `${cardColor}dd` }}
+                          style={{ color: cardColor }}
                         >
                           {cat.name}
                         </div>
                       )}
 
                       {/* Description */}
-                      <p className="relative z-10 text-[11px] leading-[1.55] text-gray-200/85 line-clamp-3">
+                      <p className="relative z-10 text-[11px] leading-[1.55] text-gray-600 dark:text-gray-200/90 line-clamp-3">
                         {hoverDesc}
                       </p>
 
@@ -288,7 +337,7 @@ export default function TechStack() {
                       <div
                         className="relative z-10 mt-2.5 pt-2 border-t flex items-center gap-1.5 text-[10px] font-bold"
                         style={{
-                          borderColor: `${cardColor}28`,
+                          borderColor: isDark ? `${cardColor}30` : `${cardColor}25`,
                           color: cardColor,
                         }}
                       >
@@ -305,9 +354,9 @@ export default function TechStack() {
                       <div
                         className="w-3 h-3 rotate-45 -mt-1.5"
                         style={{
-                          background: "rgba(8,14,28,0.86)",
-                          borderRight: `1px solid ${cardColor}50`,
-                          borderBottom: `1px solid ${cardColor}50`,
+                          background: isDark ? "rgba(12, 19, 36, 0.97)" : "#ffffff",
+                          borderRight: `1px solid ${isDark ? `${cardColor}65` : `${cardColor}45`}`,
+                          borderBottom: `1px solid ${isDark ? `${cardColor}65` : `${cardColor}45`}`,
                         }}
                       />
                     </div>
@@ -329,7 +378,7 @@ export default function TechStack() {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white transition-colors"
+                className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-midnight_text dark:hover:text-white transition-colors cursor-pointer"
               >
                 <span
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"

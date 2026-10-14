@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { TechItem, TechCategory } from "@/types/techstack";
-import { getTechInfo } from "@/data/techDescriptions";
+import { getTechInfo, getTechBrandColor } from "@/data/techDescriptions";
 import { sanitizeHtml } from "@/utils/sanitize";
 
 interface TechDetailModalProps {
@@ -40,7 +40,7 @@ export const TechDetailModal: React.FC<TechDetailModalProps> = ({
 
   if (!item) return null;
 
-  const accentColor = category?.color || "#0a66c2";
+  const accentColor = getTechBrandColor(item.name, category?.color);
   const fallback = getTechInfo(item.name);
   const displayShort = item.shortDescription || fallback.shortDescription;
   const displayDesc = item.description || fallback.description;

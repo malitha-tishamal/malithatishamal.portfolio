@@ -543,8 +543,17 @@ export const PortfolioSectionManager: React.FC = () => {
     }
     setLiveSaving(true);
     try {
+      const validImages = images.filter((img) => img && img.trim().length > 0);
       const payload: Record<string, any> = {
         detailViewFit,
+        imageLayout,
+        imageFit,
+        images:
+          mediaType === "video"
+            ? [videoThumbnail || videoUrl || "/images/portfolio/cozycasa.png"]
+            : validImages.length > 0
+            ? validImages
+            : ["/images/portfolio/cozycasa.png"],
         imageCrops: imageCrops.some((c) => c && (c.zoom !== 1 || c.fit || c.ox !== 50 || c.oy !== 50))
           ? imageCrops
           : null,
@@ -557,9 +566,12 @@ export const PortfolioSectionManager: React.FC = () => {
           videoTrimStart > 0 || videoTrimEnd > 0
             ? { start: videoTrimStart, end: videoTrimEnd }
             : null;
+        if (videoUrl.trim()) payload.videoUrl = videoUrl.trim();
+        if (videoThumbnail.trim()) payload.videoThumbnail = videoThumbnail.trim();
+        if (videoPlaybackMode) payload.videoPlaybackMode = videoPlaybackMode;
       }
       await updateDoc(doc(db, "portfolio", editingId), payload);
-      toast.success("Crop / trim applied to the live card!");
+      toast.success("Crop / trim and images saved to the live card!");
     } catch (err: any) {
       console.error("Live save media error:", err);
       toast.error(err.message || "Live save failed.");
@@ -2625,7 +2637,7 @@ export const PortfolioSectionManager: React.FC = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
-                              {((currentCrop?.zoom || 1) > 1 || currentCrop?.fit) && (
+                              {((currentCrop?.zoom || 1) !== 1 || currentCrop?.fit) && (
                                 <button
                                   type="button"
                                   onClick={() => updateImageCrop(slotIdx, null)}
@@ -2688,7 +2700,7 @@ export const PortfolioSectionManager: React.FC = () => {
                                 <div
                                   className="absolute inset-0 w-full h-full z-1"
                                   style={
-                                    currentZoom > 1
+                                    currentZoom !== 1
                                       ? {
                                           transform: `scale(${currentZoom})`,
                                           transformOrigin: `${currentOx}% ${currentOy}%`,

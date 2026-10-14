@@ -218,11 +218,11 @@ const Certifications: React.FC = () => {
               type="button"
               onClick={() => sliderRef.current?.slickPrev()}
               aria-label="Scroll Left"
-              className="absolute left-0 sm:left-1 md:left-2 lg:left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95"
+              className="absolute left-0 sm:left-1 md:left-2 lg:left-3 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-md shadow-red-500/25 hover:shadow-lg hover:shadow-red-500/40 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95"
               title="Scroll Left"
             >
               <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 stroke-current stroke-[2.5] -translate-x-0.5"
+                className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 stroke-current stroke-[2.5] -translate-x-0.5"
                 fill="none"
                 viewBox="0 0 24 24"
               >
@@ -235,11 +235,11 @@ const Certifications: React.FC = () => {
               type="button"
               onClick={() => sliderRef.current?.slickNext()}
               aria-label="Scroll Right"
-              className="absolute right-0 sm:right-1 md:right-2 lg:right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95"
+              className="absolute right-0 sm:right-1 md:right-2 lg:right-3 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-white dark:bg-darklight border-2 border-red-500 text-red-600 dark:text-red-500 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white hover:border-red-600 shadow-md shadow-red-500/25 hover:shadow-lg hover:shadow-red-500/40 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95"
               title="Scroll Right"
             >
               <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 stroke-current stroke-[2.5] translate-x-0.5"
+                className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 stroke-current stroke-[2.5] translate-x-0.5"
                 fill="none"
                 viewBox="0 0 24 24"
               >

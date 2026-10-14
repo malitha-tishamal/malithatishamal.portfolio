@@ -246,3 +246,115 @@ export function getTechInfo(name: string): TechInfo {
     experienceYears: "2+ Years",
   };
 }
+
+/**
+ * Iconic brand colors for tech stack items
+ */
+export const TECH_BRAND_COLORS: Record<string, string> = {
+  // Languages
+  python: "#3776AB",
+  typescript: "#3178C6",
+  javascript: "#EAB308",
+  go: "#00ADD8",
+  bash: "#4EAA25",
+  shell: "#4EAA25",
+  c: "#659AD2",
+  "c++": "#00599C",
+  cpp: "#00599C",
+  "c#": "#239120",
+  csharp: "#239120",
+  java: "#ED8B00",
+  php: "#777BB4",
+  ruby: "#CC342D",
+  rust: "#DEA584",
+  swift: "#F05138",
+  kotlin: "#7F52FF",
+  dart: "#0175C2",
+  html: "#E34F26",
+  html5: "#E34F26",
+  css: "#1572B6",
+  css3: "#1572B6",
+  sql: "#CC292B",
+
+  // Frameworks & Libraries
+  react: "#0EA5E9",
+  "react native": "#0EA5E9",
+  "next.js": "#38BDF8",
+  nextjs: "#38BDF8",
+  "node.js": "#22C55E",
+  nodejs: "#22C55E",
+  fastapi: "#059669",
+  flutter: "#0284C7",
+  tailwindcss: "#06B6D4",
+  tailwind: "#06B6D4",
+  vue: "#42B883",
+  vuejs: "#42B883",
+  angular: "#DD0031",
+  django: "#092E20",
+  flask: "#000000",
+  express: "#68A063",
+  laravel: "#FF2D20",
+  spring: "#6DB33F",
+  redux: "#764ABC",
+  bootstrap: "#7952B3",
+
+  // DevOps & Cloud
+  docker: "#2496ED",
+  linux: "#EAB308",
+  aws: "#FF9900",
+  nginx: "#009639",
+  github: "#8B5CF6",
+  git: "#F05032",
+  ansible: "#EE0000",
+  kubernetes: "#326CE5",
+  terraform: "#844FBA",
+  jenkins: "#D24939",
+  azure: "#0089D6",
+  gcp: "#4285F4",
+  gitlab: "#FC6D26",
+  grafana: "#F46800",
+  prometheus: "#E6522C",
+
+  // Databases
+  postgresql: "#336791",
+  mysql: "#00758F",
+  mongodb: "#10B981",
+  redis: "#DC382D",
+  firebase: "#F59E0B",
+  sqlite: "#003B57",
+  supabase: "#3ECF8E",
+  cassandra: "#1287B1",
+  elasticsearch: "#005571",
+
+  // Tools & Platforms
+  "vs code": "#007ACC",
+  vscode: "#007ACC",
+  postman: "#FF6C37",
+  figma: "#A855F7",
+  jira: "#0052CC",
+  trello: "#0079BF",
+  slack: "#4A154B",
+
+  // Security & Networking
+  wireshark: "#1679A7",
+  nmap: "#38BDF8",
+  metasploit: "#EF4444",
+  openvpn: "#EA7E20",
+  burpsuite: "#FF6633",
+  kali: "#557C94",
+  snort: "#CA2026",
+};
+
+export function getTechBrandColor(name: string, fallbackColor?: string): string {
+  const key = name.toLowerCase().trim();
+  if (TECH_BRAND_COLORS[key]) {
+    return TECH_BRAND_COLORS[key];
+  }
+  for (const [techKey, color] of Object.entries(TECH_BRAND_COLORS)) {
+    if (key.includes(techKey) || techKey.includes(key)) {
+      return color;
+    }
+  }
+  return fallbackColor || "#2F73F2";
+}
+
