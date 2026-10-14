@@ -66,14 +66,27 @@ const fmtTime = (s: number): string => {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 };
 
-// Firestore setDoc rejects `undefined` field values — drop them before writing
-const stripUndefined = (obj: Record<string, any>): Record<string, any> => {
-  const out: Record<string, any> = {};
-  Object.keys(obj).forEach((k) => {
-    if (obj[k] !== undefined) out[k] = obj[k];
-  });
-  return out;
+// Firestore setDoc & updateDoc reject `undefined` field values anywhere in the object tree — drop them deeply
+export const deepCleanUndefined = <T,>(obj: T): T => {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj
+      .filter((v) => v !== undefined)
+      .map((v) => deepCleanUndefined(v)) as unknown as T;
+  }
+  if (typeof obj === "object" && !(obj instanceof Date)) {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, any>)) {
+      if (v !== undefined) {
+        out[k] = deepCleanUndefined(v);
+      }
+    }
+    return out as T;
+  }
+  return obj;
 };
+
+const stripUndefined = deepCleanUndefined;
 
 export const ProjectsSectionManager: React.FC = () => {
   const [projects, setProjects] = useState<ProjectItem[]>([]);

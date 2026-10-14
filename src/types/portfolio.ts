@@ -27,14 +27,16 @@ export type PortfolioBlockType =
   | "video"
   | "gallery"
   | "quote"
-  | "divider";
+  | "divider"
+  | "split"
+  | "html";
 
 export interface PortfolioBlock {
   id: string;
   type: PortfolioBlockType;
   /** heading / quote plain text */
   text?: string;
-  /** rich HTML for text blocks */
+  /** rich HTML for text, split, or html blocks */
   html?: string;
   /** image / video primary src */
   src?: string;
@@ -44,6 +46,10 @@ export interface PortfolioBlock {
   images?: string[];
   /** video autoplay loop muted on the page */
   autoplay?: boolean;
+  /** Split layout: 'image_left' (Image on Left, Text on Right) or 'image_right' (Text on Left, Image on Right) */
+  layout?: "image_left" | "image_right";
+  /** Split width ratio: '50-50' | '40-60' | '60-40' */
+  splitRatio?: "50-50" | "40-60" | "60-40";
 }
 
 export const isVideoUrl = (url?: string): boolean => {
