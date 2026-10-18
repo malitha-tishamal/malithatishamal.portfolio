@@ -30,14 +30,29 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.*
 
-# firebase
+# firebase & secrets
 .firebase/
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
 *serviceAccount*.json
 *service-account*.json
+credentials*.json
+google-services.json
+GoogleService-Info.plist
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.secret
+
+# backups
+*backup*
+*BACKUP*
+*.bak
 
 # vercel
 .vercel
