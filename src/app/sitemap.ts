@@ -2,7 +2,9 @@ import { MetadataRoute } from 'next';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://malithatishamal.vercel.app';
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://malithatishamal.vercel.app')
+  .replace(/^["']|["']$/g, '')
+  .trim();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteUrl;
@@ -57,13 +59,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const dynamicPages: MetadataRoute.Sitemap = [];
 
   try {
+    const fetchWithTimeout = async <T>(promise: Promise<T>, timeoutMs = 4000): Promise<T> => {
+      let handle: NodeJS.Timeout;
+      const timeout = new Promise<never>((_, reject) => {
+        handle = setTimeout(() => reject(new Error('Firestore timeout')), timeoutMs);
+      });
+      return Promise.race([promise, timeout]).finally(() => clearTimeout(handle));
+    };
+
     // Fetch blog posts
     const blogsQuery = query(
       collection(db, 'blogs'),
       orderBy('publishedAt', 'desc'),
       limit(50)
     );
-    const blogsSnapshot = await getDocs(blogsQuery);
+    const blogsSnapshot = await fetchWithTimeout(getDocs(blogsQuery));
     
     blogsSnapshot.forEach((doc) => {
       const data = doc.data();
@@ -84,7 +94,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       orderBy('createdAt', 'desc'),
       limit(50)
     );
-    const projectsSnapshot = await getDocs(projectsQuery);
+    const projectsSnapshot = await fetchWithTimeout(getDocs(projectsQuery));
     
     projectsSnapshot.forEach((doc) => {
       const data = doc.data();
@@ -105,7 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       orderBy('updatedAt', 'desc'),
       limit(50)
     );
-    const portfolioSnapshot = await getDocs(portfolioQuery);
+    const portfolioSnapshot = await fetchWithTimeout(getDocs(portfolioQuery));
     
     portfolioSnapshot.forEach((doc) => {
       const data = doc.data();
