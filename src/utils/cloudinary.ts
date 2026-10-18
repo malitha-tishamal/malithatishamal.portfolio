@@ -1,9 +1,9 @@
 import axios from "axios";
 
 export const CLOUDINARY_CLOUD_NAME =
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "dqeptzlsb";
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "";
 export const CLOUDINARY_UPLOAD_PRESET =
-  process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "flutter_mediq_upload";
+  process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "";
 
 export interface CloudinaryUploadResponse {
   url: string;
@@ -20,11 +20,22 @@ export const uploadToCloudinary = async (
   onProgress?: (percent: number) => void,
   resourceType: "auto" | "image" | "video" | "raw" = "auto"
 ): Promise<CloudinaryUploadResponse> => {
+  const cloudName =
+    CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset =
+    CLOUDINARY_UPLOAD_PRESET || process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    throw new Error(
+      "Cloudinary credentials missing. Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in your environment variables."
+    );
+  }
+
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  formData.append("upload_preset", uploadPreset);
 
-  const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+  const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
 
   const response = await axios.post<CloudinaryUploadResponse>(endpoint, formData, {
     headers: {
