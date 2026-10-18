@@ -1,7 +1,9 @@
 import axios from "axios";
 
-export const CLOUDINARY_CLOUD_NAME = "dqeptzlsb";
-export const CLOUDINARY_UPLOAD_PRESET = "flutter_mediq_upload";
+export const CLOUDINARY_CLOUD_NAME =
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "dqeptzlsb";
+export const CLOUDINARY_UPLOAD_PRESET =
+  process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "flutter_mediq_upload";
 
 export interface CloudinaryUploadResponse {
   url: string;
