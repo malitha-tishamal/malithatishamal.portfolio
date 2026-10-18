@@ -183,6 +183,65 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             )}
           </div>
         )
+      case 'split': {
+        const isRight = b.layout === 'image_right'
+        const ratio = b.splitRatio || '50-50'
+        const gridCols =
+          ratio === '40-60'
+            ? 'lg:grid-cols-[2fr_3fr]'
+            : ratio === '60-40'
+            ? 'lg:grid-cols-[3fr_2fr]'
+            : 'lg:grid-cols-2'
+
+        const imageEl = (
+          <div key='img' className='space-y-1.5 w-full'>
+            <div className='relative w-full rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-gray-100 dark:bg-darkmode shadow-md aspect-[4/3]'>
+              {b.src ? (
+                <Image
+                  src={getImgPath(b.src)}
+                  alt={b.caption || project.title}
+                  fill
+                  unoptimized
+                  className='object-cover hover:scale-105 transition-transform duration-500'
+                />
+              ) : (
+                <div className='w-full h-full flex items-center justify-center text-xs text-gray-400'>
+                  No Image Added
+                </div>
+              )}
+            </div>
+            {b.caption && (
+              <p className='text-xs text-gray-500 dark:text-gray-400 text-center italic'>
+                {b.caption}
+              </p>
+            )}
+          </div>
+        )
+
+        const textEl = (
+          <div
+            key='txt'
+            className='flex flex-col justify-center text-sm sm:text-base leading-relaxed text-grey dark:text-gray-300 prose prose-sm sm:prose-base dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline'
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(b.html || '') }}
+          />
+        )
+
+        return (
+          <div
+            key={b.id}
+            className={`grid grid-cols-1 ${gridCols} gap-6 sm:gap-8 items-center my-4`}>
+            {isRight ? [textEl, imageEl] : [imageEl, textEl]}
+          </div>
+        )
+      }
+      case 'html':
+        return (
+          <div
+            key={b.id}
+            className='w-full overflow-x-auto text-sm sm:text-base text-grey dark:text-gray-300 my-4'
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(b.html || '') }}
+          />
+        )
       default:
         return null
     }

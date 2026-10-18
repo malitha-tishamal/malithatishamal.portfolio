@@ -31,9 +31,18 @@ yarn-error.log*
 .env*.local
 .env
 
+# firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+*serviceAccount*.json
+*service-account*.json
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+

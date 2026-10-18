@@ -8,6 +8,8 @@ import { uploadToCloudinary } from "@/utils/cloudinary";
 import { getImgPath } from "@/utils/image";
 import toast from "react-hot-toast";
 
+import { sanitizeHtml } from "@/utils/sanitize";
+
 interface PortfolioPageBuilderProps {
   blocks: PortfolioBlock[];
   onChange: (blocks: PortfolioBlock[]) => void;
@@ -18,6 +20,8 @@ const newId = () => `blk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}
 const BLOCK_META: Record<PortfolioBlockType, { label: string; icon: string }> = {
   heading: { label: "Heading", icon: "H" },
   text: { label: "Paragraph", icon: "¶" },
+  split: { label: "Split (Image + Text)", icon: "◫" },
+  html: { label: "HTML Code", icon: "<>" },
   image: { label: "Image", icon: "🖼" },
   video: { label: "Video", icon: "🎬" },
   gallery: { label: "Gallery", icon: "🗂" },
@@ -29,17 +33,27 @@ const makeBlock = (type: PortfolioBlockType): PortfolioBlock => ({
   id: newId(),
   type,
   text: type === "heading" ? "New Section Heading" : type === "quote" ? "Your quote here" : "",
-  html: type === "text" ? "<p>Write your paragraph here…</p>" : "",
+  html:
+    type === "text"
+      ? "<p>Write your paragraph here…</p>"
+      : type === "split"
+      ? "<p>Write content describing this image or section here…</p>"
+      : type === "html"
+      ? '<div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-center">\n  <h4 class="font-bold text-blue-500">Custom HTML Block</h4>\n  <p class="text-sm">Paste any custom HTML, embed widgets, or tables here.</p>\n</div>'
+      : "",
   src: "",
   caption: "",
   images: type === "gallery" ? [] : undefined,
   autoplay: type === "video" ? true : undefined,
+  layout: type === "split" ? "image_left" : undefined,
+  splitRatio: type === "split" ? "50-50" : undefined,
 });
 
 export const PortfolioPageBuilder: React.FC<PortfolioPageBuilderProps> = ({ blocks, onChange }) => {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [htmlViewMode, setHtmlViewMode] = useState<Record<string, "code" | "preview">>({});
 
   const update = (id: string, patch: Partial<PortfolioBlock>) =>
     onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
@@ -259,6 +273,227 @@ export const PortfolioPageBuilder: React.FC<PortfolioPageBuilderProps> = ({ bloc
                   placeholder="Gallery caption (optional)"
                   className="w-full px-3 py-1 text-xs rounded-lg border border-border dark:border-dark_border bg-white dark:bg-darklight text-dark dark:text-white"
                 />
+              </div>
+            )}
+
+            {b.type === "split" && (
+              <div className="space-y-3">
+                {/* Split Configuration Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-gray-50 dark:bg-darkmode border border-border/60 dark:border-dark_border/60">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Layout:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => update(b.id, { layout: "image_left" })}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 ${
+                        b.layout !== "image_right"
+                          ? "bg-primary text-white shadow-xs"
+                          : "bg-white dark:bg-darklight text-gray-600 dark:text-gray-300 border border-border/70 dark:border-dark_border hover:text-primary"
+                      }`}
+                      title="Image on Left, Text on Right"
+                    >
+                      <span>🖼️ Left</span>
+                      <span>|</span>
+                      <span>📝 Right</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => update(b.id, { layout: "image_right" })}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 ${
+                        b.layout === "image_right"
+                          ? "bg-primary text-white shadow-xs"
+                          : "bg-white dark:bg-darklight text-gray-600 dark:text-gray-300 border border-border/70 dark:border-dark_border hover:text-primary"
+                      }`}
+                      title="Text on Left, Image on Right"
+                    >
+                      <span>📝 Left</span>
+                      <span>|</span>
+                      <span>🖼️ Right</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Ratio:
+                    </span>
+                    {(["50-50", "40-60", "60-40"] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => update(b.id, { splitRatio: r })}
+                        className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition cursor-pointer ${
+                          (b.splitRatio || "50-50") === r
+                            ? "bg-primary/20 text-primary border border-primary/40 font-bold"
+                            : "bg-white dark:bg-darklight text-gray-500 border border-border/60 hover:text-primary"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Side-by-side editing grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+                  {/* Image Column Editor */}
+                  <div className="p-3 rounded-xl border border-border/60 dark:border-dark_border/60 bg-gray-50/50 dark:bg-darkmode/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-dark dark:text-white flex items-center gap-1">
+                        <span>🖼️</span>
+                        <span>Side Image ({b.layout === "image_right" ? "Right Side" : "Left Side"})</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {b.src && (
+                        <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-gray-200 dark:bg-darkmode border border-border/60 shrink-0">
+                          <Image src={getImgPath(b.src)} alt="split" fill unoptimized className="object-cover" />
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        value={b.src || ""}
+                        onChange={(e) => update(b.id, { src: e.target.value })}
+                        placeholder="Image URL or upload"
+                        className="flex-1 px-3 py-1 text-xs rounded-lg border border-border dark:border-dark_border bg-white dark:bg-darklight text-dark dark:text-white"
+                      />
+                      <label className="px-2.5 py-1 rounded-lg bg-primary hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer transition shrink-0">
+                        {uploading[b.id] ? "…" : "Upload"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) uploadMedia(f, b.id, "image");
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={b.caption || ""}
+                      onChange={(e) => update(b.id, { caption: e.target.value })}
+                      placeholder="Image caption (optional)"
+                      className="w-full px-3 py-1 text-xs rounded-lg border border-border dark:border-dark_border bg-white dark:bg-darklight text-dark dark:text-white"
+                    />
+                  </div>
+
+                  {/* Text Column Editor */}
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold text-dark dark:text-white flex items-center gap-1">
+                      <span>📝</span>
+                      <span>Side Content (Rich Text / HTML)</span>
+                    </span>
+                    <RichTextEditor
+                      value={b.html || ""}
+                      onChange={(html) => update(b.id, { html })}
+                      minHeight="140px"
+                      placeholder="Write description or paste HTML content for this side..."
+                    />
+                  </div>
+                </div>
+
+                {/* Mini Preview Mockup */}
+                {b.src && (
+                  <div className="p-2 rounded-xl border border-dashed border-border dark:border-dark_border bg-white/40 dark:bg-darklight/40">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                      Live Mockup Preview:
+                    </span>
+                    <div
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center p-2 rounded-lg bg-gray-50 dark:bg-darkmode text-xs"
+                    >
+                      {b.layout === "image_right" ? (
+                        <>
+                          <div
+                            className="text-[11px] leading-relaxed line-clamp-3 text-gray-600 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(b.html || "") }}
+                          />
+                          <div className="relative w-full h-24 rounded-lg overflow-hidden border border-border/40">
+                            <Image src={getImgPath(b.src)} alt="preview" fill unoptimized className="object-cover" />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="relative w-full h-24 rounded-lg overflow-hidden border border-border/40">
+                            <Image src={getImgPath(b.src)} alt="preview" fill unoptimized className="object-cover" />
+                          </div>
+                          <div
+                            className="text-[11px] leading-relaxed line-clamp-3 text-gray-600 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(b.html || "") }}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {b.type === "html" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-dark dark:text-white flex items-center gap-1.5">
+                    <span>&lt;&gt;</span>
+                    <span>Raw HTML Code Editor &amp; Output</span>
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setHtmlViewMode((prev) => ({ ...prev, [b.id]: "code" }))
+                      }
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                        (htmlViewMode[b.id] || "code") === "code"
+                          ? "bg-primary text-white shadow-xs"
+                          : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300 hover:text-primary"
+                      }`}
+                    >
+                      &lt;/&gt; Code View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setHtmlViewMode((prev) => ({ ...prev, [b.id]: "preview" }))
+                      }
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                        htmlViewMode[b.id] === "preview"
+                          ? "bg-primary text-white shadow-xs"
+                          : "bg-gray-100 dark:bg-darkmode text-gray-600 dark:text-gray-300 hover:text-primary"
+                      }`}
+                    >
+                      👁️ Output Preview
+                    </button>
+                  </div>
+                </div>
+
+                {(htmlViewMode[b.id] || "code") === "code" ? (
+                  <div className="space-y-1">
+                    <textarea
+                      value={b.html || ""}
+                      onChange={(e) => update(b.id, { html: e.target.value })}
+                      rows={6}
+                      placeholder="Paste your HTML code here (e.g. <div>...</div>, <table>...</table>, styled spans, etc.)..."
+                      className="w-full p-3 font-mono text-xs rounded-xl border border-border dark:border-dark_border bg-gray-900/5 dark:bg-black/40 text-dark dark:text-white focus:outline-hidden focus:border-primary resize-y"
+                    />
+                    <span className="text-[10px] text-gray-400 block">
+                      💡 Paste any HTML snippet here. Switch to &quot;Output Preview&quot; above to see the real-time rendered result.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 dark:bg-darkmode/50 min-h-[100px] overflow-x-auto">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary block mb-2">
+                      Live Output Preview:
+                    </span>
+                    <div
+                      className="text-sm text-dark dark:text-white"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(b.html || "") }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
