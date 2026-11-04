@@ -45,11 +45,11 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     return 'Recently'
   }
 
-  // Combine cover image and gallery images
+  // Combine cover image and gallery images (prioritizing primary card photo in images[0])
   const allImages = Array.from(
     new Set([
-      ...(project.coverImage ? [project.coverImage] : []),
       ...(project.images || []),
+      ...(project.coverImage ? [project.coverImage] : []),
     ])
   ).filter((img) => img && img.trim().length > 0)
 

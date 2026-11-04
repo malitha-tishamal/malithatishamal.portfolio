@@ -35,8 +35,9 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
 
   const images = project.images && project.images.length > 0 ? project.images : (project.coverImage ? [project.coverImage] : [])
   const cover =
-    project.coverImage ||
-    (images.length > 0 ? images[0] : '/images/portfolio/cozycasa.png')
+    (images.length > 0 && images[0])
+      ? images[0]
+      : (project.coverImage || '/images/portfolio/cozycasa.png')
 
   const layout = project.imageLayout || 'single'
   const fit = project.imageFit || 'cover'

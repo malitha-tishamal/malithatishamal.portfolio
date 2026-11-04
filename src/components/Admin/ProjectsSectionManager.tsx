@@ -328,10 +328,12 @@ export const ProjectsSectionManager: React.FC = () => {
 
       if (res.secure_url) {
         setCoverImage(res.secure_url);
-        // Also sync first card photo slot if empty
-        if (!images[0]) {
-          setImages([res.secure_url]);
-        }
+        // Also sync first card photo slot
+        setImages((prev) => {
+          const next = [...prev];
+          next[0] = res.secure_url;
+          return next;
+        });
         toast.success("Cover image uploaded!", { id: toastId });
       } else {
         throw new Error("Upload failed");
@@ -367,7 +369,7 @@ export const ProjectsSectionManager: React.FC = () => {
           next[index] = res.secure_url;
           return next;
         });
-        if (index === 0 && !coverImage) {
+        if (index === 0) {
           setCoverImage(res.secure_url);
         }
         toast.success(`Photo ${index + 1} uploaded!`);
@@ -400,7 +402,13 @@ export const ProjectsSectionManager: React.FC = () => {
   };
 
   const handleRemoveImageSlot = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImages((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (index === 0) {
+        setCoverImage(next[0] || "");
+      }
+      return next;
+    });
     setImageCrops((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -413,6 +421,9 @@ export const ProjectsSectionManager: React.FC = () => {
       const temp = next[index];
       next[index] = next[targetIndex];
       next[targetIndex] = temp;
+      if (index === 0 || targetIndex === 0) {
+        setCoverImage(next[0] || "");
+      }
       return next;
     });
 
@@ -576,12 +587,14 @@ export const ProjectsSectionManager: React.FC = () => {
     setLiveSaving(true);
     try {
       const cleanImages = images.filter((img) => img && img.trim().length > 0);
+      const primaryCover = (cleanImages.length > 0 && cleanImages[0]) ? cleanImages[0] : (coverImage || "");
       const payload: Record<string, any> = {
         mediaType,
         imageFit,
         imageLayout,
         detailViewFit,
         coverCrop,
+        coverImage: primaryCover,
         images: cleanImages,
         imageCrops: cleanImages.map((_, i) => imageCrops[i] || null),
         updatedAt: new Date().toLocaleDateString("en-US", {
@@ -590,7 +603,6 @@ export const ProjectsSectionManager: React.FC = () => {
           day: "numeric",
         }),
       };
-      if (coverImage) payload.coverImage = coverImage;
       if (mediaType === "video") {
         payload.videoUrl = videoUrl;
         payload.videoThumbnail = videoThumbnail;
@@ -659,9 +671,8 @@ export const ProjectsSectionManager: React.FC = () => {
     setContentBlocks(item.contentBlocks || []);
     setTagsInput(item.tags ? item.tags.join(", ") : "");
     setDisplayOrder(item.displayOrder || 1);
-    setCoverImage(item.coverImage || "");
-
     const baseImages = item.images && item.images.length > 0 ? item.images : (item.coverImage ? [item.coverImage] : [""]);
+    setCoverImage(baseImages[0] || item.coverImage || "");
     setImages(baseImages);
     setImageLayout(item.imageLayout || (baseImages.length >= 4 ? "grid_4" : baseImages.length >= 2 ? "split_horizontal_2" : "single"));
     setImageFit(item.imageFit || "cover");
@@ -716,7 +727,11 @@ export const ProjectsSectionManager: React.FC = () => {
 
     const validCardImages = images.filter((img) => img && img.trim().length > 0);
     const validGallery = galleryImages.filter((img) => img && img.trim().length > 0);
-    const combinedAllImages = Array.from(new Set([...validCardImages, ...validGallery]));
+    const primaryCover =
+      (validCardImages.length > 0 && validCardImages[0])
+        ? validCardImages[0]
+        : (coverImage.trim() || "/images/portfolio/cozycasa.png");
+    const combinedAllImages = Array.from(new Set([primaryCover, ...validCardImages, ...validGallery]));
 
     const nowFormatted = new Date().toLocaleDateString("en-US", {
       year: "numeric",
@@ -732,8 +747,8 @@ export const ProjectsSectionManager: React.FC = () => {
       description: description.trim(),
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       tags: cleanTags,
-      coverImage: coverImage.trim() || validCardImages[0] || "/images/portfolio/cozycasa.png",
-      images: combinedAllImages.length > 0 ? combinedAllImages : [coverImage.trim() || "/images/portfolio/cozycasa.png"],
+      coverImage: primaryCover,
+      images: combinedAllImages.length > 0 ? combinedAllImages : [primaryCover],
       imageLayout,
       imageFit,
       detailViewFit,
@@ -992,7 +1007,7 @@ export const ProjectsSectionManager: React.FC = () => {
               <div className="mt-4 pt-3 border-t border-border/40 dark:border-dark_border/40">
                 <div className="flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-500 mb-3">
                   <span>Updated: {formatDate(item.updatedAt)}</span>
-                  <span>Images: {(item.images?.length || 0) + (item.coverImage ? 1 : 0)}</span>
+                  <span>Images: {item.images?.length || (item.coverImage ? 1 : 0)}</span>
                 </div>
 
                 <div className="flex items-center justify-end gap-2">
