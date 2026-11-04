@@ -45,13 +45,26 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     return 'Recently'
   }
 
-  // Combine cover image and gallery images (prioritizing primary card photo in images[0])
+  // Combine cover image and gallery images (prioritizing real non-placeholder image in slot 0)
+  const isDefaultPlaceholder = (url?: string) =>
+    !url || url.includes('/images/portfolio/cozycasa.png') || url.trim() === ''
+  const cov = project.coverImage?.trim() || ''
+  const first = project.images && project.images.length > 0 ? project.images[0]?.trim() || '' : ''
+  const primaryCover =
+    (!isDefaultPlaceholder(first) ? first : !isDefaultPlaceholder(cov) ? cov : first || cov) ||
+    '/images/portfolio/cozycasa.png'
+
+  const rawImages = project.images && project.images.length > 0 ? project.images : []
   const allImages = Array.from(
     new Set([
-      ...(project.images || []),
+      primaryCover,
+      ...rawImages.slice(1),
       ...(project.coverImage ? [project.coverImage] : []),
     ])
-  ).filter((img) => img && img.trim().length > 0)
+  ).filter((img) => img && img.trim().length > 0 && !isDefaultPlaceholder(img))
+  if (allImages.length === 0) {
+    allImages.push('/images/portfolio/cozycasa.png')
+  }
 
   // Every video on the item: explicit videoUrl + any video URLs stored in image slots
   const videoSources = [

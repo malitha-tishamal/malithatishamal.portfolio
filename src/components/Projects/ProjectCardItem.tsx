@@ -33,11 +33,31 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
     return 'Recently'
   }
 
-  const images = project.images && project.images.length > 0 ? project.images : (project.coverImage ? [project.coverImage] : [])
-  const cover =
-    (images.length > 0 && images[0])
-      ? images[0]
-      : (project.coverImage || '/images/portfolio/cozycasa.png')
+  const isDefaultPlaceholder = (url?: string) =>
+    !url || url.includes('/images/portfolio/cozycasa.png') || url.trim() === ''
+
+  const rawImages =
+    project.images && project.images.length > 0
+      ? project.images
+      : project.coverImage
+      ? [project.coverImage]
+      : []
+  const cov = project.coverImage?.trim() || ''
+  const first = rawImages.length > 0 ? rawImages[0]?.trim() || '' : ''
+
+  let primaryCover = '/images/portfolio/cozycasa.png'
+  if (!isDefaultPlaceholder(first) && isDefaultPlaceholder(cov)) {
+    primaryCover = first
+  } else if (!isDefaultPlaceholder(cov) && isDefaultPlaceholder(first)) {
+    primaryCover = cov
+  } else if (!isDefaultPlaceholder(first)) {
+    primaryCover = first
+  } else if (!isDefaultPlaceholder(cov)) {
+    primaryCover = cov
+  }
+
+  const images = rawImages.length > 0 ? [primaryCover, ...rawImages.slice(1)] : [primaryCover]
+  const cover = primaryCover
 
   const layout = project.imageLayout || 'single'
   const fit = project.imageFit || 'cover'

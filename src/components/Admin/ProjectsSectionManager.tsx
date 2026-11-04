@@ -371,6 +371,18 @@ export const ProjectsSectionManager: React.FC = () => {
         });
         if (index === 0) {
           setCoverImage(res.secure_url);
+          const freshCrop: PortfolioMediaCrop = {
+            zoom: 1,
+            ox: 50,
+            oy: 50,
+            fit: imageFit === "contain" ? "contain" : "cover",
+          };
+          setCoverCrop(freshCrop);
+          setImageCrops((prev) => {
+            const next = [...prev];
+            next[0] = freshCrop;
+            return next;
+          });
         }
         toast.success(`Photo ${index + 1} uploaded!`);
       } else {
@@ -588,6 +600,11 @@ export const ProjectsSectionManager: React.FC = () => {
     try {
       const cleanImages = images.filter((img) => img && img.trim().length > 0);
       const primaryCover = (cleanImages.length > 0 && cleanImages[0]) ? cleanImages[0] : (coverImage || "");
+      if (cleanImages.length > 0) {
+        cleanImages[0] = primaryCover;
+      } else if (primaryCover) {
+        cleanImages.push(primaryCover);
+      }
       const payload: Record<string, any> = {
         mediaType,
         imageFit,
@@ -671,8 +688,24 @@ export const ProjectsSectionManager: React.FC = () => {
     setContentBlocks(item.contentBlocks || []);
     setTagsInput(item.tags ? item.tags.join(", ") : "");
     setDisplayOrder(item.displayOrder || 1);
-    const baseImages = item.images && item.images.length > 0 ? item.images : (item.coverImage ? [item.coverImage] : [""]);
-    setCoverImage(baseImages[0] || item.coverImage || "");
+    const isDefaultPlaceholder = (url?: string) =>
+      !url || url.includes("/images/portfolio/cozycasa.png") || url.trim() === "";
+    const cov = item.coverImage?.trim() || "";
+    const firstImg = item.images && item.images.length > 0 ? (item.images[0]?.trim() || "") : "";
+    let primaryCover = "/images/portfolio/cozycasa.png";
+    if (!isDefaultPlaceholder(firstImg) && isDefaultPlaceholder(cov)) {
+      primaryCover = firstImg;
+    } else if (!isDefaultPlaceholder(cov) && isDefaultPlaceholder(firstImg)) {
+      primaryCover = cov;
+    } else if (!isDefaultPlaceholder(firstImg)) {
+      primaryCover = firstImg;
+    } else if (!isDefaultPlaceholder(cov)) {
+      primaryCover = cov;
+    }
+
+    const baseImages = item.images && item.images.length > 0 ? [...item.images] : [primaryCover];
+    baseImages[0] = primaryCover;
+    setCoverImage(primaryCover);
     setImages(baseImages);
     setImageLayout(item.imageLayout || (baseImages.length >= 4 ? "grid_4" : baseImages.length >= 2 ? "split_horizontal_2" : "single"));
     setImageFit(item.imageFit || "cover");
