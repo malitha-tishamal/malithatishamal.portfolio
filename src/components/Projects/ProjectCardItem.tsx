@@ -1,41 +1,88 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React from 'react'
 import Image from 'next/image'
 import { ProjectItem } from '@/types/project'
 import { PortfolioMediaCrop, isVideoUrl } from '@/types/portfolio'
 import { getImgPath } from '@/utils/image'
+import { getVisitSiteTarget } from '@/types/landingPage'
+import {
+  FEATURED_PROJECTS_DEFAULTS,
+} from '@/types/featuredProjects'
+import { ContentCard } from '@/components/SharedComponent/MarqueeRows/ContentCard'
 
 interface ProjectCardItemProps {
   project: ProjectItem
   onClick?: () => void
+  /** Card copy limits; the admin live preview overrides individual values. */
+  tagsShown?: number
+  descriptionLines?: number
+  showVisitSite?: boolean
+  /** "Latest · …" pill text, provided by the section that ranks the cards. */
+  latestLabel?: string
+  /** Width override (cards are fixed-width in the marquee, `w-full` in admin). */
+  widthClass?: string
+  className?: string
 }
+
+const PLACEHOLDER_COVER = '/images/portfolio/cozycasa.png'
+
+const isDefaultPlaceholder = (url?: string) =>
+  !url || url.includes(PLACEHOLDER_COVER) || url.trim() === ''
+
+const formatDate = (val: unknown): string => {
+  if (!val) return 'Recently'
+  if (typeof val === 'string') return val
+  const candidate = val as { toDate?: () => Date }
+  if (typeof candidate.toDate === 'function') {
+    return candidate.toDate().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+    })
+  }
+  return 'Recently'
+}
+
+/** First sentence of the long description, used when `summary` is empty. */
+const firstSentence = (html?: string): string => {
+  const plain = (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!plain) return ''
+  const match = plain.match(/^[^.!?]+[.!?]?/)
+  return (match ? match[0] : plain).trim()
+}
+
+const PlaceholderMedia: React.FC<{ label?: string }> = ({ label }) => (
+  <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white'>
+    <svg
+      className='h-10 w-10 opacity-90'
+      fill='none'
+      stroke='currentColor'
+      viewBox='0 0 24 24'
+      aria-hidden='true'>
+      <path
+        strokeLinecap='round'
+        strokeLinejoin='round'
+        strokeWidth='1.8'
+        d='M8 9l-3 3 3 3m8-6l3 3-3 3M13.5 6l-3 12'
+      />
+    </svg>
+    <span className='px-4 text-center text-[11px] font-bold tracking-[0.18em] uppercase opacity-90'>
+      {label || 'Project'}
+    </span>
+  </div>
+)
 
 export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
   project,
   onClick,
+  tagsShown = FEATURED_PROJECTS_DEFAULTS.tagsShown,
+  descriptionLines = FEATURED_PROJECTS_DEFAULTS.descriptionLines,
+  showVisitSite = FEATURED_PROJECTS_DEFAULTS.showVisitSite,
+  latestLabel,
+  widthClass,
+  className,
 }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [thumbPlayStarted, setThumbPlayStarted] = useState(false)
-  const [videoEnded, setVideoEnded] = useState(false)
-
-  // Format date helper
-  const formatDate = (val: any): string => {
-    if (!val) return 'Recently'
-    if (typeof val === 'string') return val
-    if (val?.toDate) {
-      return val.toDate().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-      })
-    }
-    return 'Recently'
-  }
-
-  const isDefaultPlaceholder = (url?: string) =>
-    !url || url.includes('/images/portfolio/cozycasa.png') || url.trim() === ''
-
   const rawImages =
     project.images && project.images.length > 0
       ? project.images
@@ -45,7 +92,7 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
   const cov = project.coverImage?.trim() || ''
   const first = rawImages.length > 0 ? rawImages[0]?.trim() || '' : ''
 
-  let primaryCover = '/images/portfolio/cozycasa.png'
+  let primaryCover = PLACEHOLDER_COVER
   if (!isDefaultPlaceholder(first) && isDefaultPlaceholder(cov)) {
     primaryCover = first
   } else if (!isDefaultPlaceholder(cov) && isDefaultPlaceholder(first)) {
@@ -58,6 +105,7 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
 
   const images = rawImages.length > 0 ? [primaryCover, ...rawImages.slice(1)] : [primaryCover]
   const cover = primaryCover
+  const hasCover = !isDefaultPlaceholder(cover)
 
   const layout = project.imageLayout || 'single'
   const fit = project.imageFit || 'cover'
@@ -67,17 +115,21 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
   const oy = crop?.oy ?? 50
   const isContain = (crop?.fit || fit) === 'contain'
 
-  // Video media detection
   const isVideo =
     project.mediaType === 'video' ||
     !!project.videoUrl ||
     (images.length === 1 && isVideoUrl(images[0]))
 
-  const videoSrc = project.videoUrl || (images.find((img) => isVideoUrl(img)) || '')
+  const visitSite = showVisitSite ? getVisitSiteTarget(project) : null
+  const visitHref = visitSite ? getImgPath(visitSite.url) : null
+
+  const tagList = project.tags || []
+  const descriptionText =
+    (project.summary || '').trim() || firstSentence(project.description)
+
+  const videoSrc = project.videoUrl || images.find((img) => isVideoUrl(img)) || ''
   const videoThumb = project.videoThumbnail || (cover && !isVideoUrl(cover) ? cover : '')
   const playbackMode = project.videoPlaybackMode || 'autoplay_loop'
-  const trimStart = project.videoTrim?.start || 0
-  const trimEnd = project.videoTrim?.end || 0
   const videoCrop = project.videoCrop
 
   const cropWrapStyle = (c?: PortfolioMediaCrop | null) =>
@@ -85,13 +137,8 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
       ? { transform: `scale(${c.zoom})`, transformOrigin: `${c.ox}% ${c.oy}%` }
       : undefined
 
-  const cardAspectClass =
-    fit === 'portrait_tall'
-      ? 'aspect-[3/4]'
-      : 'aspect-[16/10]'
-
   const renderMediaSlot = (src: string, alt: string, idx: number) => {
-    const slotCrop = idx === 0 ? (crop || project.imageCrops?.[idx]) : project.imageCrops?.[idx]
+    const slotCrop = idx === 0 ? crop || project.imageCrops?.[idx] : project.imageCrops?.[idx]
     const wrapStyle = cropWrapStyle(slotCrop)
     const slotFit = slotCrop?.fit || fit
     const isSlotContain = slotFit === 'contain' && (!slotCrop?.zoom || slotCrop.zoom <= 1)
@@ -105,7 +152,7 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
           autoPlay
           playsInline
           preload='metadata'
-          className={`w-full h-full ${slotFit === 'contain' ? 'object-contain bg-black' : 'object-cover'}`}
+          className={`h-full w-full ${slotFit === 'contain' ? 'bg-black object-contain' : 'object-cover'}`}
         />
       </div>
     ) : (
@@ -115,179 +162,123 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
           alt={alt}
           fill
           unoptimized
+          loading='lazy'
+          sizes='(max-width: 640px) 85vw, (max-width: 1280px) 320px, 380px'
           style={{
-            objectPosition: isSlotContain ? 'center center' : `${slotCrop?.ox ?? 50}% ${slotCrop?.oy ?? 50}%`,
+            objectPosition: isSlotContain
+              ? 'center center'
+              : `${slotCrop?.ox ?? 50}% ${slotCrop?.oy ?? 50}%`,
           }}
           className={`${
-            isSlotContain
-              ? 'object-contain'
-              : 'object-cover object-top'
-          } group-hover:scale-105 transition-transform duration-500`}
+            isSlotContain ? 'object-contain' : 'object-cover object-top'
+          } transition-transform duration-500 group-hover:scale-105`}
+        />
+      </div>
+    )
+  }
+
+  let media: React.ReactNode
+
+  if (isVideo && videoSrc) {
+    media = (
+      <div className='relative h-full w-full overflow-hidden'>
+        <div className='absolute inset-0' style={cropWrapStyle(videoCrop)}>
+          <video
+            src={getImgPath(videoSrc)}
+            poster={videoThumb ? getImgPath(videoThumb) : undefined}
+            muted
+            loop={playbackMode === 'autoplay_loop'}
+            autoPlay={playbackMode === 'autoplay_loop'}
+            playsInline
+            preload='metadata'
+            style={{ objectPosition: `${videoCrop?.ox ?? 50}% ${videoCrop?.oy ?? 50}%` }}
+            className={`h-full w-full ${
+              videoCrop?.fit === 'contain' ? 'bg-black object-contain' : 'object-cover'
+            }`}
+          />
+        </div>
+        {/* Bottom-left so the type/Latest pills keep the top corners */}
+        <span className='absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1 rounded-lg bg-black/75 px-2 py-0.5 text-[10px] font-bold text-white shadow-md'>
+          <span className='h-2 w-2 animate-pulse rounded-full bg-red-500' />
+          <span>VIDEO</span>
+        </span>
+      </div>
+    )
+  } else if (!hasCover && !isVideo) {
+    media = <PlaceholderMedia label={project.subtitle} />
+  } else if (layout === 'grid_4' && images.length >= 4) {
+    media = (
+      <div className='grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5 bg-border/40 dark:bg-dark_border/60'>
+        {images.slice(0, 4).map((img, qi) => (
+          <div key={qi} className='relative h-full w-full overflow-hidden bg-gray-900'>
+            {renderMediaSlot(img, `${project.title} ${qi + 1}`, qi)}
+          </div>
+        ))}
+      </div>
+    )
+  } else if (layout === 'split_vertical_2' && images.length >= 2) {
+    media = (
+      <div className='grid h-full w-full grid-cols-2 gap-0.5 bg-border/40 dark:bg-dark_border/60'>
+        {[0, 1].map((ci) => (
+          <div key={ci} className='relative h-full w-full overflow-hidden bg-gray-900'>
+            {renderMediaSlot(images[ci], `${project.title} ${ci + 1}`, ci)}
+          </div>
+        ))}
+      </div>
+    )
+  } else if (layout === 'split_horizontal_2' && images.length >= 2) {
+    media = (
+      <div className='grid h-full w-full grid-rows-2 gap-0.5 bg-border/40 dark:bg-dark_border/60'>
+        {[0, 1].map((ri) => (
+          <div key={ri} className='relative h-full w-full overflow-hidden bg-gray-900'>
+            {renderMediaSlot(images[ri], `${project.title} ${ri + 1}`, ri)}
+          </div>
+        ))}
+      </div>
+    )
+  } else {
+    media = (
+      <div
+        className='absolute inset-0 h-full w-full'
+        style={
+          zoom > 1
+            ? { transform: `scale(${zoom})`, transformOrigin: `${ox}% ${oy}%` }
+            : undefined
+        }>
+        <Image
+          src={getImgPath(cover)}
+          alt={project.altText || `${project.title} – Software & Engineering by Malitha Tishamal`}
+          fill
+          unoptimized
+          loading='lazy'
+          sizes='(max-width: 640px) 85vw, (max-width: 1280px) 320px, 380px'
+          style={{ objectPosition: `${ox}% ${oy}%` }}
+          className={`${
+            isContain ? 'object-contain' : 'object-cover object-top'
+          } transition-transform duration-500 group-hover:scale-105`}
         />
       </div>
     )
   }
 
   return (
-    <div
-      onClick={onClick}
-      className='w-full group cursor-pointer bg-white dark:bg-darklight rounded-3xl border border-border/70 dark:border-dark_border p-4 sm:p-5 shadow-xs hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 flex flex-col justify-between'>
-      <div>
-        {/* Main Media Frame */}
-        <div className={`relative w-full ${cardAspectClass} rounded-2xl overflow-hidden ${isContain ? 'bg-black/90 dark:bg-black/95' : 'bg-gray-100 dark:bg-darkmode'} border border-border/40 dark:border-dark_border/40 shadow-xs mb-4`}>
-          {isVideo && videoSrc ? (
-            /* Video Media Player */
-            <div className='relative w-full h-full overflow-hidden'>
-              <div
-                className='absolute inset-0'
-                style={cropWrapStyle(videoCrop)}>
-                <video
-                  ref={videoRef}
-                  src={getImgPath(videoSrc)}
-                  poster={videoThumb ? getImgPath(videoThumb) : undefined}
-                  muted
-                  loop={playbackMode === 'autoplay_loop'}
-                  autoPlay={playbackMode === 'autoplay_loop'}
-                  playsInline
-                  preload='metadata'
-                  style={{
-                    objectPosition: `${videoCrop?.ox ?? 50}% ${videoCrop?.oy ?? 50}%`,
-                  }}
-                  className={`w-full h-full ${
-                    videoCrop?.fit === 'contain' ? 'object-contain bg-black' : 'object-cover'
-                  }`}
-                />
-              </div>
-
-              {/* Video Badge */}
-              <div className='absolute top-3 right-3 z-10'>
-                <span className='px-2 py-0.5 rounded-lg bg-black/75 text-white text-[10px] font-bold flex items-center gap-1 shadow-md'>
-                  <span className='w-2 h-2 rounded-full bg-red-500 animate-pulse'></span>
-                  <span>VIDEO</span>
-                </span>
-              </div>
-            </div>
-          ) : layout === 'grid_4' && images.length >= 4 ? (
-            /* 4 Quadrants */
-            <div className='grid grid-cols-2 grid-rows-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60'>
-              {images.slice(0, 4).map((img, qi) => (
-                <div key={qi} className='relative w-full h-full overflow-hidden bg-gray-900'>
-                  {renderMediaSlot(img, `${project.title} ${qi + 1}`, qi)}
-                </div>
-              ))}
-            </div>
-          ) : layout === 'split_vertical_2' && images.length >= 2 ? (
-            /* 2 Columns Side-by-Side */
-            <div className='grid grid-cols-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60'>
-              {[0, 1].map((ci) => (
-                <div key={ci} className='relative w-full h-full overflow-hidden bg-gray-900'>
-                  {renderMediaSlot(images[ci], `${project.title} ${ci + 1}`, ci)}
-                </div>
-              ))}
-            </div>
-          ) : layout === 'split_horizontal_2' && images.length >= 2 ? (
-            /* 2 Rows Stacked */
-            <div className='grid grid-rows-2 w-full h-full gap-0.5 bg-border/40 dark:bg-dark_border/60'>
-              {[0, 1].map((ri) => (
-                <div key={ri} className='relative w-full h-full overflow-hidden bg-gray-900'>
-                  {renderMediaSlot(images[ri], `${project.title} ${ri + 1}`, ri)}
-                </div>
-              ))}
-            </div>
-          ) : (
-            /* Single Image with Zoom & Focus */
-            <div
-              className='absolute inset-0 w-full h-full'
-              style={
-                zoom > 1
-                  ? {
-                      transform: `scale(${zoom})`,
-                      transformOrigin: `${ox}% ${oy}%`,
-                    }
-                  : undefined
-              }>
-              <Image
-                src={getImgPath(cover)}
-                alt={project.altText || `${project.title} – Software & Engineering by Malitha Tishamal`}
-                fill
-                unoptimized
-                style={{
-                  objectPosition: `${ox}% ${oy}%`,
-                }}
-                className={`${
-                  isContain
-                    ? 'object-contain'
-                    : 'object-cover object-top'
-                } group-hover:scale-105 transition-transform duration-500`}
-              />
-            </div>
-          )}
-
-          {/* Category Pill Badge on top-left */}
-          <div className='absolute top-3 left-3 z-10'>
-            <span className='px-3 py-1 rounded-xl bg-primary text-white text-[11px] font-bold shadow-md shadow-primary/30 tracking-wide uppercase'>
-              {project.subtitle || 'Project'}
-            </span>
-          </div>
-
-          {/* Multi-image count indicator on bottom-right if >1 photos */}
-          {images.length > 1 && !isVideo && (
-            <div className='absolute bottom-2.5 right-2.5 z-10'>
-              <span className='px-2.5 py-0.5 rounded-lg bg-black/70 backdrop-blur-xs text-white text-[10px] font-semibold flex items-center gap-1'>
-                <svg className='w-3 h-3' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' />
-                </svg>
-                <span>+{images.length} Photos</span>
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Project Title */}
-        <h3 className='text-lg sm:text-xl font-bold text-midnight_text dark:text-white group-hover:text-primary transition-colors line-clamp-2 leading-snug mb-2'>
-          {project.title}
-        </h3>
-
-        {/* Project Summary / Short Description */}
-        {(project.summary || project.description) && (
-          <p className='text-xs sm:text-sm text-grey dark:text-gray-300 font-normal line-clamp-2 leading-relaxed mb-3'>
-            {project.summary || project.description?.replace(/<[^>]+>/g, '')}
-          </p>
-        )}
-
-        {/* Tech Stack Tags Chips */}
-        {project.tags && project.tags.length > 0 && (
-          <div className='flex flex-wrap gap-1.5 mb-2'>
-            {project.tags.slice(0, 3).map((tag, idx) => (
-              <span
-                key={idx}
-                className='text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border border-blue-200/50 dark:border-blue-900/50'>
-                {tag}
-              </span>
-            ))}
-            {project.tags.length > 3 && (
-              <span className='text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-darkmode text-gray-500'>
-                +{project.tags.length - 3}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Card Footer: Date & View Details Link */}
-      <div className='mt-4 pt-3 border-t border-border/40 dark:border-dark_border/40 flex items-center justify-between text-xs font-semibold'>
-        <span className='text-[11px] text-gray-400 dark:text-gray-500 font-normal'>
-          {formatDate(project.updatedAt || project.createdAt)}
-        </span>
-
-        <span className='text-primary group-hover:translate-x-1 transition-transform flex items-center gap-1 font-bold'>
-          <span>View Details</span>
-          <svg className='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2.5' d='M14 5l7 7m0 0l-7 7m7-7H3' />
-          </svg>
-        </span>
-      </div>
-    </div>
+    <ContentCard
+      media={media}
+      typeLabel={project.subtitle || 'Project'}
+      latestLabel={latestLabel}
+      photoChip={images.length > 1 && !isVideo ? `+${images.length} Photos` : undefined}
+      title={project.title}
+      description={descriptionText}
+      descriptionLines={Math.min(descriptionLines, 3)}
+      tags={tagList}
+      tagsShown={tagsShown}
+      dateLabel={formatDate(project.updatedAt || project.createdAt)}
+      visitHref={visitHref}
+      onOpen={onClick}
+      openHint={`View details for ${project.title}`}
+      widthClass={widthClass}
+      className={className}
+    />
   )
 }
 

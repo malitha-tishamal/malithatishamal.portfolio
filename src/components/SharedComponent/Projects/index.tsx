@@ -1,17 +1,25 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { ProjectItem, defaultProjects } from '@/types/project'
 import { ProjectCardItem } from '@/components/Projects/ProjectCardItem'
 import { ProjectDetailModal } from '@/components/Projects/ProjectDetailModal'
+import { MarqueeRows } from '@/components/SharedComponent/MarqueeRows'
+import { useFeaturedProjectsSettings } from '@/hooks/useFeaturedProjectsSettings'
+
+const LATEST_COUNT = 6
+
+const getProjectKey = (project: ProjectItem) => project.id
+const getProjectUpdatedAt = (project: ProjectItem) => project.updatedAt || project.createdAt
 
 const ProjectsSection: React.FC = () => {
   const [projects, setProjects] = useState<ProjectItem[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
+  const settings = useFeaturedProjectsSettings()
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -48,11 +56,8 @@ const ProjectsSection: React.FC = () => {
     }
   }, [])
 
-  // Show up to 6 projects on homepage (3x2 grid layout)
-  const displayedProjects = projects.slice(0, 6)
-
   return (
-    <section id='projects' className='py-16 sm:py-24 bg-white dark:bg-darkmode transition-colors'>
+    <section id='projects' className='py-16 sm:py-24 scroll-mt-24 bg-white dark:bg-darkmode transition-colors'>
       <div className='container mx-auto max-w-6xl px-4 sm:px-6'>
         {/* Section Header (Matching Reference Style with View More Link) */}
         <div className='flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10'>
@@ -64,10 +69,10 @@ const ProjectsSection: React.FC = () => {
               </span>
             </div>
             <h2 className='text-3xl sm:text-4xl font-extrabold text-midnight_text dark:text-white'>
-              Featured Projects
+              {settings.sectionTitle}
             </h2>
             <p className='text-sm sm:text-base text-grey dark:text-gray-300 font-medium mt-1 max-w-xl'>
-              Explore our production-grade software platforms, cloud architectures, and mobile systems.
+              {settings.sectionSubtitle}
             </p>
           </div>
 
@@ -88,33 +93,32 @@ const ProjectsSection: React.FC = () => {
           </div>
         </div>
 
-        {/* 6 Projects in 3x2 Grid */}
-        {loading ? (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className='rounded-3xl bg-gray-100 dark:bg-darklight p-5 h-84 animate-pulse border border-border/40 dark:border-dark_border/40 flex flex-col justify-between'
-              >
-                <div className='h-44 bg-gray-200 dark:bg-darkmode rounded-2xl w-full' />
-                <div className='space-y-2.5 mt-4'>
-                  <div className='h-4 bg-gray-200 dark:bg-darkmode rounded-md w-3/4' />
-                  <div className='h-3 bg-gray-200 dark:bg-darkmode rounded-md w-1/2' />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'>
-            {displayedProjects.map((project) => (
-              <ProjectCardItem
-                key={project.id}
-                project={project}
-                onClick={() => setSelectedProject(project)}
-              />
-            ))}
-          </div>
-        )}
+        {/* Two-row endless marquee — equal-size cards, no card in both rows */}
+        <MarqueeRows<ProjectItem>
+          items={projects}
+          getKey={getProjectKey}
+          getUpdatedAt={getProjectUpdatedAt}
+          latestCount={LATEST_COUNT}
+          speed={50}
+          rowCount={2}
+          loading={loading}
+          skeletonCount={8}
+          ariaLabel='Featured projects'
+          emptyState={
+            <p className='text-sm font-semibold text-gray-500 dark:text-gray-400'>
+              No projects published yet.
+            </p>
+          }
+          renderCard={(project, { latestLabel }) => (
+            <ProjectCardItem
+              project={project}
+              tagsShown={settings.tagsShown}
+              showVisitSite={settings.showVisitSite}
+              latestLabel={latestLabel}
+              onClick={() => setSelectedProject(project)}
+            />
+          )}
+        />
 
         {/* Bottom View All Button */}
         <div className='text-center pt-10'>

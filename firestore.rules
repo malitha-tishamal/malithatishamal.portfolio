@@ -60,6 +60,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── Uploaded landing pages (published at /projects/{slug}/) ─────────────
+    // The public route and the admin panel both read the manifest; only admins
+    // can create/replace/remove it.
+    match /landingPages/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ── Anonymous-create collections (public submit, admin-only manage) ─────
     match /inquiries/{doc} {
       allow create: if true;

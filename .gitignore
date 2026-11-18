@@ -9,6 +9,9 @@
 # testing
 /coverage
 
+# uploaded project landing pages (local storage driver)
+/.landing-pages/
+
 # next.js
 /.next/
 /out/

@@ -11,7 +11,8 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
+import { adminJson } from "@/utils/adminApi";
 import {
   ProjectItem,
   ProjectImageFit,
@@ -40,6 +41,8 @@ import {
 import { RichTextEditor } from "./RichTextEditor";
 import { PortfolioPageBuilder } from "./PortfolioPageBuilder";
 import { PhotoCropModal } from "./PhotoCropModal";
+import { FeaturedProjectsSettingsPanel } from "./FeaturedProjectsSettingsPanel";
+import { LandingPageZipField } from "./LandingPageZipField";
 import {
   saveCustomProjectCategory,
   deleteCustomProjectCategory,
@@ -772,6 +775,10 @@ export const ProjectsSectionManager: React.FC = () => {
       day: "numeric",
     });
 
+    const existing = editingId
+      ? projects.find((p) => p.id === editingId)
+      : undefined;
+
     const itemData: ProjectItem = {
       id,
       title: title.trim(),
@@ -799,6 +806,16 @@ export const ProjectsSectionManager: React.FC = () => {
       facebookUrl: facebookUrl.trim(),
       instagramUrl: instagramUrl.trim(),
       youtubeUrl: youtubeUrl.trim(),
+      // Managed by the landing-page uploader — never overwritten by this form.
+      landingPageSlug: existing?.landingPageSlug,
+      landingPageUrl: existing?.landingPageUrl,
+      landingPageVersion: existing?.landingPageVersion,
+      landingPageUploadedAt: existing?.landingPageUploadedAt,
+      landingPageStatus: existing?.landingPageStatus,
+      landingPageFileCount: existing?.landingPageFileCount,
+      landingPageTotalBytes: existing?.landingPageTotalBytes,
+      landingPageVersions: existing?.landingPageVersions,
+      showBackToPortfolio: existing?.showBackToPortfolio,
       displayOrder: Number(displayOrder) || 1,
       seoTitle: generateSeoTitle(title.trim(), subtitle.trim() || "Software System"),
       seoDescription: generateSeoDescription(summary.trim() || description.trim(), title.trim()),
@@ -829,6 +846,24 @@ export const ProjectsSectionManager: React.FC = () => {
     if (!confirm(`Are you sure you want to delete "${item.title}"?`)) return;
 
     try {
+      // Remove the uploaded landing page (files, ZIPs and manifest) first so a
+      // deleted project does not leave a public site behind.
+      if (item.landingPageSlug || item.landingPageUrl) {
+        const slug =
+          item.landingPageSlug ||
+          (item.landingPageUrl || "")
+            .split("/")
+            .filter(Boolean)
+            .pop() ||
+          "";
+        const token = await auth.currentUser?.getIdToken();
+        if (slug && token) {
+          await adminJson("/api/admin/landing-page/remove", {
+            token,
+            body: { projectId: item.id, slug },
+          });
+        }
+      }
       await deleteDoc(doc(db, "projects", item.id));
       toast.success(`"${item.title}" deleted.`);
     } catch (err: any) {
@@ -876,6 +911,10 @@ export const ProjectsSectionManager: React.FC = () => {
     return matchesSearch && matchesCat;
   });
 
+  const editingProject = editingId
+    ? projects.find((p) => p.id === editingId) || null
+    : null;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Header Banner */}
@@ -904,6 +943,9 @@ export const ProjectsSectionManager: React.FC = () => {
           <span>Add New Project</span>
         </button>
       </div>
+
+      {/* Section-wide card settings (tags, description lines, grid, copy) */}
+      <FeaturedProjectsSettingsPanel />
 
       {/* Category Pills & Search Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-darklight p-4 rounded-2xl border border-border/70 dark:border-dark_border">
@@ -2159,6 +2201,24 @@ export const ProjectsSectionManager: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Landing page ZIP (existing projects only — the slug is derived from the saved record) */}
+              {editingProject ? (
+                <LandingPageZipField
+                  project={editingProject}
+                  projectTitle={title}
+                />
+              ) : (
+                <div className="p-4 rounded-2xl bg-gray-50/70 dark:bg-darkmode border border-dashed border-border dark:border-dark_border">
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                    Landing page (ZIP)
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                    Create the project first, then reopen it to upload a landing
+                    page ZIP.
+                  </p>
+                </div>
+              )}
 
               {/* Row 9: Social Links (LinkedIn, Facebook, Instagram, YouTube) */}
               <div>

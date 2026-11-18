@@ -7,7 +7,8 @@
         "build": "next build",
         "export": "next build",
         "start": "next start",
-        "lint": "next lint"
+        "lint": "next lint",
+        "test": "vitest run"
     },
     "dependencies": {
         "@iconify/icons-ion": "^1.2.10",
@@ -17,6 +18,7 @@
         "axios": "^1.7.2",
         "date-fns": "^3.4.0",
         "dompurify": "^3.4.16",
+        "fflate": "^0.8.3",
         "firebase": "^11.4.0",
         "gray-matter": "^4.0.3",
         "isomorphic-dompurify": "^3.19.0",
@@ -42,7 +44,8 @@
         "@types/react-slick": "^0.23.13",
         "postcss": "^8",
         "tailwindcss": "^4.0.0",
-        "typescript": "^5"
+        "typescript": "^5",
+        "vitest": "^2.1.9"
     },
     "overrides": {
         "react": "19.0.1",

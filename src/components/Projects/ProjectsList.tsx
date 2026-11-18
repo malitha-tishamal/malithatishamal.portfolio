@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import {
@@ -10,6 +10,11 @@ import {
 } from '@/types/project'
 import { ProjectCardItem } from './ProjectCardItem'
 import { ProjectDetailModal } from './ProjectDetailModal'
+import { FEATURED_GRID_CLASSES } from '@/types/featuredProjects'
+import { useFeaturedProjectsSettings } from '@/hooks/useFeaturedProjectsSettings'
+import { formatRelativeTime, toDateValue } from '@/utils/relativeTime'
+
+const LATEST_COUNT = 6
 
 export const ProjectsList: React.FC = () => {
   const [projects, setProjects] = useState<ProjectItem[]>([])
@@ -17,6 +22,7 @@ export const ProjectsList: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('All Projects')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
+  const settings = useFeaturedProjectsSettings()
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -60,6 +66,22 @@ export const ProjectsList: React.FC = () => {
       ...projects.map((p) => p.subtitle).filter(Boolean),
     ])
   )
+
+  // "Latest · 1 month ago" labels for the six most recently updated projects.
+  const latestLabels = useMemo(() => {
+    const labels = new Map<string, string>()
+    projects
+      .map((project) => ({
+        project,
+        date: toDateValue(project.updatedAt || project.createdAt),
+      }))
+      .sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0))
+      .slice(0, LATEST_COUNT)
+      .forEach(({ project, date }) => {
+        if (date) labels.set(project.id, formatRelativeTime(date))
+      })
+    return labels
+  }, [projects])
 
   // Filtered projects
   const filteredProjects = projects.filter((project) => {
@@ -128,7 +150,7 @@ export const ProjectsList: React.FC = () => {
 
         {/* Projects Grid */}
         {loading ? (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'>
+          <div className={`grid ${FEATURED_GRID_CLASSES[settings.cardsPerRow]} gap-6 sm:gap-7 items-stretch`}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
@@ -161,11 +183,15 @@ export const ProjectsList: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'>
+          <div className={`grid ${FEATURED_GRID_CLASSES[settings.cardsPerRow]} gap-6 sm:gap-7 items-stretch`}>
             {filteredProjects.map((project) => (
               <ProjectCardItem
                 key={project.id}
                 project={project}
+                tagsShown={settings.tagsShown}
+                descriptionLines={settings.descriptionLines}
+                showVisitSite={settings.showVisitSite}
+                latestLabel={latestLabels.get(project.id)}
                 onClick={() => setSelectedProject(project)}
               />
             ))}

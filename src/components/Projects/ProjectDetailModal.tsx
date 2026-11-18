@@ -84,13 +84,17 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     ...nonVideoImages.map((src) => ({ kind: 'image' as const, src })),
   ]
 
+  const hasUploadedLandingPage =
+    project.landingPageStatus === 'ready' && !!project.landingPageUrl?.trim()
+
   const hasLinks = !!(
     project.projectUrl ||
     project.githubUrl ||
     project.linkedinUrl ||
     project.facebookUrl ||
     project.instagramUrl ||
-    project.youtubeUrl
+    project.youtubeUrl ||
+    hasUploadedLandingPage
   )
 
   const blocks = project.contentBlocks || []
@@ -316,6 +320,19 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 </span>
               </div>
               <div className='flex flex-wrap items-center gap-2'>
+                {hasUploadedLandingPage && (
+                  <a
+                    href={getImgPath(project.landingPageUrl!.trim())}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    aria-label={`Visit ${project.title} site`}
+                    className='px-3.5 py-1.5 min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2'>
+                    <svg className='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24' aria-hidden='true'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14' />
+                    </svg>
+                    <span>Visit Site</span>
+                  </a>
+                )}
                 {project.projectUrl && project.projectUrl.trim().length > 0 && (
                   <a
                     href={project.projectUrl}

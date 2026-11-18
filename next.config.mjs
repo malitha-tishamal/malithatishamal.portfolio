@@ -31,6 +31,31 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
 ];
 
+// Uploaded landing pages get their own CSP. `sandbox` without allow-same-origin
+// puts the document on an opaque origin: no cookies, no localStorage and no
+// access to the portfolio origin. These rules come after the global one so the
+// header value replaces the site CSP for /projects/{slug}/...
+// Keep in sync with LANDING_PAGE_CSP in src/lib/landingPage/serve.ts.
+const landingCsp = [
+  "sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads",
+  "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'",
+  "script-src * data: blob: 'unsafe-inline' 'unsafe-eval'",
+  "style-src * data: blob: 'unsafe-inline'",
+  "img-src * data: blob:",
+  "font-src * data:",
+  "media-src * data: blob:",
+  "connect-src * https: http: ws: wss:",
+  "base-uri *",
+  "form-action *",
+  "frame-ancestors 'self'",
+].join("; ");
+
+const landingPageHeaders = [
+  { key: "Content-Security-Policy", value: landingCsp },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "no-referrer" },
+];
+
 const nextConfig = {
   images: {
     unoptimized: true,
@@ -43,6 +68,14 @@ const nextConfig = {
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/projects/:slug",
+        headers: landingPageHeaders,
+      },
+      {
+        source: "/projects/:slug/:path*",
+        headers: landingPageHeaders,
       },
     ];
   },

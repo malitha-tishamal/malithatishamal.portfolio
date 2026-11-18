@@ -6,6 +6,7 @@ import {
   VideoPlaybackMode,
   PortfolioVideoTrim,
 } from "./portfolio";
+import type { LandingPageStatus, LandingPageVersion } from "./landingPage";
 
 export type ProjectImageFit = "cover" | "contain" | "portrait_tall";
 
@@ -36,6 +37,16 @@ export interface ProjectItem {
   facebookUrl?: string; // Facebook URL
   instagramUrl?: string; // Instagram URL
   youtubeUrl?: string; // YouTube URL
+  // Uploaded static landing page (ZIP) — see src/lib/landingPage
+  landingPageSlug?: string; // stable slug used by /projects/{slug}/
+  landingPageUrl?: string; // public URL, e.g. /projects/{slug}/
+  landingPageVersion?: string; // live version id
+  landingPageUploadedAt?: string;
+  landingPageStatus?: LandingPageStatus;
+  landingPageFileCount?: number;
+  landingPageTotalBytes?: number;
+  landingPageVersions?: LandingPageVersion[]; // rollback history (last 3)
+  showBackToPortfolio?: boolean; // default true
   featured?: boolean;
   displayOrder: number;
   seoTitle?: string;
