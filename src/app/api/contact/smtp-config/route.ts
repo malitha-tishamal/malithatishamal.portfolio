@@ -1,34 +1,22 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
-import fs from "fs";
-import path from "path";
 import { getVerifiedAdminEmail } from "@/lib/adminAuth";
-import { isValidEmail, cleanString } from "@/utils/validation";
+import { getSmtpConfig, getSmtpStatus } from "@/lib/smtpConfig";
+import { sendTestEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/utils/rateLimit";
 
+/**
+ * Admin-only SMTP status + test endpoint.
+ *
+ * Credentials live in the server environment and are never accepted from the
+ * browser, written to disk at runtime, or stored in Firestore / `.env.local`.
+ */
 export async function GET(req: Request) {
   const adminEmail = await getVerifiedAdminEmail(req);
   if (!adminEmail) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const smtpUser = process.env.SMTP_USER || "malithatishamal@gmail.com";
-  const receiverEmail = process.env.CONTACT_RECEIVER_EMAIL || "malithatishamal@gmail.com";
-  const hasPass = Boolean(process.env.SMTP_PASS && process.env.SMTP_PASS.trim().length > 0);
-
-  return NextResponse.json({
-    configured: hasPass,
-    smtpUser,
-    receiverEmail,
-    smtpHost: process.env.SMTP_HOST || "smtp.gmail.com",
-    hasPassword: hasPass,
-  });
-}
-
-/** Only permit simple, single-line env values — blocks newline/env injection. */
-function safeEnvValue(value: string): string {
-  // eslint-disable-next-line no-control-regex
-  return value.replace(/[\u0000-\u001F\u007F"']/g, "").slice(0, 254);
+  return NextResponse.json(getSmtpStatus());
 }
 
 export async function POST(req: Request) {
@@ -38,8 +26,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip = getClientIp(req);
-    const rl = rateLimit("smtp-config", ip, 5, 10 * 60 * 1000);
+    const rl = rateLimit("smtp-config", getClientIp(req), 5, 10 * 60 * 1000);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -47,128 +34,32 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const smtpUser = cleanString(body?.smtpUser, 254);
-    const smtpPass = cleanString(body?.smtpPass, 64);
-    const receiverEmail = cleanString(body?.receiverEmail, 254);
-    const testNow = Boolean(body?.testNow);
-
-    const targetUser = (smtpUser || process.env.SMTP_USER || "malithatishamal@gmail.com").trim();
-    const targetReceiver = (receiverEmail || process.env.CONTACT_RECEIVER_EMAIL || targetUser).trim();
-    const cleanPass = (smtpPass || "").trim().replace(/\s+/g, "");
-
-    if (!isValidEmail(targetUser) || !isValidEmail(targetReceiver)) {
+    const config = getSmtpConfig();
+    if (!config) {
       return NextResponse.json(
-        { error: "Please provide valid email addresses." },
-        { status: 400 }
+        {
+          error:
+            "Email is not configured on the server. Set SMTP_USER, SMTP_PASS and CONTACT_RECEIVER_EMAIL.",
+        },
+        { status: 503 }
       );
     }
 
-    if (!cleanPass) {
+    const sent = await sendTestEmail(config);
+    if (!sent) {
       return NextResponse.json(
-        { error: "App Password is required. Please generate a 16-character Google App Password." },
-        { status: 400 }
+        { error: "Failed to send the test email. Check the server SMTP credentials." },
+        { status: 502 }
       );
     }
-
-    // Verify SMTP connection and optionally send test email
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: targetUser,
-        pass: cleanPass,
-      },
-    });
-
-    let testSent = false;
-    if (testNow) {
-      try {
-        await transporter.sendMail({
-          from: `"Portfolio Notification Test" <${targetUser}>`,
-          to: targetReceiver,
-          subject: "🎉 Test Notification: Portfolio Contact Form Email is Working!",
-          html: `
-            <div style="font-family: sans-serif; background-color: #0b1120; color: #ffffff; padding: 30px; border-radius: 12px; max-width: 550px; margin: auto;">
-              <h2 style="color: #38bdf8; margin-top: 0;">🚀 Gmail SMTP Connected Successfully!</h2>
-              <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">
-                Great news! Your portfolio website is now linked with Gmail SMTP. Whenever a visitor submits the <strong>&quot;Start the project&quot;</strong> contact form, you will receive an instant notification email right here.
-              </p>
-              <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; border-left: 4px solid #0a66c2; margin: 20px 0;">
-                <p style="margin: 0; font-size: 13px; color: #94a3b8;"><strong>Sender:</strong> ${targetUser}</p>
-                <p style="margin: 5px 0 0 0; font-size: 13px; color: #94a3b8;"><strong>Receiver:</strong> ${targetReceiver}</p>
-                <p style="margin: 5px 0 0 0; font-size: 13px; color: #94a3b8;"><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
-              </div>
-              <p style="color: #64748b; font-size: 12px; margin-bottom: 0;">
-                Sent from Malitha Tishamal Portfolio System.
-              </p>
-            </div>
-          `,
-          text: `Gmail SMTP connected successfully! Test notification sent to ${targetReceiver} at ${new Date().toLocaleString()}`,
-        });
-        testSent = true;
-      } catch (authErr: any) {
-        console.error("SMTP verification error:", authErr);
-        let humanMsg = authErr.message || "Failed to authenticate with Gmail SMTP.";
-        if (authErr.code === "EAUTH" || authErr.responseCode === 535) {
-          humanMsg =
-            "Invalid Google App Password or Username. Please make sure 2-Step Verification is ON in your Google Account and generate a new 16-character App Password at https://myaccount.google.com/apppasswords";
-        }
-        return NextResponse.json({ error: humanMsg }, { status: 401 });
-      }
-    }
-
-    // Update .env.local file
-    const envPath = path.join(process.cwd(), ".env.local");
-    let envContent = "";
-    try {
-      if (fs.existsSync(envPath)) {
-        envContent = fs.readFileSync(envPath, "utf-8");
-      }
-    } catch (e) {
-      console.warn("Could not read .env.local:", e);
-    }
-
-    const updateOrAppend = (content: string, key: string, val: string) => {
-      const regex = new RegExp(`^${key}=.*$`, "m");
-      if (regex.test(content)) {
-        return content.replace(regex, `${key}=${val}`);
-      }
-      return `${content.trim()}\n${key}=${val}\n`;
-    };
-
-    envContent = updateOrAppend(envContent, "SMTP_USER", safeEnvValue(targetUser));
-    envContent = updateOrAppend(envContent, "SMTP_PASS", safeEnvValue(cleanPass));
-    envContent = updateOrAppend(envContent, "CONTACT_RECEIVER_EMAIL", safeEnvValue(targetReceiver));
-    envContent = updateOrAppend(envContent, "SMTP_HOST", "smtp.gmail.com");
-    envContent = updateOrAppend(envContent, "SMTP_PORT", "465");
-    envContent = updateOrAppend(envContent, "SMTP_SECURE", "true");
-
-    try {
-      fs.writeFileSync(envPath, envContent, "utf-8");
-    } catch (writeErr) {
-      console.warn("Could not write to .env.local file:", writeErr);
-    }
-
-    // Also update in-memory process.env so it works immediately
-    process.env.SMTP_USER = targetUser;
-    process.env.SMTP_PASS = cleanPass;
-    process.env.CONTACT_RECEIVER_EMAIL = targetReceiver;
-    process.env.SMTP_HOST = "smtp.gmail.com";
-    process.env.SMTP_PORT = "465";
-    process.env.SMTP_SECURE = "true";
 
     return NextResponse.json({
       success: true,
-      testSent,
-      message: testSent
-        ? `SMTP configured successfully and test email delivered to ${targetReceiver}!`
-        : "SMTP credentials saved and active!",
+      testSent: true,
+      message: `Test email sent to ${config.recipientEmail}.`,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error in smtp-config route:", err);
-    return NextResponse.json(
-      { error: err?.message || "Internal server error while configuring SMTP" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }

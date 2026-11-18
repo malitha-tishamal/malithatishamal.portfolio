@@ -18,22 +18,39 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Owner's super-admin email — guarantees you can never be locked out even
-    // if your /users profile doc is missing or misconfigured.
+    // if your /users profile doc is missing or misconfigured. The address must
+    // be verified: an unverified signup cannot claim it.
     function isSuperAdmin() {
       return request.auth != null
+        && request.auth.token.email_verified == true
         && request.auth.token.email == 'malithatishamal@gmail.com';
     }
 
     function isAdmin() {
-      return request.auth != null && (
-        isSuperAdmin() ||
-        (
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved' &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isApproved == true
-        )
-      );
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && (
+          isSuperAdmin() ||
+          (
+            exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved' &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isApproved == true
+          )
+        );
+    }
+
+    // The public content documents are world-readable, so they must never
+    // contain mail credentials. Older builds stored the Gmail app password in
+    // `siteContent/footer`; block any write that reintroduces those fields.
+    function noSmtpSecrets() {
+      return !request.resource.data.keys().hasAny([
+        'gmailSmtpAppPassword',
+        'gmailSmtpUser',
+        'gmailNotificationRecipient',
+        'gmailSmtpEnabled',
+        'newsletterNotificationEmail'
+      ]);
     }
 
     // ── Public content: world-readable, admin-writable ──────────────────────
@@ -49,15 +66,24 @@ service cloud.firestore {
 
     // ── Site content (hero, footer, slider settings, categories, etc.) ──────
     // The live visitor counter is incremented by anonymous visitors, so it gets
-    // a dedicated rule allowing public read + update (never public create/delete).
+    // a dedicated rule allowing public read + a validated +1 update.
     match /siteContent/visitorCounter {
       allow read: if true;
-      allow update: if true;
-      allow create, delete: if isAdmin();
+      // Anonymous visitors may only bump the counter by exactly one, and may
+      // not touch any other field.
+      allow update: if request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['totalVisitors', 'updatedAt'])
+        && request.resource.data.totalVisitors == resource.data.totalVisitors + 1;
+      // First-ever initialisation (fresh database) — value must start at 1.
+      allow create: if request.resource.data.keys()
+          .hasOnly(['totalVisitors', 'createdAt', 'updatedAt'])
+        && request.resource.data.totalVisitors == 1;
+      allow delete: if isAdmin();
     }
     match /siteContent/{doc} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && noSmtpSecrets();
+      allow delete: if isAdmin();
     }
 
     // ── Uploaded landing pages (published at /projects/{slug}/) ─────────────
@@ -69,12 +95,30 @@ service cloud.firestore {
     }
 
     // ── Anonymous-create collections (public submit, admin-only manage) ─────
+    // The contact form writes inquiries directly from the browser. Whitelist
+    // the exact shape so the endpoint cannot be abused to plant arbitrary
+    // fields (for example a forged `status` or oversized payload).
     match /inquiries/{doc} {
-      allow create: if true;
+      allow create: if request.resource.data.keys().hasOnly([
+          'firstName', 'lastName', 'email', 'country',
+          'serviceCategory', 'message', 'status', 'isStarred', 'createdAt'
+        ])
+        && request.resource.data.status == 'new'
+        && request.resource.data.isStarred == false
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 5000
+        && request.resource.data.firstName.size() <= 120
+        && request.resource.data.lastName.size() <= 120
+        && request.resource.data.country.size() <= 120;
       allow read, update, delete: if isAdmin();
     }
     match /newsletterSubscribers/{doc} {
-      allow create: if true;
+      allow create: if request.resource.data.keys().hasOnly(['email', 'subscribedAt', 'status'])
+        && request.resource.data.status == 'active'
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254;
       allow read, update, delete: if isAdmin();
     }
     match /advancedAnalytics/{doc} {
@@ -92,7 +136,15 @@ service cloud.firestore {
     // dailyStats is read publicly (to render counts) and written by the
     // anonymous visitor hook; deletion stays admin-only.
     match /dailyStats/{doc} {
-      allow read, create, update: if true;
+      allow read: if true;
+      allow create: if request.resource.data.keys()
+          .hasOnly(['date', 'totalVisitors', 'uniqueVisitors', 'locations', 'createdAt', 'updatedAt'])
+        && request.resource.data.totalVisitors is int
+        && request.resource.data.uniqueVisitors is int;
+      // Anonymous updates may only bump the counters / locations — never swap
+      // the date or inject arbitrary fields.
+      allow update: if request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['totalVisitors', 'uniqueVisitors', 'locations', 'updatedAt']);
       allow delete: if isAdmin();
     }
 

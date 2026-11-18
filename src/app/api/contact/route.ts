@@ -213,18 +213,24 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!emailSent) {
+      console.warn(
+        `[Contact API] Inquiry stored; notification email not sent (request ${req.headers.get("x-request-id") || "n/a"}).`
+      );
+    }
+
+    // Never reveal SMTP state or transport errors to the public client.
     return NextResponse.json({
       success: true,
-      emailSent,
-      emailError,
-      message: emailSent
-        ? "Inquiry sent successfully to email and recorded in database!"
-        : "Inquiry saved in database! (Configure SMTP in .env.local to enable direct email notifications)",
+      message: "Inquiry received! We will get back to you shortly.",
     });
-  } catch (err: any) {
-    console.error("Contact API error:", err);
+  } catch (err) {
+    console.error(
+      `Contact API error (request ${req.headers.get("x-request-id") || "n/a"}):`,
+      err
+    );
     return NextResponse.json(
-      { error: err?.message || "Internal server error processing contact inquiry" },
+      { error: "Something went wrong while sending your inquiry. Please try again." },
       { status: 500 }
     );
   }

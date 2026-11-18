@@ -10,6 +10,7 @@ import {
   getRedirectResult,
   signOut,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
   onAuthStateChanged,
 } from "firebase/auth";
@@ -102,11 +103,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (fbUser) {
         const cleanEmail = (fbUser.email || "").toLowerCase().trim();
+        const usesPassword = fbUser.providerData.some((p) => p.providerId === "password");
+
+        // Password accounts must confirm their email before any session is
+        // accepted. Social providers verify the address themselves.
+        if (usesPassword && !fbUser.emailVerified) {
+          await signOut(auth);
+          setUser(null);
+          setUserProfile(null);
+          setLoading(false);
+          return;
+        }
+
         let profile = await fetchUserProfile(fbUser.uid);
         const isSuper = isInitialAdmin(cleanEmail);
 
         // Auto-approve the initial super admin so they can access the admin panel to approve others
-        if (isSuper && profile && (!profile.isApproved || profile.status !== "approved" || profile.role !== "admin")) {
+        if (isSuper && fbUser.emailVerified && profile && (!profile.isApproved || profile.status !== "approved" || profile.role !== "admin")) {
           try {
             await updateDoc(doc(db, "users", fbUser.uid), {
               role: "admin",
@@ -146,7 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  // Email/Password Sign Up -> ROLE: ADMIN, STATUS: PENDING, NO AUTO-LOGIN
+  // Email/Password Sign Up -> verification email, ROLE: ADMIN, STATUS: PENDING, NO AUTO-LOGIN
   const signUpWithEmail = async (name: string, email: string, pass: string) => {
     const cleanEmail = email.toLowerCase().trim();
     const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
@@ -154,16 +167,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await updateProfile(cred.user, { displayName: name });
     }
 
+    try {
+      await sendEmailVerification(cred.user);
+    } catch (verifyErr) {
+      console.warn("Could not send verification email:", verifyErr);
+    }
+
     const isSuper = isInitialAdmin(cleanEmail);
 
+    // Even the bootstrap admin starts pending: the profile is promoted by the
+    // verified owner on first successful sign-in (see the auth listener).
     const newProfile: UserProfile = {
       uid: cred.user.uid,
       name: name || cleanEmail.split("@")[0],
       email: cleanEmail,
       photoURL: cred.user.photoURL || "",
       role: "admin",
-      status: isSuper ? "approved" : "pending",
-      isApproved: isSuper ? true : false,
+      status: "pending",
+      isApproved: false,
       provider: "password",
       createdAt: serverTimestamp(),
     };
@@ -178,24 +199,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw setErr;
     }
 
-    // New accounts are pending: strictly sign out immediately (no auto-login)
+    // New accounts must verify their email and be approved: no auto-login.
     await signOut(auth);
     setUser(null);
     setUserProfile(null);
 
     return {
       success: true,
-      isApproved: isSuper,
+      isApproved: false,
       message: isSuper
-        ? "Admin account created successfully! You can now sign in."
-        : "Account created successfully! Your account is pending administrator approval before you can sign in.",
+        ? "Account created! Check your inbox for the verification link, then sign in."
+        : "Account created! Confirm your email address, then wait for administrator approval before you can sign in.",
     };
   };
 
-  // Email/Password Sign In -> CHECKS APPROVAL
+  // Email/Password Sign In -> CHECKS VERIFICATION + APPROVAL
   const signInWithEmail = async (email: string, pass: string) => {
     const cleanEmail = email.toLowerCase().trim();
     const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+
+    if (!cred.user.emailVerified) {
+      try {
+        await sendEmailVerification(cred.user);
+      } catch {
+        // Ignore; the account simply cannot sign in yet.
+      }
+      await signOut(auth);
+      setUser(null);
+      setUserProfile(null);
+      throw new Error(
+        "Please verify your email address first. We sent a fresh verification link to your inbox."
+      );
+    }
+
     let profile = await fetchUserProfile(cred.user.uid);
     const isSuper = isInitialAdmin(cleanEmail);
 

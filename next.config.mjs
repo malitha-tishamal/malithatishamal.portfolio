@@ -18,17 +18,27 @@ const csp = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'self'",
+  "report-uri /api/csp-report",
   ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: csp },
   { key: "X-Content-Type-Options", value: "nosniff" },
+  // 'self' instead of DENY: the admin panel previews uploaded landing pages in
+  // a same-origin iframe, so framing by the site itself must stay possible.
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), interest-cohort=()" },
+  {
+    key: "Permissions-Policy",
+    value:
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=(), interest-cohort=()",
+  },
   { key: "X-DNS-Prefetch-Control", value: "off" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-site" },
+  { key: "Reporting-Endpoints", value: 'csp-endpoint="/api/csp-report"' },
 ];
 
 // Uploaded landing pages get their own CSP. `sandbox` without allow-same-origin
@@ -57,6 +67,8 @@ const landingPageHeaders = [
 ];
 
 const nextConfig = {
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   images: {
     unoptimized: true,
   },
@@ -68,6 +80,15 @@ const nextConfig = {
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        // Signed-in areas and API responses must never be cached.
+        source: "/admin/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
+      },
+      {
+        source: "/api/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
       },
       {
         source: "/projects/:slug",

@@ -32,9 +32,6 @@ export const FooterManager: React.FC = () => {
   const [newNavHref, setNewNavHref] = useState("");
   const [testingEmail, setTestingEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [passwordFetchResult, setPasswordFetchResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [passwordSaved, setPasswordSaved] = useState(false);
 
   // ── Fetch footer content ──────────────────────────────────────────────────
   useEffect(() => {
@@ -42,20 +39,21 @@ export const FooterManager: React.FC = () => {
       try {
         const snap = await getDoc(doc(db, "siteContent", "footer"));
         if (snap.exists()) {
-          const d = snap.data() as FooterContent;
-          // Never surface the stored secret to the browser. If it is encrypted
-          // at rest, blank the field and flag it as saved so the admin only
-          // re-enters it to change or re-test.
-          const storedPass = d.gmailSmtpAppPassword || "";
-          const passIsEncrypted = storedPass.startsWith("enc:v1:");
+          // The footer document is public. Legacy versions stored SMTP secrets
+          // here — drop them on load (and on save) so they cannot survive.
+          const raw = (snap.data() || {}) as Record<string, unknown>;
+          delete raw.gmailSmtpAppPassword;
+          delete raw.gmailSmtpUser;
+          delete raw.gmailNotificationRecipient;
+          delete raw.gmailSmtpEnabled;
+          delete raw.newsletterNotificationEmail;
+          const d = raw as unknown as FooterContent;
           setFormData({
             ...defaultFooterContent,
             ...d,
-            gmailSmtpAppPassword: passIsEncrypted ? "" : storedPass,
             socialLinks: d.socialLinks?.length ? d.socialLinks : DEFAULT_SOCIAL_LINKS,
             navLinks: d.navLinks?.length ? d.navLinks : DEFAULT_NAV_LINKS,
           });
-          if (passIsEncrypted) setPasswordSaved(true);
         }
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
@@ -138,15 +136,18 @@ export const FooterManager: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, "siteContent", "footer"), { ...formData, updatedAt: serverTimestamp() });
+      // Write exactly what the public footer needs — no SMTP fields, ever.
+      const payload = { ...formData, updatedAt: serverTimestamp() } as Record<string, unknown>;
+      delete payload.gmailSmtpAppPassword;
+      delete payload.gmailSmtpUser;
+      delete payload.gmailNotificationRecipient;
+      delete payload.gmailSmtpEnabled;
+      delete payload.newsletterNotificationEmail;
+      await setDoc(doc(db, "siteContent", "footer"), payload);
       toast.success("Footer saved successfully!");
-      setPasswordSaved(true);
-      // Reset password saved indicator after 5 seconds
-      setTimeout(() => setPasswordSaved(false), 5000);
     } catch (e) {
       console.error(e);
       toast.error("Failed to save. Please try again.");
-      setPasswordSaved(false);
     } finally { setSaving(false); }
   };
 
@@ -160,55 +161,30 @@ export const FooterManager: React.FC = () => {
     } catch (e) { toast.error("Error removing subscriber."); }
   };
 
-  // Toggle password visibility
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  // Copy password to clipboard
-  const copyPassword = async () => {
-    const password = formData.gmailSmtpAppPassword || '';
-    if (!password) {
-      toast.error('No password to copy');
-      return;
-    }
+  // Send a test email with the server-side SMTP configuration
+  const sendTestEmailNow = async () => {
+    setTestingEmail(true);
+    setTestEmailResult(null);
     try {
-      await navigator.clipboard.writeText(password);
-      toast.success('Password copied to clipboard!');
-    } catch (error) {
-      toast.error('Failed to copy password');
-    }
-  };
-
-  // Fetch password from Firestore
-  const fetchPasswordFromFirestore = async () => {
-    try {
-      const snap = await getDoc(doc(db, "siteContent", "footer"));
-      if (snap.exists()) {
-        const d = snap.data() as FooterContent;
-        if (d.gmailSmtpAppPassword) {
-          if (d.gmailSmtpAppPassword.startsWith("enc:v1:")) {
-            // Stored encrypted at rest — do not expose ciphertext in the field.
-            setPasswordSaved(true);
-            setPasswordFetchResult({ success: true, message: "🔒 A password is saved (encrypted at rest). Re-enter it only to change or re-test." });
-            toast.success("Password is saved securely (encrypted).");
-          } else {
-            setField("gmailSmtpAppPassword", d.gmailSmtpAppPassword);
-            setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
-            toast.success("Password fetched from Firestore!");
-          }
-        } else {
-          setPasswordFetchResult({ success: false, message: "❌ No password found in Firestore" });
-          toast.error("No password found in Firestore");
-        }
+      const token = await user?.getIdToken();
+      const response = await fetch('/api/newsletter/test-email', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setTestEmailResult({ success: true, message: data.message });
+        toast.success(data.message);
       } else {
-        setPasswordFetchResult({ success: false, message: "❌ No footer configuration found in Firestore" });
-        toast.error("No footer configuration found");
+        setTestEmailResult({ success: false, message: data.error || 'Test failed.' });
+        toast.error(data.error || 'Test failed.');
       }
     } catch (error) {
-      console.error('Error fetching password:', error);
-      setPasswordFetchResult({ success: false, message: "❌ Failed to fetch password from Firestore" });
-      toast.error("Failed to fetch password from Firestore");
+      console.error('Test email error:', error);
+      setTestEmailResult({ success: false, message: 'Failed to send test email.' });
+      toast.error('Failed to send test email.');
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -378,243 +354,57 @@ export const FooterManager: React.FC = () => {
                 </label>
               </div>
               <div>
-                <label className={labelCls}>Notification Email Address</label>
-                <input
-                  className={inputCls}
-                  type="email"
-                  value={formData.newsletterNotificationEmail || ''}
-                  onChange={e => setField("newsletterNotificationEmail", e.target.value)}
-                  placeholder="your-email@example.com"
-                  disabled={!formData.enableNewsletterNotifications}
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  When someone subscribes, you'll receive an email notification at this address.
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  When someone subscribes, a notification is emailed to the address configured in the server&apos;s
+                  <code className="mx-1 bg-gray-100 dark:bg-darkmode px-1 rounded">CONTACT_RECEIVER_EMAIL</code>
+                  environment variable.
                 </p>
               </div>
             </div>
 
-            {/* Gmail SMTP Configuration */}
+            {/* Email delivery — configured on the server, never stored here */}
             <div className="border-t border-border dark:border-dark_border pt-4 mt-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">📧</span>
+                  <span className="text-2xl">🔒</span>
                   <div>
-                    <h4 className="font-bold text-dark dark:text-white text-sm">Email Notifications (Gmail SMTP)</h4>
+                    <h4 className="font-bold text-dark dark:text-white text-sm">
+                      Email delivery is configured on the server
+                    </h4>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Send an automatic email copy of every new newsletter subscription directly to your personal inbox.
+                      Notification emails use the <code className="bg-blue-100 dark:bg-blue-900/50 px-1 rounded">SMTP_USER</code>, <code className="bg-blue-100 dark:bg-blue-900/50 px-1 rounded">SMTP_PASS</code> and <code className="bg-blue-100 dark:bg-blue-900/50 px-1 rounded">CONTACT_RECEIVER_EMAIL</code> environment variables. Credentials are never stored in this form, in Firestore, or sent to visitors.
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                      To change the sender or recipient, update the environment variables in your hosting dashboard and redeploy.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4">
+              <div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
                 <div className="flex items-start gap-2">
                   <span className="text-lg">⚠️</span>
                   <div>
-                    <h4 className="font-bold text-dark dark:text-white text-sm">App Password Required</h4>
+                    <h4 className="font-bold text-dark dark:text-white text-sm">Rotate the old app password</h4>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Newsletter subscriptions are currently being saved safely into the database, but Google Gmail requires a 16-character Google App Password to authorize your website to send notification emails.
+                      Earlier versions stored the Gmail app password in the public footer document. If you have not already, revoke that app password and create a new one.
                     </p>
-                    <ol className="text-xs text-gray-600 dark:text-gray-400 mt-2 list-decimal list-inside space-y-1">
-                      <li>Make sure 2-Step Verification is ON in your Google Account.</li>
-                      <li>Visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google App Passwords</a> ↗</li>
-                      <li>Type an App Name (e.g. Portfolio) and click Create.</li>
-                      <li>Copy the 16-letter code and paste it below.</li>
-                    </ol>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <input
-                  type="checkbox"
-                  id="enableGmailSmtp"
-                  checked={formData.gmailSmtpEnabled ?? false}
-                  onChange={e => setField("gmailSmtpEnabled", e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                />
-                <label htmlFor="enableGmailSmtp" className="text-sm font-medium text-dark dark:text-white cursor-pointer">
-                  Enable Gmail SMTP
-                </label>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className={labelCls}>Sender Gmail Account (SMTP User)</label>
-                  <input
-                    className={inputCls}
-                    type="email"
-                    value={formData.gmailSmtpUser || ''}
-                    onChange={e => setField("gmailSmtpUser", e.target.value)}
-                    placeholder="malithatishamal@gmail.com"
-                    disabled={!formData.gmailSmtpEnabled}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelCls}>Notification Recipient Email</label>
-                  <input
-                    className={inputCls}
-                    type="email"
-                    value={formData.gmailNotificationRecipient || ''}
-                    onChange={e => setField("gmailNotificationRecipient", e.target.value)}
-                    placeholder="malithatishamal@gmail.com"
-                    disabled={!formData.gmailSmtpEnabled}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelCls}>Google App Password (16 Characters)</label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        className={`${inputCls} pr-20`}
-                        type={showPassword ? "text" : "password"}
-                        value={formData.gmailSmtpAppPassword || ''}
-                        onChange={e => {
-                          setField("gmailSmtpAppPassword", e.target.value.replace(/\s/g, ''));
-                          setPasswordSaved(false);
-                        }}
-                        placeholder="e.g. abcd efgh ijkl mnop"
-                        disabled={!formData.gmailSmtpEnabled}
-                        maxLength={16}
-                      />
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                        <button
-                          type="button"
-                          onClick={togglePasswordVisibility}
-                          disabled={!formData.gmailSmtpEnabled}
-                          className={`p-1.5 rounded transition ${
-                            !formData.gmailSmtpEnabled
-                              ? 'text-gray-400 cursor-not-allowed opacity-50'
-                              : 'text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-darklight cursor-pointer'
-                          }`}
-                          title={showPassword ? "Hide password" : "Show password"}
-                        >
-                          {showPassword ? "👁️" : "👁️‍🗨️"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={copyPassword}
-                          disabled={!formData.gmailSmtpEnabled || !formData.gmailSmtpAppPassword}
-                          className={`p-1.5 rounded transition ${
-                            !formData.gmailSmtpEnabled || !formData.gmailSmtpAppPassword
-                              ? 'text-gray-400 cursor-not-allowed opacity-50'
-                              : 'text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-darklight cursor-pointer'
-                          }`}
-                          title="Copy password"
-                        >
-                          📋
-                        </button>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={fetchPasswordFromFirestore}
-                      disabled={!formData.gmailSmtpEnabled}
-                      className={`px-3 py-2 text-xs font-medium rounded-lg transition ${
-                        !formData.gmailSmtpEnabled
-                          ? 'bg-gray-100 dark:bg-darkmode text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-                          : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 cursor-pointer'
-                      }`}
-                      title="Fetch password from Firestore"
-                    >
-                      🔄 Fetch from Firestore
-                    </button>
                     <a
                       href="https://myaccount.google.com/apppasswords"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`px-3 py-2 bg-gray-100 dark:bg-darkmode text-xs font-medium rounded-lg transition ${
-                        !formData.gmailSmtpEnabled
-                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-darklight cursor-pointer'
-                      }`}
+                      className="inline-block mt-2 text-xs font-medium text-primary hover:underline"
                     >
-                      Get App Password ↗
+                      Open Google App Passwords ↗
                     </a>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Spaces are automatically removed. This is your 16-character Google App Password (not your regular Google password).
-                  </p>
-                  {passwordSaved && (
-                    <div className="mt-2 p-2 rounded-lg text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800">
-                      ✅ Key fetched from Firestore successfully!
-                    </div>
-                  )}
-                  {passwordFetchResult && (
-                    <div className={`mt-2 p-2 rounded-lg text-xs ${
-                      passwordFetchResult.success
-                        ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                    }`}>
-                      {passwordFetchResult.message}
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Test Email Button */}
               <div className="mt-4">
                 <button
-                  onClick={async () => {
-                    const smtpUser = formData.gmailSmtpUser || '';
-                    const appPassword = formData.gmailSmtpAppPassword || '';
-                    const recipientEmail = formData.gmailNotificationRecipient || '';
-
-                    if (!smtpUser || !appPassword || !recipientEmail) {
-                      toast.error('Please fill in all Gmail SMTP fields first.');
-                      return;
-                    }
-
-                    setTestingEmail(true);
-                    setTestEmailResult(null);
-
-                    try {
-                      const token = await user?.getIdToken();
-                      const response = await fetch('/api/newsletter/test-email', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                        },
-                        body: JSON.stringify({
-                          smtpUser,
-                          appPassword,
-                          recipientEmail,
-                        }),
-                      });
-
-                      const data = await response.json();
-                      setTestEmailResult(data);
-
-                      if (response.ok) {
-                        toast.success(data.message);
-                        // Refresh the form data to get the saved configuration
-                        const fetch = async () => {
-                          const snap = await getDoc(doc(db, "siteContent", "footer"));
-                          if (snap.exists()) {
-                            const d = snap.data() as FooterContent;
-                            setFormData({
-                              ...defaultFooterContent,
-                              ...(d),
-                              socialLinks: d.socialLinks?.length ? d.socialLinks : DEFAULT_SOCIAL_LINKS,
-                              navLinks: d.navLinks?.length ? d.navLinks : DEFAULT_NAV_LINKS,
-                            });
-                          }
-                        };
-                        fetch();
-                      } else {
-                        toast.error(data.error);
-                      }
-                    } catch (error) {
-                      console.error('Test email error:', error);
-                      toast.error('Failed to send test email. Please try again.');
-                    } finally {
-                      setTestingEmail(false);
-                    }
-                  }}
-                  disabled={testingEmail || !formData.gmailSmtpEnabled}
+                  onClick={sendTestEmailNow}
+                  disabled={testingEmail}
                   className="w-full py-3 px-4 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
                 >
                   {testingEmail ? (
@@ -625,16 +415,16 @@ export const FooterManager: React.FC = () => {
                   ) : (
                     <>
                       <span>🚀</span>
-                      Save & Send Test Email
+                      Send Test Email
                     </>
                   )}
                 </button>
 
                 {testEmailResult && (
                   <div className={`mt-3 p-3 rounded-lg text-sm ${
-                    testEmailResult.success 
-                      ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' 
-                      : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
+                    testEmailResult.success
+                      ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800"
+                      : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
                   }`}>
                     {testEmailResult.message}
                   </div>

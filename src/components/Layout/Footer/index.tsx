@@ -48,7 +48,15 @@ const Footer: FC = () => {
         doc(db, 'siteContent', 'footer'),
         (snap) => {
           if (snap.exists()) {
-            setData({ ...defaultFooterContent, ...(snap.data() as FooterContent) })
+            // The footer document is public. Older builds stored SMTP secrets
+            // in it — drop them from client state as defence in depth.
+            const raw = (snap.data() || {}) as Record<string, unknown>
+            delete raw.gmailSmtpAppPassword
+            delete raw.gmailSmtpUser
+            delete raw.gmailNotificationRecipient
+            delete raw.gmailSmtpEnabled
+            delete raw.newsletterNotificationEmail
+            setData({ ...defaultFooterContent, ...(raw as unknown as FooterContent) })
           }
         },
         (err) => {

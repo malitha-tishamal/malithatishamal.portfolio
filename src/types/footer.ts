@@ -45,14 +45,9 @@ export interface FooterContent {
   visitorCountBase?: number;
 
   // Newsletter Email Notification Settings
-  newsletterNotificationEmail?: string; // Email to receive subscription notifications
-  enableNewsletterNotifications?: boolean; // Enable/disable email notifications
-  
-  // Gmail SMTP Configuration for Email Notifications
-  gmailSmtpEnabled?: boolean; // Enable Gmail SMTP for email sending
-  gmailSmtpUser?: string; // Gmail address for SMTP (sender)
-  gmailSmtpAppPassword?: string; // 16-character Google App Password
-  gmailNotificationRecipient?: string; // Email to receive notifications
+  // SMTP credentials live in server environment variables only; this document
+  // is world-readable and must never hold secrets.
+  enableNewsletterNotifications?: boolean; // Send an email copy of each subscription
 }
 
 export const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
@@ -111,12 +106,5 @@ export const defaultFooterContent: FooterContent = {
   visitorCountBase: 1250,
 
   // Newsletter Email Notification
-  newsletterNotificationEmail: 'malithatishamal@gmail.com',
   enableNewsletterNotifications: true,
-
-  // Gmail SMTP Configuration
-  gmailSmtpEnabled: false,
-  gmailSmtpUser: 'malithatishamal@gmail.com',
-  gmailSmtpAppPassword: '',
-  gmailNotificationRecipient: 'malithatishamal@gmail.com',
 };

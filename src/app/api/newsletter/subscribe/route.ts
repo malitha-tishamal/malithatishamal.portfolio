@@ -4,7 +4,7 @@ import { db } from '@/lib/firebase';
 import { sendNewsletterNotification } from '@/lib/email';
 import { isValidEmail, cleanString } from '@/utils/validation';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
-import { decrypt } from '@/lib/crypto';
+import { getSmtpConfig } from '@/lib/smtpConfig';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,40 +52,23 @@ export async function POST(request: NextRequest) {
       status: 'active',
     });
 
-    // Get footer settings to check if email notifications are enabled
-    const footerDoc = await getDoc(doc(db, 'siteContent', 'footer'));
-    const footerData = footerDoc.exists() ? footerDoc.data() : null;
-    
-    const enableNotifications = footerData?.enableNewsletterNotifications ?? true;
-    const enableGmailSmtp = footerData?.gmailSmtpEnabled ?? false;
-    
-    // Send email notification using Gmail SMTP if enabled
-    if (enableNotifications && enableGmailSmtp) {
-      const smtpUser = footerData?.gmailSmtpUser || '';
-      const appPassword = decrypt(footerData?.gmailSmtpAppPassword || '');
-      const recipientEmail = footerData?.gmailNotificationRecipient || footerData?.newsletterNotificationEmail || 'malithatishamal@gmail.com';
-      
-      if (smtpUser && appPassword && recipientEmail) {
-        const emailSent = await sendNewsletterNotification(email, {
-          smtpUser,
-          appPassword,
-          recipientEmail,
-        });
-        
-        if (!emailSent) {
-          console.warn('Email notification failed, but subscription was successful');
-        }
+    // Notifications use the server-side SMTP configuration. The public footer
+    // document only carries the non-secret on/off switch.
+    const smtpConfig = getSmtpConfig();
+    let notificationsEnabled = true;
+    try {
+      const footerDoc = await getDoc(doc(db, 'siteContent', 'footer'));
+      notificationsEnabled =
+        footerDoc.exists() ? footerDoc.data()?.enableNewsletterNotifications ?? true : true;
+    } catch {
+      // A read failure should never block the subscription itself.
+    }
+
+    if (smtpConfig && notificationsEnabled) {
+      const emailSent = await sendNewsletterNotification(email, smtpConfig);
+      if (!emailSent) {
+        console.warn('Newsletter notification email failed; subscription was still saved.');
       }
-    } else if (enableNotifications) {
-      // Fallback to console logging if SMTP not configured
-      const notificationEmail = footerData?.newsletterNotificationEmail || 'malithatishamal@gmail.com';
-      console.log('📧 Newsletter Subscription Notification');
-      console.log('=====================================');
-      console.log(`To: ${notificationEmail}`);
-      console.log(`New Subscriber: ${email}`);
-      console.log(`Time: ${new Date().toISOString()}`);
-      console.log('=====================================');
-      console.log('Note: Configure Gmail SMTP in Admin Panel for automatic email delivery');
     }
 
     return NextResponse.json(

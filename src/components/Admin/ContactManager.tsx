@@ -10,6 +10,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   serverTimestamp,
   query,
   orderBy,
@@ -50,17 +51,14 @@ export const ContactManager: React.FC = () => {
   const [newPartnerLogo, setNewPartnerLogo] = useState<string>("");
   const [uploadingLogo, setUploadingLogo] = useState<boolean>(false);
 
-  // SMTP Email Delivery State
-  const [smtpUser, setSmtpUser] = useState<string>("malithatishamal@gmail.com");
-  const [smtpPass, setSmtpPass] = useState<string>("");
-  const [receiverEmail, setReceiverEmail] = useState<string>("malithatishamal@gmail.com");
+  // SMTP Email Delivery State — credentials live on the server only
   const [smtpConfigured, setSmtpConfigured] = useState<boolean>(false);
   const [checkingSmtp, setCheckingSmtp] = useState<boolean>(true);
   const [testingSmtp, setTestingSmtp] = useState<boolean>(false);
-  const [savingSmtp, setSavingSmtp] = useState<boolean>(false);
-  const [showSmtpPass, setShowSmtpPass] = useState<boolean>(false);
-  const [passwordFetchResult, setPasswordFetchResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [smtpStatus, setSmtpStatus] = useState<{ smtpUser: string; receiverEmail: string }>({
+    smtpUser: "",
+    receiverEmail: "",
+  });
 
   // Check SMTP configuration status on load
   useEffect(() => {
@@ -74,8 +72,10 @@ export const ContactManager: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setSmtpConfigured(Boolean(data.configured));
-          if (data.smtpUser) setSmtpUser(data.smtpUser);
-          if (data.receiverEmail) setReceiverEmail(data.receiverEmail);
+          setSmtpStatus({
+            smtpUser: data.smtpUser || "",
+            receiverEmail: data.receiverEmail || "",
+          });
         }
       } catch (err) {
         console.warn("Failed to check SMTP status:", err);
@@ -86,108 +86,25 @@ export const ContactManager: React.FC = () => {
     checkSmtp();
   }, [user]);
 
-  // Handle Save / Test SMTP
-  const handleSaveSmtp = async (testNow: boolean) => {
-    if (!smtpPass.trim() && !smtpConfigured) {
-      toast.error("Please enter your 16-character Google App Password.");
-      return;
-    }
-
-    if (testNow) setTestingSmtp(true);
-    else setSavingSmtp(true);
-
+  // Send a test email with the server-side SMTP configuration
+  const handleTestSmtp = async () => {
+    setTestingSmtp(true);
     try {
-      // First, save non-secret config to Firestore. The app password is NOT
-      // stored here in plaintext — it is persisted server-side (encrypted in
-      // .env.local) by the authenticated /api/contact/smtp-config call below.
-      await setDoc(
-        doc(db, "siteContent", "contact"),
-        {
-          gmailSmtpUser: smtpUser.trim(),
-          gmailNotificationRecipient: receiverEmail.trim(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      // Then call the API for SMTP configuration/testing
       const token = await user?.getIdToken();
       const res = await fetch("/api/contact/smtp-config", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          smtpUser: smtpUser.trim(),
-          smtpPass: smtpPass.trim(),
-          receiverEmail: receiverEmail.trim(),
-          testNow,
-        }),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || "Failed to configure SMTP");
+        throw new Error(data.error || "Failed to send test email");
       }
-
-      setSmtpConfigured(true);
-      setSmtpPass(""); // Clear password field from UI once saved
-      setPasswordSaved(true);
-      setPasswordFetchResult({ success: true, message: "✅ Key saved to Firestore successfully!" });
-      toast.success(data.message || "SMTP configured successfully!");
-      // Reset password saved indicator after 5 seconds
-      setTimeout(() => setPasswordSaved(false), 5000);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update SMTP settings");
-      setPasswordSaved(false);
-      setPasswordFetchResult({ success: false, message: "❌ Failed to save password to Firestore" });
+      toast.success(data.message || "Test email sent successfully!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send test email");
     } finally {
       setTestingSmtp(false);
-      setSavingSmtp(false);
-    }
-  };
-
-  // Copy password to clipboard
-  const copyPassword = async () => {
-    const password = smtpPass.trim();
-    if (!password) {
-      toast.error('No password to copy');
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(password);
-      toast.success('Password copied to clipboard!');
-    } catch (error) {
-      toast.error('Failed to copy password');
-    }
-  };
-
-  // Fetch password from Firestore
-  const fetchPasswordFromFirestore = async () => {
-    try {
-      const snap = await getDoc(doc(db, "siteContent", "contact"));
-      if (snap.exists()) {
-        const data = snap.data() as any;
-        if (data.gmailSmtpAppPassword) {
-          // Secret is never revealed back to the browser. Confirm it exists.
-          setSmtpConfigured(true);
-          setPasswordSaved(true);
-          setPasswordFetchResult({ success: true, message: "🔒 A password is saved securely. Re-enter it only to change or re-test." });
-          toast.success("Password is saved securely.");
-        } else {
-          setPasswordFetchResult({ success: false, message: "❌ No password found in Firestore" });
-          toast.error("No password found in Firestore");
-        }
-      } else {
-        setPasswordFetchResult({ success: false, message: "❌ No contact configuration found in Firestore" });
-        toast.error("No contact configuration found");
-      }
-    } catch (error) {
-      console.error('Error fetching password:', error);
-      setPasswordFetchResult({ success: false, message: "❌ Failed to fetch password from Firestore" });
-      toast.error("Failed to fetch password from Firestore");
     }
   };
 
@@ -245,23 +162,19 @@ export const ContactManager: React.FC = () => {
       try {
         const snap = await getDoc(doc(db, "siteContent", "contact"));
         if (snap.exists()) {
-          const data = snap.data() as Partial<ContactSectionContent>;
-          // Strip the stored secret from client state — never echo it back.
-          const { gmailSmtpAppPassword: _storedPass, ...safeData } = data as any;
+          // This document is publicly readable. Strip any legacy SMTP fields so
+          // they are neither rendered nor re-saved.
+          const raw = (snap.data() || {}) as Record<string, unknown>;
+          delete raw.gmailSmtpAppPassword;
+          delete raw.gmailSmtpUser;
+          delete raw.gmailNotificationRecipient;
+          delete raw.newsletterNotificationEmail;
+          const data = raw as Partial<ContactSectionContent>;
           setFormData({
             ...defaultContactContent,
-            ...safeData,
+            ...data,
             partners: data.partners?.length ? data.partners : defaultContactPartners,
           });
-          // Load SMTP settings if available
-          if (data.gmailSmtpUser) setSmtpUser(data.gmailSmtpUser);
-          if (data.gmailNotificationRecipient) setReceiverEmail(data.gmailNotificationRecipient);
-          if (_storedPass) {
-            // A password exists (encrypted at rest or legacy) — reflect the
-            // configured state without exposing the value in the input.
-            setSmtpConfigured(true);
-            setPasswordSaved(true);
-          }
         }
       } catch (e) {
         console.error("Error fetching contact settings:", e);
@@ -281,22 +194,19 @@ export const ContactManager: React.FC = () => {
         doc(db, "siteContent", "contact"),
         {
           ...formData,
-          gmailSmtpUser: smtpUser,
-          gmailNotificationRecipient: receiverEmail,
+          // Purge any legacy SMTP fields from the public document.
+          gmailSmtpUser: deleteField(),
+          gmailNotificationRecipient: deleteField(),
+          gmailSmtpAppPassword: deleteField(),
+          newsletterNotificationEmail: deleteField(),
           updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
       toast.success("Contact section settings saved successfully!");
-      if (smtpPass) {
-        setPasswordSaved(true);
-        setPasswordFetchResult({ success: true, message: "✅ Key fetched from Firestore successfully!" });
-        setTimeout(() => setPasswordSaved(false), 5000);
-      }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error saving contact settings:", err);
-      toast.error(err.message || "Failed to save settings.");
-      setPasswordSaved(false);
+      toast.error("Failed to save settings.");
     } finally {
       setSavingSettings(false);
     }
@@ -984,15 +894,15 @@ export const ContactManager: React.FC = () => {
             </div>
           </div>
 
-          {/* ═══════════ EMAIL NOTIFICATION (GMAIL SMTP) CARD ═══════════ */}
+          {/* ═══════════ EMAIL NOTIFICATION (SERVER-SIDE SMTP) CARD ═══════════ */}
           <div className="bg-white dark:bg-darklight p-6 rounded-2xl border border-border dark:border-dark_border space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border dark:border-dark_border">
               <div>
                 <h2 className="text-lg font-bold text-midnight_text dark:text-white flex items-center gap-2">
-                  <span>📧</span> Email Notifications (Gmail SMTP)
+                  <span>📧</span> Email Notifications (Server SMTP)
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Send an automatic email copy of every new client inquiry directly to your personal inbox.
+                  Inquiry notifications are sent by the server. Credentials never reach the browser or the database.
                 </p>
               </div>
 
@@ -1008,188 +918,71 @@ export const ContactManager: React.FC = () => {
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    App Password Required
+                    Not Configured
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Explanatory / Warning Banner */}
-            {!smtpConfigured && (
+            <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 text-xs text-blue-900 dark:text-blue-200 space-y-2">
+              <p className="font-bold flex items-center gap-1.5">🔒 Credentials are managed in the environment</p>
+              <p className="leading-relaxed">
+                Email delivery uses <code className="bg-blue-100 dark:bg-blue-900/50 px-1.5 py-0.5 rounded font-mono">SMTP_USER</code>, <code className="bg-blue-100 dark:bg-blue-900/50 px-1.5 py-0.5 rounded font-mono">SMTP_PASS</code> and <code className="bg-blue-100 dark:bg-blue-900/50 px-1.5 py-0.5 rounded font-mono">CONTACT_RECEIVER_EMAIL</code>. Set them in your hosting dashboard (Vercel → Project → Settings → Environment Variables) and redeploy.
+              </p>
+              {smtpConfigured && (
+                <p className="leading-relaxed">
+                  Sender: <code className="bg-blue-100 dark:bg-blue-900/50 px-1.5 py-0.5 rounded font-mono">{smtpStatus.smtpUser}</code>
+                  {" · "}
+                  Recipient: <code className="bg-blue-100 dark:bg-blue-900/50 px-1.5 py-0.5 rounded font-mono">{smtpStatus.receiverEmail}</code>
+                </p>
+              )}
+            </div>
+
+            {!smtpConfigured && !checkingSmtp && (
               <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-900 dark:text-amber-200 space-y-2">
-                <p className="font-bold flex items-center gap-1.5">
-                  ⚠️ Why emails are not arriving in your inbox:
+                <p className="font-bold flex items-center gap-1.5">⚠️ Email notifications are currently off</p>
+                <p className="leading-relaxed">
+                  Inquiries are still saved to the database. Add the three environment variables above to start delivering notification emails.
                 </p>
                 <p className="leading-relaxed">
-                  Inquiries are currently being saved safely into this Admin Panel database, but Google Gmail requires a <strong>16-character Google App Password</strong> to authorize your website to send notification emails through <code className="bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded font-mono">malithatishamal@gmail.com</code>.
-                </p>
-                <div className="pt-2 border-t border-amber-200/60 dark:border-amber-800/40">
-                  <p className="font-semibold mb-1">How to generate your 16-character App Password (takes 1 minute):</p>
-                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-amber-800 dark:text-amber-300">
-                    <li>Make sure <strong>2-Step Verification</strong> is ON in your Google Account.</li>
-                    <li>
-                      Visit{" "}
-                      <a
-                        href="https://myaccount.google.com/apppasswords"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline font-bold text-blue-600 dark:text-blue-400 hover:opacity-80"
-                      >
-                        Google App Passwords (click here) ↗
-                      </a>
-                    </li>
-                    <li>Type an App Name (e.g. <strong>Portfolio</strong>) and click <strong>Create</strong>.</li>
-                    <li>Copy the <strong>16-letter code</strong> and paste it into the field below, then click <strong>&quot;Save &amp; Send Test Email&quot;</strong>.</li>
-                  </ol>
-                </div>
-              </div>
-            )}
-
-            {/* Inputs Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Sender Gmail */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-1.5">
-                  Sender Gmail Account (SMTP User)
-                </label>
-                <input
-                  type="email"
-                  value={smtpUser}
-                  onChange={(e) => setSmtpUser(e.target.value)}
-                  placeholder="malithatishamal@gmail.com"
-                  className="w-full text-xs sm:text-sm px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border text-midnight_text dark:text-white focus:border-primary focus:outline-none"
-                />
-              </div>
-
-              {/* Receiver Email */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-1.5">
-                  Notification Recipient Email
-                </label>
-                <input
-                  type="email"
-                  value={receiverEmail}
-                  onChange={(e) => setReceiverEmail(e.target.value)}
-                  placeholder="malithatishamal@gmail.com"
-                  className="w-full text-xs sm:text-sm px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border text-midnight_text dark:text-white focus:border-primary focus:outline-none"
-                />
-              </div>
-
-              {/* 16-Char Google App Password */}
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-1.5">
-                  Google App Password (16 Characters)
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type={showSmtpPass ? "text" : "password"}
-                      value={smtpPass}
-                      onChange={(e) => {
-                        setSmtpPass(e.target.value.replace(/\s/g, ''));
-                        setPasswordSaved(false);
-                      }}
-                      placeholder={smtpConfigured ? "•••••••••••••••• (Configured. Enter new to update)" : "e.g. abcd efgh ijkl mnop"}
-                      className="w-full text-xs sm:text-sm font-mono tracking-wider px-4 py-2.5 pr-20 rounded-xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border text-midnight_text dark:text-white focus:border-primary focus:outline-none"
-                      maxLength={16}
-                    />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowSmtpPass((p) => !p)}
-                        className="p-1.5 rounded transition text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-darklight cursor-pointer"
-                        title={showSmtpPass ? "Hide password" : "Show password"}
-                      >
-                        {showSmtpPass ? "👁️" : "👁️‍🗨️"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={copyPassword}
-                        disabled={!smtpPass}
-                        className={`p-1.5 rounded transition ${
-                          !smtpPass
-                            ? 'text-gray-400 cursor-not-allowed opacity-50'
-                            : 'text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-darklight cursor-pointer'
-                        }`}
-                        title="Copy password"
-                      >
-                        📋
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={fetchPasswordFromFirestore}
-                    className="px-3 py-2 text-xs font-medium rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition cursor-pointer"
-                    title="Fetch password from Firestore"
-                  >
-                    🔄 Fetch from Firestore
-                  </button>
+                  If an app password was ever stored in the shared site content, revoke it and generate a new one at{" "}
                   <a
                     href="https://myaccount.google.com/apppasswords"
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3 py-2 bg-gray-100 dark:bg-darkmode text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-darklight transition cursor-pointer"
+                    className="underline font-bold text-blue-600 dark:text-blue-400 hover:opacity-80"
                   >
-                    Get App Password ↗
+                    Google App Passwords ↗
                   </a>
-                </div>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  Spaces are automatically removed. This is your 16-character Google App Password (not your regular Google password).
                 </p>
-                {passwordSaved && (
-                  <div className="mt-2 p-2 rounded-lg text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800">
-                    ✅ Key fetched from Firestore successfully!
-                  </div>
-                )}
-                {passwordFetchResult && (
-                  <div className={`mt-2 p-2 rounded-lg text-xs ${
-                    passwordFetchResult.success
-                      ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800'
-                      : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                  }`}>
-                    {passwordFetchResult.message}
-                  </div>
-                )}
               </div>
-            </div>
+            )}
 
-            {/* Action Buttons for SMTP */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border dark:border-dark_border">
               <span className="text-xs text-gray-500">
                 {smtpConfigured
-                  ? `✅ Emails will be delivered to ${receiverEmail}`
-                  : "Enter the app password to activate email notifications."}
+                  ? `✅ Emails will be delivered to ${smtpStatus.receiverEmail}`
+                  : "Set the SMTP environment variables to enable notifications."}
               </span>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSaveSmtp(false)}
-                  disabled={savingSmtp || testingSmtp}
-                  className="px-4 py-2 rounded-xl border border-border dark:border-dark_border text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-darkmode transition cursor-pointer disabled:opacity-50"
-                >
-                  {savingSmtp ? "Saving..." : "Save Password Only"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSaveSmtp(true)}
-                  disabled={savingSmtp || testingSmtp}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                >
-                  {testingSmtp ? (
-                    <>
-                      <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                      Testing &amp; Sending...
-                    </>
-                  ) : (
-                    <>
-                      <span>🚀</span>
-                      Save &amp; Send Test Email
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleTestSmtp}
+                disabled={testingSmtp || !smtpConfigured}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {testingSmtp ? (
+                  <>
+                    <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    Sending Test...
+                  </>
+                ) : (
+                  <>
+                    <span>🚀</span>
+                    Send Test Email
+                  </>
+                )}
+              </button>
             </div>
           </div>
 

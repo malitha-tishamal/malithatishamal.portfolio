@@ -5,7 +5,7 @@
 
 import nodemailer from 'nodemailer';
 
-interface EmailConfig {
+export interface EmailConfig {
   smtpUser: string;
   appPassword: string;
   recipientEmail: string;
@@ -49,7 +49,7 @@ export const sendEmail = async (config: EmailConfig, content: EmailContent): Pro
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully to:', content.to);
+    console.log('✅ Email sent successfully');
     return true;
   } catch (error) {
     console.error('❌ Error sending email:', error);

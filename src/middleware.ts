@@ -100,7 +100,7 @@ function isMaliciousUrlPart(raw: string): boolean {
   return isMalicious(raw) || isMalicious(safeDecode(raw));
 }
 
-function blocked(status: number, message: string): NextResponse {
+function blocked(status: number, message: string, requestId?: string): NextResponse {
   const res = NextResponse.json({ error: message }, { status });
   // Defence-in-depth: attach core headers even on our own short-circuit
   // responses (these bypass next.config headers()).
@@ -108,6 +108,7 @@ function blocked(status: number, message: string): NextResponse {
   res.headers.set("X-Frame-Options", "SAMEORIGIN");
   res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   res.headers.set("Cache-Control", "no-store");
+  if (requestId) res.headers.set("x-request-id", requestId);
   return res;
 }
 
@@ -127,19 +128,28 @@ export function middleware(req: NextRequest): NextResponse {
   const now = Date.now();
   sweep(now);
 
+  const requestId = crypto.randomUUID();
   const ip = clientIp(req);
   const ua = req.headers.get("user-agent") || "";
   const referer = req.headers.get("referer") || "";
   const { pathname, search } = req.nextUrl;
+  const isApi = pathname.startsWith("/api/");
+
+  // 0. CVE-2025-29927 class bypass: the `x-middleware-subrequest` header is
+  //    meant for Next's own internal subrequests. An external request carrying
+  //    it must never skip this middleware.
+  if (req.headers.has("x-middleware-subrequest")) {
+    return blocked(400, "Bad Request", requestId);
+  }
 
   // 1. Scanner / attack-tool user agents
   if (BLOCKED_UA.test(ua)) {
-    return blocked(403, "Forbidden");
+    return blocked(403, "Forbidden", requestId);
   }
 
   // 2. HTTP method restriction
   if (!ALLOWED_METHODS.has(req.method)) {
-    return blocked(405, "Method Not Allowed");
+    return blocked(405, "Method Not Allowed", requestId);
   }
 
   // 3. Injection signatures across path, query, referer, UA
@@ -149,16 +159,41 @@ export function middleware(req: NextRequest): NextResponse {
     isMaliciousUrlPart(referer) ||
     isMalicious(ua)
   ) {
-    return blocked(403, "Forbidden");
+    return blocked(403, "Forbidden", requestId);
   }
 
-  // 4. Coarse per-IP rate limit (120 req / 10s). Route-level limiters add
+  // 4. CSRF: state-changing API calls from a browser must come from this
+  //    origin. Requests without Origin/Referer (curl, server jobs) pass; our
+  //    admin APIs additionally require a Bearer token.
+  if (isApi && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    const origin = req.headers.get("origin");
+    const expected = req.nextUrl.origin;
+    if (origin) {
+      if (origin !== expected) return blocked(403, "Cross-origin request blocked", requestId);
+    } else if (referer && !referer.startsWith(`${expected}/`)) {
+      return blocked(403, "Cross-origin request blocked", requestId);
+    }
+  }
+
+  // 5. Oversized bodies are rejected before they reach a route handler.
+  const contentLength = Number(req.headers.get("content-length") || "0");
+  if (Number.isFinite(contentLength) && contentLength > 1_000_000) {
+    return blocked(413, "Payload Too Large", requestId);
+  }
+
+  // 6. Coarse per-IP rate limit (120 req / 10s). Route-level limiters add
   //    stricter, per-endpoint caps on top of this.
   if (!withinLimit(ip, 120, 10_000, now)) {
-    return blocked(429, "Too Many Requests");
+    return blocked(429, "Too Many Requests", requestId);
   }
 
-  return NextResponse.next();
+  // Forward a correlation id to route handlers and echo it to the client.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-request-id", requestId);
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+  res.headers.set("x-request-id", requestId);
+  if (isApi) res.headers.set("Cache-Control", "no-store");
+  return res;
 }
 
 export const config = {

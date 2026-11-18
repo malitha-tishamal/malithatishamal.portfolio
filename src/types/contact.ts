@@ -17,9 +17,6 @@ export interface ContactSectionContent {
   notificationEmail: string;
   termsText: string;
   termsUrl: string;
-  gmailSmtpUser?: string;
-  gmailNotificationRecipient?: string;
-  gmailSmtpAppPassword?: string;
   updatedAt?: any;
 }
 
