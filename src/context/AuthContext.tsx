@@ -159,6 +159,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  // Idle session timeout: signed-in accounts are signed out after 30 minutes
+  // without interaction, limiting the window for an unattended admin session.
+  useEffect(() => {
+    if (!user) return;
+
+    const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+    let timer: ReturnType<typeof setTimeout>;
+    let lastMark = 0;
+
+    const reset = () => {
+      const now = Date.now();
+      if (now - lastMark < 5000) return;
+      lastMark = now;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        void signOut(auth);
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    const events: Array<keyof WindowEventMap> = [
+      "mousemove",
+      "keydown",
+      "touchstart",
+      "scroll",
+      "click",
+    ];
+    events.forEach((event) => window.addEventListener(event, reset, { passive: true }));
+    timer = setTimeout(() => {
+      void signOut(auth);
+    }, IDLE_TIMEOUT_MS);
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach((event) => window.removeEventListener(event, reset));
+    };
+  }, [user]);
+
   // Email/Password Sign Up -> verification email, ROLE: ADMIN, STATUS: PENDING, NO AUTO-LOGIN
   const signUpWithEmail = async (name: string, email: string, pass: string) => {
     const cleanEmail = email.toLowerCase().trim();

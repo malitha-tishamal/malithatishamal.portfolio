@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { distributedRateLimit, getClientIp } from '@/utils/rateLimit';
 
 /**
  * CSP violation collector. Browsers POST reports here; we log the directive and
  * a query-stripped URL only — never cookies, tokens or full referrers.
  */
 export async function POST(request: NextRequest) {
-  const rl = rateLimit('csp-report', getClientIp(request), 30, 60 * 1000);
+  const rl = await distributedRateLimit('csp-report', getClientIp(request), 30, 60 * 1000);
   if (!rl.success) return new NextResponse(null, { status: 429 });
 
   const contentType = request.headers.get('content-type') || '';

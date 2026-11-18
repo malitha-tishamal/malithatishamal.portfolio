@@ -54,6 +54,53 @@ export function rateLimit(
   };
 }
 
+/**
+ * Distributed limiter backed by Upstash Redis REST when configured.
+ *
+ * Env: UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN. Without them this
+ * falls back to the per-process limiter above, so local/WAMP behaviour is
+ * unchanged. Network errors also fall back rather than failing the request.
+ */
+export async function distributedRateLimit(
+  key: string,
+  id: string,
+  limit: number,
+  windowMs: number
+): Promise<RateLimitResult> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return rateLimit(key, id, limit, windowMs);
+
+  try {
+    const redisKey = `rl:${key}:${id}`;
+    const res = await fetch(`${url.replace(/\/$/, "")}/pipeline`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([
+        ["INCR", redisKey],
+        ["PEXPIRE", redisKey, windowMs, "NX"],
+        ["PTTL", redisKey],
+      ]),
+    });
+    if (!res.ok) return rateLimit(key, id, limit, windowMs);
+
+    const results = (await res.json()) as Array<{ result?: number }>;
+    const count = Number(results[0]?.result ?? 0);
+    const ttl = Number(results[2]?.result ?? windowMs);
+    return {
+      success: count <= limit,
+      limit,
+      remaining: Math.max(0, limit - count),
+      resetAt: Date.now() + (ttl > 0 ? ttl : windowMs),
+    };
+  } catch {
+    return rateLimit(key, id, limit, windowMs);
+  }
+}
+
 /** Best-effort client IP extraction from a Request. */
 export function getClientIp(req: Request): string {
   const h = req.headers;

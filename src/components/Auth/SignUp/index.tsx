@@ -8,6 +8,7 @@ import Loader from "@/components/Common/Loader";
 import toast, { Toaster } from "react-hot-toast";
 import AuthDialogContext from "@/app/context/AuthDialogContext";
 import { useAuth } from "@/context/AuthContext";
+import { checkPasswordPolicy, isPasswordBreached } from "@/utils/passwordPolicy";
 
 interface SignUpProps {
   signUpOpen?: (value: boolean) => void;
@@ -33,13 +34,18 @@ const SignUp: React.FC<SignUpProps> = ({ signUpOpen, onOpenSignIn }) => {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    const policy = checkPasswordPolicy(password);
+    if (!policy.ok) {
+      toast.error(policy.message || "Password does not meet the security policy.");
       return;
     }
 
     setLoading(true);
     try {
+      if (await isPasswordBreached(password)) {
+        toast.error("This password appears in a known data breach. Please choose a different one.");
+        return;
+      }
       const res = await signUpWithEmail(name, email, password);
       if (res.isApproved) {
         toast.success("Admin account created successfully!");
@@ -61,7 +67,7 @@ const SignUp: React.FC<SignUpProps> = ({ signUpOpen, onOpenSignIn }) => {
       } else if (err.code === "auth/invalid-email") {
         msg = "Invalid email address format.";
       } else if (err.code === "auth/weak-password") {
-        msg = "Password is too weak. Please use at least 6 characters.";
+        msg = "Password is too weak. Please use at least 12 characters.";
       } else if (err.message) {
         msg = err.message;
       }

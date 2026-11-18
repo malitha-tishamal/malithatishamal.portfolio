@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { splitMarqueeRows } from './layout'
 import { MARQUEE_LANE } from './lane'
 import { formatRelativeTime, toDateValue, type DateLike } from '@/utils/relativeTime'
@@ -45,9 +45,9 @@ export interface MarqueeRowsProps<T> {
   className?: string
 }
 
-/** 32px soft edge so cards fade out well before the arrow lane. */
+/** 40px soft edge so cards fade out well before the arrow lane. */
 const FADE_MASK =
-  'linear-gradient(to right, transparent 0, black 32px, black calc(100% - 32px), transparent 100%)'
+  'linear-gradient(to right, transparent 0, black 40px, black calc(100% - 40px), transparent 100%)'
 
 /** Arrow nudge: one 404px card step in roughly 400ms. */
 const NUDGE_SPEED = 1000
@@ -93,6 +93,8 @@ interface ArrowButtonProps {
   onClick: () => void
   disabled?: boolean
   className?: string
+  style?: React.CSSProperties
+  ariaControls?: string
 }
 
 const ArrowButton: React.FC<ArrowButtonProps> = ({
@@ -101,12 +103,16 @@ const ArrowButton: React.FC<ArrowButtonProps> = ({
   onClick,
   disabled = false,
   className = '',
+  style,
+  ariaControls,
 }) => (
   <button
     type='button'
     onClick={onClick}
     aria-label={label}
+    aria-controls={ariaControls}
     disabled={disabled}
+    style={style}
     className={`h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2563EB] text-white shadow-[0_6px_16px_rgba(37,99,235,0.35)] transition-all duration-200 hover:enabled:scale-[1.06] hover:enabled:bg-[#1D4ED8] active:scale-[0.96] focus-visible:ring-[3px] focus-visible:ring-[#93C5FD] focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-40 dark:ring-2 dark:ring-white/30 ${className}`}>
     <svg
       className='h-[22px] w-[22px]'
@@ -135,9 +141,11 @@ interface MarqueeRowProps<T> {
   speed: number
   reduced: boolean
   rowIndex: number
+  rowId: string
   ariaLabel: string
-  onNudgeKey: (forward: boolean) => void
-  registerControl: (index: number, nudge: ((forward: boolean) => void) | null) => void
+  previousLabel: string
+  nextLabel: string
+  disabled: boolean
 }
 
 function MarqueeRow<T>({
@@ -151,9 +159,11 @@ function MarqueeRow<T>({
   speed,
   reduced,
   rowIndex,
+  rowId,
   ariaLabel,
-  onNudgeKey,
-  registerControl,
+  previousLabel,
+  nextLabel,
+  disabled,
 }: MarqueeRowProps<T>) {
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const trackRef = useRef<HTMLDivElement | null>(null)
@@ -349,11 +359,6 @@ function MarqueeRow<T>({
     [direction, pause, reduced, scheduleResume]
   )
 
-  useEffect(() => {
-    registerControl(rowIndex, nudge)
-    return () => registerControl(rowIndex, null)
-  }, [nudge, registerControl, rowIndex])
-
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     if (reduced) return
     if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
@@ -366,22 +371,45 @@ function MarqueeRow<T>({
     if (event.target !== event.currentTarget) return
     if (event.key === 'ArrowLeft') {
       event.preventDefault()
-      onNudgeKey(false)
+      nudge(false)
     } else if (event.key === 'ArrowRight') {
       event.preventDefault()
-      onNudgeKey(true)
+      nudge(true)
     }
   }
 
   return (
     <div className='relative' data-marquee-row={rowIndex}>
-      <div className={MARQUEE_LANE}>
+      <div className={`${MARQUEE_LANE} relative`}>
+        {/* Phones / small tablets: each row carries its own compact pair above it */}
+        <div className='mb-3 flex items-center justify-end gap-3 min-[900px]:hidden'>
+          <ArrowButton
+            direction='prev'
+            label={previousLabel}
+            onClick={() => nudge(false)}
+            disabled={disabled}
+            ariaControls={rowId}
+            className='flex'
+          />
+          <ArrowButton
+            direction='next'
+            label={nextLabel}
+            onClick={() => nudge(true)}
+            disabled={disabled}
+            ariaControls={rowId}
+            className='flex'
+          />
+        </div>
+
         <div
+          id={rowId}
           ref={viewportRef}
           role='region'
           aria-label={ariaLabel}
           tabIndex={0}
           onKeyDown={handleKeyDown}
+          onFocus={() => pause()}
+          onBlur={() => scheduleResume()}
           onPointerEnter={(event) => {
             if (event.pointerType === 'mouse') pause()
           }}
@@ -392,7 +420,7 @@ function MarqueeRow<T>({
           onWheel={handleWheel}
           onClickCapture={suppressClickIfDragged}
           className={`focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden ${
-            reduced ? 'overflow-x-auto pb-2' : 'overflow-hidden'
+            reduced ? 'overflow-x-auto pb-2' : 'overflow-clip'
           }`}
           style={{
             maskImage: FADE_MASK,
@@ -427,6 +455,26 @@ function MarqueeRow<T>({
             )}
           </div>
         </div>
+
+        {/* Desktop: each row gets its own pair, centred in the shared gutter */}
+        <ArrowButton
+          direction='prev'
+          label={previousLabel}
+          onClick={() => nudge(false)}
+          disabled={disabled}
+          ariaControls={rowId}
+          className='absolute top-1/2 z-30 hidden -translate-y-1/2 min-[900px]:flex'
+          style={{ left: 'calc((var(--gutter) - 48px) / 2)' }}
+        />
+        <ArrowButton
+          direction='next'
+          label={nextLabel}
+          onClick={() => nudge(true)}
+          disabled={disabled}
+          ariaControls={rowId}
+          className='absolute top-1/2 z-30 hidden -translate-y-1/2 min-[900px]:flex'
+          style={{ right: 'calc((var(--gutter) - 48px) / 2)' }}
+        />
       </div>
     </div>
   )
@@ -452,7 +500,7 @@ export function MarqueeRows<T>({
   className = '',
 }: MarqueeRowsProps<T>) {
   const [reduced, setReduced] = useState(false)
-  const controls = useRef(new Map<number, (forward: boolean) => void>())
+  const instanceId = useId().replace(/:/g, '')
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -460,18 +508,6 @@ export function MarqueeRows<T>({
     apply()
     query.addEventListener('change', apply)
     return () => query.removeEventListener('change', apply)
-  }, [])
-
-  const registerControl = useCallback(
-    (index: number, nudge: ((forward: boolean) => void) | null) => {
-      if (nudge) controls.current.set(index, nudge)
-      else controls.current.delete(index)
-    },
-    []
-  )
-
-  const nudgeAll = useCallback((forward: boolean) => {
-    controls.current.forEach((nudge) => nudge(forward))
   }, [])
 
   const ordered = useMemo(() => {
@@ -504,13 +540,13 @@ export function MarqueeRows<T>({
     )
     return (
       <div className={className} aria-busy='true' aria-label={`Loading ${ariaLabel}`}>
-        {/* Reserve the mobile controls row so the cards do not jump in on load */}
-        <div className='mb-4 h-12 min-[900px]:hidden' aria-hidden='true' />
         <div className='space-y-6'>
           {skeletonRows.map((row, rowIndex) => (
-            <div key={rowIndex} className={MARQUEE_LANE}>
+            <div key={rowIndex} className={`${MARQUEE_LANE} relative`}>
+              {/* Reserve each row's mobile control strip so cards do not jump */}
+              <div className='mb-3 h-12 min-[900px]:hidden' aria-hidden='true' />
               <div
-                className='flex gap-6 overflow-hidden py-1'
+                className='flex gap-6 overflow-clip py-1'
                 style={{ maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK }}>
                 {row.map((key) =>
                   renderSkeleton ? (
@@ -543,67 +579,35 @@ export function MarqueeRows<T>({
     )
   }
 
-  const controlsDisabled = ordered.length < 2
+  const multiRow = rows.length > 1
 
   return (
     <div className={`relative ${className}`} role='group' aria-label={ariaLabel}>
-      {/* Below 900px there is no side lane: a compact pair sits under the subtitle */}
-      <div className='mb-4 min-[900px]:hidden'>
-        <div
-          className={`mx-auto flex w-full max-w-[1280px] items-center justify-end gap-3 ${MARQUEE_LANE}`}>
-          <ArrowButton
-            direction='prev'
-            label={previousLabel}
-            onClick={() => nudgeAll(false)}
-            disabled={controlsDisabled}
-            className='flex'
-          />
-          <ArrowButton
-            direction='next'
-            label={nextLabel}
-            onClick={() => nudgeAll(true)}
-            disabled={controlsDisabled}
-            className='flex'
-          />
-        </div>
-      </div>
-
       <div className='space-y-6'>
-        {rows.map((row, rowIndex) => (
-          <MarqueeRow
-            key={rowIndex}
-            items={row}
-            renderCard={renderCard}
-            getKey={getKey}
-            latestIndices={row.map((item) => ordered.indexOf(item))}
-            latestCount={latestCount}
-            dates={row.map((item) => dates[ordered.indexOf(item)] ?? null)}
-            reverse={rowIndex > 0}
-            speed={speed}
-            reduced={reduced}
-            rowIndex={rowIndex}
-            ariaLabel={`${ariaLabel} row ${rowIndex + 1}`}
-            onNudgeKey={nudgeAll}
-            registerControl={registerControl}
-          />
-        ))}
+        {rows.map((row, rowIndex) => {
+          const suffix = multiRow ? `, row ${rowIndex + 1}` : ''
+          return (
+            <MarqueeRow
+              key={rowIndex}
+              items={row}
+              renderCard={renderCard}
+              getKey={getKey}
+              latestIndices={row.map((item) => ordered.indexOf(item))}
+              latestCount={latestCount}
+              dates={row.map((item) => dates[ordered.indexOf(item)] ?? null)}
+              reverse={rowIndex > 0}
+              speed={speed}
+              reduced={reduced}
+              rowIndex={rowIndex}
+              rowId={`${instanceId}-row-${rowIndex}`}
+              ariaLabel={`${ariaLabel}${multiRow ? ` row ${rowIndex + 1}` : ''}`}
+              previousLabel={`${previousLabel}${suffix}`}
+              nextLabel={`${nextLabel}${suffix}`}
+              disabled={row.length < 2}
+            />
+          )
+        })}
       </div>
-
-      {/* One pair of arrows in the white side lanes, centred on the whole block */}
-      <ArrowButton
-        direction='prev'
-        label={previousLabel}
-        onClick={() => nudgeAll(false)}
-        disabled={controlsDisabled}
-        className='absolute top-1/2 left-3 z-30 -mt-6 hidden min-[900px]:flex'
-      />
-      <ArrowButton
-        direction='next'
-        label={nextLabel}
-        onClick={() => nudgeAll(true)}
-        disabled={controlsDisabled}
-        className='absolute top-1/2 right-3 z-30 -mt-6 hidden min-[900px]:flex'
-      />
     </div>
   )
 }

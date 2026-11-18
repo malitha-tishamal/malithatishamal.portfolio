@@ -142,22 +142,19 @@ body {
 
 /* Horizontal lane for the card marquee rows and the section headings. Keeps the
    first card aligned with the heading and reserves the white side space for the
-   48px arrows. Plain CSS (unlayered) so the cascade can't reorder it. */
+   48px arrows.
+
+   --gutter is the single source of truth for both sides: 12px on phones, then
+   clamp(56px, 7vw, 104px) from 768px up (768→56, 1024→72, 1280→90, 1440→101,
+   1920→104). The arrows sit at calc((var(--gutter) - 48px) / 2) so they are
+   centred in the same lane. Plain CSS (unlayered) so the cascade can't reorder
+   it. */
 .marquee-lane {
-  padding-inline: 12px;
+  --gutter: 12px;
+  padding-inline: var(--gutter);
 }
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .marquee-lane {
-    padding-inline: 16px;
-  }
-}
-@media (min-width: 900px) {
-  .marquee-lane {
-    padding-inline: 64px;
-  }
-}
-@media (min-width: 1280px) {
-  .marquee-lane {
-    padding-inline: 72px;
+    --gutter: clamp(56px, 7vw, 104px);
   }
 }

@@ -153,7 +153,6 @@ const Contactform = () => {
             country: formData.country.trim(),
             serviceCategory: formData.serviceCategory.trim() || "General Consultation",
             message: formData.message.trim(),
-            notificationEmail: content.notificationEmail || "malithatishamal@gmail.com",
           }),
         });
       } catch (emailErr) {

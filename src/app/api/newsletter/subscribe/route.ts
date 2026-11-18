@@ -3,13 +3,19 @@ import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, limit, 
 import { db } from '@/lib/firebase';
 import { sendNewsletterNotification } from '@/lib/email';
 import { isValidEmail, cleanString } from '@/utils/validation';
-import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { distributedRateLimit, getClientIp } from '@/utils/rateLimit';
 import { getSmtpConfig } from '@/lib/smtpConfig';
+import {
+  newsletterSchema,
+  readJsonBody,
+  validationMessage,
+  RequestBodyError,
+} from '@/lib/schemas';
 
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request);
-    const rl = rateLimit('newsletter', ip, 5, 10 * 60 * 1000);
+    const rl = await distributedRateLimit('newsletter', ip, 5, 10 * 60 * 1000);
     if (!rl.success) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
@@ -17,8 +23,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const email = cleanString(body?.email, 254).toLowerCase();
+    let parsed;
+    try {
+      parsed = newsletterSchema.safeParse(await readJsonBody(request));
+    } catch (bodyErr) {
+      if (bodyErr instanceof RequestBodyError) {
+        return NextResponse.json({ error: bodyErr.message }, { status: bodyErr.status });
+      }
+      throw bodyErr;
+    }
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: validationMessage(parsed.error) },
+        { status: 400 }
+      );
+    }
+
+    const email = cleanString(parsed.data.email, 254).toLowerCase();
 
     if (!isValidEmail(email)) {
       return NextResponse.json(

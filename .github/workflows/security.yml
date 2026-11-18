@@ -1,0 +1,76 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * 1" # weekly, Monday 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    name: Dependency audit, types, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      # Production tree must have no high/critical advisories.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      # Dev tooling cannot be forced to zero while upstream has no fix
+      # (picomatch ReDoS), so gate the dev tree at critical only.
+      - name: Audit full dependency tree
+        run: npm audit --audit-level=critical
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+
+  secrets:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so past leaks are caught
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  semgrep:
+    name: Semgrep (OWASP / Next.js / JWT / secrets)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: >
+          semgrep scan
+          --config=p/owasp-top-ten
+          --config=p/javascript
+          --config=p/jwt
+          --config=p/secrets
+          --error
+          --skip-unknown-extensions
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v3

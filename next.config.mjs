@@ -12,7 +12,7 @@ const csp = [
   "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
   "img-src 'self' data: blob: https:",
   "media-src 'self' https: blob:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://*.cloudinary.com https://api.ipify.org https://ipapi.co https://accounts.google.com wss:",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://*.cloudinary.com https://api.ipify.org https://ipapi.co https://accounts.google.com https://api.pwnedpasswords.com wss:",
   "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://*.firebaseio.com",
   "object-src 'none'",
   "base-uri 'self'",

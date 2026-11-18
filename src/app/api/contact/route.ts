@@ -2,13 +2,19 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { isValidEmail, cleanString, isSafeHeaderValue } from "@/utils/validation";
 import { escapeHtml } from "@/utils/sanitize";
-import { rateLimit, getClientIp } from "@/utils/rateLimit";
+import { distributedRateLimit, getClientIp } from "@/utils/rateLimit";
+import {
+  contactSchema,
+  readJsonBody,
+  validationMessage,
+  RequestBodyError,
+} from "@/lib/schemas";
 
 export async function POST(req: Request) {
   try {
     // Rate limit: 5 inquiries / 10 min per IP.
     const ip = getClientIp(req);
-    const rl = rateLimit("contact", ip, 5, 10 * 60 * 1000);
+    const rl = await distributedRateLimit("contact", ip, 5, 10 * 60 * 1000);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -16,15 +22,28 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const raw = body && typeof body === "object" ? body : {};
+    let parsed;
+    try {
+      parsed = contactSchema.safeParse(await readJsonBody(req));
+    } catch (bodyErr) {
+      if (bodyErr instanceof RequestBodyError) {
+        return NextResponse.json({ error: bodyErr.message }, { status: bodyErr.status });
+      }
+      throw bodyErr;
+    }
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: validationMessage(parsed.error) },
+        { status: 400 }
+      );
+    }
 
-    const firstName = cleanString(raw.firstName, 100);
-    const lastName = cleanString(raw.lastName, 100);
-    const email = cleanString(raw.email, 254);
-    const country = cleanString(raw.country, 100);
-    const serviceCategory = cleanString(raw.serviceCategory, 100);
-    const message = cleanString(raw.message, 5000);
+    const firstName = cleanString(parsed.data.firstName, 100);
+    const lastName = cleanString(parsed.data.lastName, 100);
+    const email = cleanString(parsed.data.email, 254);
+    const country = cleanString(parsed.data.country, 100);
+    const serviceCategory = cleanString(parsed.data.serviceCategory, 100);
+    const message = cleanString(parsed.data.message, 5000);
 
     if (!firstName || !email || !message) {
       return NextResponse.json(

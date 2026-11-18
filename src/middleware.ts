@@ -175,9 +175,12 @@ export function middleware(req: NextRequest): NextResponse {
     }
   }
 
-  // 5. Oversized bodies are rejected before they reach a route handler.
+  // 5. Oversized bodies are rejected before they reach a route handler. The
+  //    landing-page upload route is exempt: it enforces its own 100 MB cap and
+  //    magic-byte checks inside the handler.
+  const isZipUpload = pathname === "/api/admin/landing-page/upload";
   const contentLength = Number(req.headers.get("content-length") || "0");
-  if (Number.isFinite(contentLength) && contentLength > 1_000_000) {
+  if (!isZipUpload && Number.isFinite(contentLength) && contentLength > 1_000_000) {
     return blocked(413, "Payload Too Large", requestId);
   }
 

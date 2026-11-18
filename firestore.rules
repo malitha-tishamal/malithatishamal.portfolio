@@ -149,6 +149,26 @@ service cloud.firestore {
     }
 
     // ── Users: private ──────────────────────────────────────────────────────
+    // Exactly these fields may exist on a profile document. Anything else is
+    // rejected so a client cannot stash arbitrary data (or privileged flags)
+    // on a user document.
+    function isUserProfileShape(data) {
+      return data.keys().hasOnly([
+          'uid', 'name', 'email', 'photoURL',
+          'role', 'status', 'isApproved', 'provider',
+          'createdAt', 'updatedAt'
+        ])
+        && data.uid is string
+        && data.email is string
+        && data.email.size() <= 254
+        && data.name is string
+        && data.name.size() <= 120
+        && data.role in ['admin', 'user']
+        && data.status in ['pending', 'approved', 'rejected']
+        && data.isApproved is bool
+        && data.provider in ['password', 'google', 'github'];
+    }
+
     match /users/{uid} {
       // A signed-in user may read their own profile; admins may read any.
       allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
@@ -157,6 +177,13 @@ service cloud.firestore {
       // (unless you are the super admin). Blocks self-approval / role escalation.
       allow create: if request.auth != null
         && request.auth.uid == uid
+        && isUserProfileShape(request.resource.data)
+        && request.resource.data.uid == uid
+        // Social providers can withhold the email (private GitHub address);
+        // otherwise the profile must carry the verified token address.
+        && (request.auth.token.email == null
+          ? request.resource.data.email == ''
+          : request.resource.data.email == request.auth.token.email)
         && (
           isSuperAdmin() ||
           (request.resource.data.status == 'pending'
@@ -164,9 +191,16 @@ service cloud.firestore {
         );
 
       // Admins manage everyone; the super admin may update their own doc
-      // (used by the auto-approve bootstrap in AuthContext).
-      allow update: if isAdmin()
-        || (request.auth != null && request.auth.uid == uid && isSuperAdmin());
+      // (used by the auto-approve bootstrap in AuthContext). The identity
+      // fields of an existing profile are immutable.
+      allow update: if request.auth != null
+        && isUserProfileShape(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.uid == uid
+        && (isAdmin()
+          || (request.auth.uid == uid && isSuperAdmin()));
 
       allow delete: if isAdmin();
     }
