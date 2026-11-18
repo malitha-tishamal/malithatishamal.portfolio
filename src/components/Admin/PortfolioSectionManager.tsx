@@ -208,10 +208,10 @@ export const PortfolioSectionManager: React.FC = () => {
     setSavingSettings(true);
     try {
       await setDoc(doc(db, "siteContent", "portfolio"), { ...sliderSettings }, { merge: true });
-      toast.success("Slider settings saved!");
+      toast.success("Marquee settings saved!");
     } catch (err: any) {
-      console.error("Save slider settings error:", err);
-      toast.error(err.message || "Failed to save slider settings.");
+      console.error("Save marquee settings error:", err);
+      toast.error(err.message || "Failed to save marquee settings.");
     } finally {
       setSavingSettings(false);
     }
@@ -782,11 +782,11 @@ export const PortfolioSectionManager: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="text-lg">⚙️</span>
               <h3 className="text-base font-bold text-dark dark:text-white">
-                Homepage Slider &amp; Carousel Controls
+                Homepage Marquee Controls
               </h3>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Manage autoplay interval, transition speed, and pause behaviors for the portfolio showcase carousel on the homepage.
+              Cards scroll continuously in two rows. The marquee pauses on hover or drag and resumes one second later.
             </p>
           </div>
           <button
@@ -794,97 +794,44 @@ export const PortfolioSectionManager: React.FC = () => {
             disabled={savingSettings}
             className="px-5 py-2.5 rounded-xl bg-primary hover:bg-blue-700 text-white font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 cursor-pointer shrink-0 flex items-center gap-2"
           >
-            <span>{savingSettings ? "Saving..." : "💾 Save Slider Settings"}</span>
+            <span>{savingSettings ? "Saving..." : "💾 Save Marquee Settings"}</span>
           </button>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Autoplay Toggle */}
-          <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-dark dark:text-white">Autoplay</p>
-              <p className="text-[11px] text-gray-400">Auto-rotate slides</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={sliderSettings.autoplay}
-              onChange={(e) =>
-                setSliderSettings((p) => ({ ...p, autoplay: e.target.checked }))
-              }
-              className="w-5 h-5 text-primary rounded cursor-pointer"
-            />
-          </div>
-
-          {/* Autoplay Speed / Interval */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          {/* Scroll Speed */}
           <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-1.5">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-dark dark:text-white">Slide Interval</p>
+              <p className="text-xs font-bold text-dark dark:text-white">Scroll Speed</p>
               <span className="text-xs font-mono font-bold text-primary">
-                {sliderSettings.autoplaySpeed}ms ({(sliderSettings.autoplaySpeed / 1000).toFixed(1)}s)
+                {sliderSettings.speed}px/s
               </span>
             </div>
             <input
               type="range"
-              min={1500}
-              max={10000}
-              step={250}
-              value={sliderSettings.autoplaySpeed}
+              min={40}
+              max={60}
+              step={1}
+              value={sliderSettings.speed}
               onChange={(e) =>
                 setSliderSettings((p) => ({
                   ...p,
-                  autoplaySpeed: Number(e.target.value),
+                  speed: Number(e.target.value),
                 }))
               }
               className="w-full accent-primary cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-gray-400">
-              <span>1.5s</span>
-              <span>10s</span>
+              <span>40px/s</span>
+              <span>60px/s</span>
             </div>
           </div>
 
-          {/* Transition Speed */}
-          <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border space-y-1.5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-dark dark:text-white">Transition Speed</p>
-              <span className="text-xs font-mono font-bold text-primary">
-                {sliderSettings.transitionSpeed}ms
-              </span>
-            </div>
-            <input
-              type="range"
-              min={200}
-              max={2000}
-              step={50}
-              value={sliderSettings.transitionSpeed}
-              onChange={(e) =>
-                setSliderSettings((p) => ({
-                  ...p,
-                  transitionSpeed: Number(e.target.value),
-                }))
-              }
-              className="w-full accent-primary cursor-pointer"
-            />
-            <div className="flex justify-between text-[10px] text-gray-400">
-              <span>200ms</span>
-              <span>2000ms</span>
-            </div>
-          </div>
-
-          {/* Pause on Hover */}
-          <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-dark dark:text-white">Pause on Hover</p>
-              <p className="text-[11px] text-gray-400">Halt when hovered</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={sliderSettings.pauseOnHover}
-              onChange={(e) =>
-                setSliderSettings((p) => ({ ...p, pauseOnHover: e.target.checked }))
-              }
-              className="w-5 h-5 text-primary rounded cursor-pointer"
-            />
+          <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-darkmode border border-border dark:border-dark_border">
+            <p className="text-xs font-bold text-dark dark:text-white">Always moving</p>
+            <p className="text-[11px] text-gray-400 mt-1">
+              The marquee never stops on its own. It only pauses while you hover, drag or swipe, and while the browser tab is hidden.
+            </p>
           </div>
         </div>
       </div>
@@ -987,6 +934,7 @@ export const PortfolioSectionManager: React.FC = () => {
                     item={item}
                     index={0}
                     isStaggered={false}
+                    widthClass="w-full"
                     onClick={() => setPreviewItem(item)}
                   />
                 </div>

@@ -158,6 +158,7 @@ const PortfolioList: React.FC = () => {
                 item={item}
                 index={index}
                 isStaggered={false}
+                widthClass='w-full'
                 onClick={() => setSelectedItem(item)}
               />
             ))}

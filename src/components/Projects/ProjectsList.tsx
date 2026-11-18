@@ -192,6 +192,7 @@ export const ProjectsList: React.FC = () => {
                 descriptionLines={settings.descriptionLines}
                 showVisitSite={settings.showVisitSite}
                 latestLabel={latestLabels.get(project.id)}
+                widthClass='w-full'
                 onClick={() => setSelectedProject(project)}
               />
             ))}

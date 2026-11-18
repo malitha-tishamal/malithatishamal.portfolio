@@ -28,6 +28,8 @@ export interface MarqueeRowsProps<T> {
   minForTwoRows?: number
   loading?: boolean
   skeletonCount?: number
+  /** Reserve the category/date meta row inside skeleton cards too. */
+  metaRow?: boolean
   emptyState?: React.ReactNode
   ariaLabel?: string
   className?: string
@@ -43,21 +45,30 @@ function wrapOffset(value: number, width: number): number {
   return wrapped === 0 ? 0 : wrapped - width
 }
 
-const SkeletonCard: React.FC = () => (
+const SkeletonCard: React.FC<{ metaRow?: boolean }> = ({ metaRow = false }) => (
   <div
     data-content-card=''
-    className='flex h-[520px] w-[85vw] shrink-0 animate-pulse flex-col rounded-3xl border border-border/40 bg-gray-100 p-4 sm:w-[320px] sm:p-5 xl:w-[380px] dark:border-dark_border/40 dark:bg-darklight'>
+    className='flex w-[85vw] shrink-0 animate-pulse flex-col rounded-3xl border border-border/40 bg-gray-100 p-4 sm:w-[320px] sm:p-5 xl:w-[380px] dark:border-dark_border/40 dark:bg-darklight'>
     <div className='mb-3 aspect-[16/10] w-full shrink-0 rounded-2xl bg-gray-200 dark:bg-darkmode' />
-    <div className='h-5 w-3/4 rounded-md bg-gray-200 dark:bg-darkmode' />
-    <div className='mt-2 h-5 w-1/2 rounded-md bg-gray-200 dark:bg-darkmode' />
-    <div className='mt-4 space-y-2'>
+    {metaRow && (
+      <div className='mb-1.5 flex h-[1.125rem] shrink-0 items-center justify-between gap-2'>
+        <div className='h-3 w-1/3 rounded-md bg-gray-200 dark:bg-darkmode' />
+        <div className='h-3 w-1/4 rounded-md bg-gray-200 dark:bg-darkmode' />
+      </div>
+    )}
+    <div className='mb-1.5 flex h-[3.125rem] shrink-0 flex-col justify-center gap-2 sm:h-[3.5rem]'>
+      <div className='h-4 w-3/4 rounded-md bg-gray-200 dark:bg-darkmode' />
+      <div className='h-4 w-1/2 rounded-md bg-gray-200 dark:bg-darkmode' />
+    </div>
+    <div className='mb-2 flex min-h-[4.25rem] shrink-0 flex-col gap-2'>
       <div className='h-3 w-full rounded-md bg-gray-200 dark:bg-darkmode' />
       <div className='h-3 w-full rounded-md bg-gray-200 dark:bg-darkmode' />
       <div className='h-3 w-2/3 rounded-md bg-gray-200 dark:bg-darkmode' />
     </div>
+    <div className='h-[50px] shrink-0' />
     <div className='mt-auto flex items-center justify-between border-t border-border/40 pt-3 dark:border-dark_border/40'>
       <div className='h-3 w-16 rounded-md bg-gray-200 dark:bg-darkmode' />
-      <div className='h-8 w-24 rounded-xl bg-gray-200 dark:bg-darkmode' />
+      <div className='h-10 w-28 rounded-xl bg-gray-200 dark:bg-darkmode' />
     </div>
   </div>
 )
@@ -373,6 +384,7 @@ export function MarqueeRows<T>({
   minForTwoRows = 6,
   loading = false,
   skeletonCount = 8,
+  metaRow = false,
   emptyState,
   ariaLabel = 'Content carousel',
   className = '',
@@ -426,7 +438,7 @@ export function MarqueeRows<T>({
             className='flex gap-6 overflow-hidden px-1 py-1'
             style={{ maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK }}>
             {row.map((key) => (
-              <SkeletonCard key={`${rowIndex}-${key}`} />
+              <SkeletonCard key={`${rowIndex}-${key}`} metaRow={metaRow} />
             ))}
           </div>
         ))}

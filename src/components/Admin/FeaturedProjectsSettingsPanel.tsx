@@ -289,7 +289,7 @@ export const FeaturedProjectsSettingsPanel: React.FC = () => {
             />
             <Stepper
               label="Description lines"
-              hint="Cards without a description stay compact."
+              hint="Fixed-height cards cap the description at 3 lines."
               value={draft.descriptionLines}
               min={FEATURED_PROJECTS_LIMITS.descriptionLines.min}
               max={FEATURED_PROJECTS_LIMITS.descriptionLines.max}
@@ -319,7 +319,8 @@ export const FeaturedProjectsSettingsPanel: React.FC = () => {
                 ))}
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5">
-                Mobile stays at 1 column, tablet at 2.
+                Applies to the /projects listing grid. The homepage marquee
+                always uses two rows.
               </p>
             </div>
 

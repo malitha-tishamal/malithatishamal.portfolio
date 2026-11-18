@@ -13,10 +13,16 @@ export interface ContentCardProps {
   media: React.ReactNode
   /** Top-left category pill, e.g. "FULL STACK WEB". */
   typeLabel?: string
-  /** Top-right "Latest · 1 month ago" pill. */
+  /** "Latest · 1 month ago" pill. */
   latestLabel?: string
+  /** Corner that carries the Latest pill (defaults to top-right). */
+  latestPosition?: 'top-left' | 'top-right'
   /** Bottom-right chip, e.g. "+5 Photos". */
   photoChip?: string
+  /** Category label rendered in a meta row above the title. */
+  categoryLabel?: string
+  /** Date text rendered next to the category (replaces the footer date). */
+  metaDateLabel?: string
   title: string
   description?: string
   emptyDescription?: string
@@ -35,7 +41,8 @@ export interface ContentCardProps {
   className?: string
 }
 
-const TAG_CHAR_BUDGET = 46
+const TAG_CHAR_BUDGET = 60
+const TAG_HIDDEN_RESERVE = 5
 const MAX_DESCRIPTION_LINES = 3
 
 /** Fit tag chips into the two-row budget; the rest go to the "+N" chip. */
@@ -48,7 +55,8 @@ export function splitVisibleTags(
   for (const tag of tags) {
     if (visible.length >= tagsShown) break
     const cost = tag.length + 2
-    if (visible.length > 0 && used + cost > TAG_CHAR_BUDGET) break
+    const reserve = visible.length + 1 < tags.length ? TAG_HIDDEN_RESERVE : 0
+    if (visible.length > 0 && used + cost + reserve > TAG_CHAR_BUDGET) break
     visible.push(tag)
     used += cost
   }
@@ -59,7 +67,10 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
   media,
   typeLabel,
   latestLabel,
+  latestPosition = 'top-right',
   photoChip,
+  categoryLabel,
+  metaDateLabel,
   title,
   description,
   emptyDescription = 'No description yet',
@@ -100,13 +111,13 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
       tabIndex={interactive ? 0 : undefined}
       aria-label={interactive ? openHint || `View details for ${title}` : undefined}
       data-content-card=''
-      className={`group relative flex h-[520px] shrink-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white p-4 shadow-xs transition-shadow duration-300 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden sm:p-5 dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}>
+      className={`group relative flex shrink-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white p-4 shadow-xs transition-shadow duration-300 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden sm:p-5 dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}>
       {/* Media */}
       <div className='relative mb-3 aspect-[16/10] w-full shrink-0 overflow-hidden rounded-2xl border border-border/40 bg-gray-100 dark:border-dark_border/40 dark:bg-darkmode'>
         {media}
 
         {typeLabel && (
-          <span className='absolute top-3 left-3 z-10 max-w-[62%] truncate rounded-xl bg-primary px-3 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-md shadow-primary/30'>
+          <span className='absolute top-3 left-3 z-10 max-w-[48%] truncate rounded-xl bg-primary px-3 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-md shadow-primary/30'>
             {typeLabel}
           </span>
         )}
@@ -114,7 +125,9 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
         {latestLabel && (
           <span
             aria-label={`Latest, updated ${latestLabel}`}
-            className='absolute top-2.5 right-2.5 z-20 max-w-[58%] truncate rounded-full bg-[#2563EB] px-2.5 py-1 text-[11px] font-semibold text-white shadow-md ring-1 ring-black/10 dark:ring-white/15'
+            className={`absolute top-2.5 z-20 max-w-[48%] truncate rounded-full bg-[#2563EB] px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap text-white shadow-md ring-1 ring-black/10 dark:ring-white/15 ${
+              latestPosition === 'top-left' ? 'left-2.5' : 'right-2.5'
+            }`}
           >
             Latest · {latestLabel}
           </span>
@@ -127,10 +140,26 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
         )}
       </div>
 
+      {/* Meta row — category and "Updated:" stay on a single line */}
+      {(categoryLabel || metaDateLabel) && (
+        <div className='mb-1.5 flex min-h-[1.125rem] shrink-0 items-center justify-between gap-2'>
+          {categoryLabel ? (
+            <span className='truncate text-[11px] font-bold tracking-wider whitespace-nowrap text-primary uppercase dark:text-blue-400'>
+              {categoryLabel}
+            </span>
+          ) : null}
+          {metaDateLabel ? (
+            <span className='shrink-0 text-[10px] font-medium whitespace-nowrap text-gray-400 dark:text-gray-500'>
+              {metaDateLabel}
+            </span>
+          ) : null}
+        </div>
+      )}
+
       {/* Title — exactly two lines */}
       <h3
         title={title}
-        className='mb-1.5 line-clamp-2 min-h-[3.125rem] text-[1.125rem] leading-snug font-bold break-words text-midnight_text transition-colors group-hover:text-primary sm:min-h-[3.5rem] sm:text-[1.25rem] dark:text-white'>
+        className='mb-1.5 line-clamp-2 min-h-[3.125rem] shrink-0 text-[1.125rem] leading-snug font-bold break-words text-midnight_text transition-colors group-hover:text-primary sm:min-h-[3.5rem] sm:text-[1.25rem] dark:text-white'>
         {title}
       </h3>
 
@@ -143,36 +172,38 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
           WebkitLineClamp: clampLines,
           overflow: 'hidden',
         }}
-        className='mb-2 min-h-[4.25rem] text-xs leading-relaxed font-normal break-words text-grey sm:text-sm dark:text-gray-300'>
+        className='mb-2 min-h-[4.25rem] shrink-0 text-xs leading-relaxed font-normal break-words text-grey sm:text-sm dark:text-gray-300'>
         {text}
       </p>
 
-      {/* Tags — at most two rows; the +N chip carries the rest */}
-      {tags.length > 0 && (
-        <div className='flex max-h-[52px] flex-wrap gap-1.5 overflow-hidden'>
-          {visible.map((tag, index) => (
-            <span
-              key={`${tag}-${index}`}
-              title={tag}
-              className='max-w-full truncate rounded-md border border-blue-200/50 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600 sm:text-[11px] dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300'>
-              {tag}
-            </span>
-          ))}
-          {hidden.length > 0 && (
-            <span
-              title={hidden.join(' · ')}
-              className='rounded-md border border-border/50 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 sm:text-[11px] dark:border-dark_border dark:bg-darkmode dark:text-gray-300'>
-              +{hidden.length}
-            </span>
-          )}
-        </div>
-      )}
+      {/* Tags — exactly two rows reserved; the +N chip carries the rest */}
+      <div
+        aria-hidden={tags.length === 0 ? true : undefined}
+        className='flex h-[50px] shrink-0 flex-wrap content-start gap-1.5 overflow-hidden'>
+        {visible.map((tag, index) => (
+          <span
+            key={`${tag}-${index}`}
+            title={tag}
+            className='max-w-full truncate rounded-md border border-blue-200/50 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600 sm:text-[11px] dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300'>
+            {tag}
+          </span>
+        ))}
+        {hidden.length > 0 && (
+          <span
+            title={hidden.join(' · ')}
+            className='rounded-md border border-border/50 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 sm:text-[11px] dark:border-dark_border dark:bg-darkmode dark:text-gray-300'>
+            +{hidden.length}
+          </span>
+        )}
+      </div>
 
       {/* Footer — pinned, one line, identical across cards */}
       <div className='mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3 text-xs font-semibold dark:border-dark_border/40'>
-        <span className='shrink-0 text-[11px] font-normal text-gray-400 dark:text-gray-500'>
-          {dateLabel}
-        </span>
+        {dateLabel && !metaDateLabel ? (
+          <span className='shrink-0 text-[11px] font-normal text-gray-400 dark:text-gray-500'>
+            {dateLabel}
+          </span>
+        ) : null}
 
         <div className='ml-auto flex items-center gap-2'>
           {visitHref ? (
