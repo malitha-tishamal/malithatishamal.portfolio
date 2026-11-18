@@ -1,45 +1,38 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import BlogCard from "@/components/SharedComponent/Blog/blogCard";
+import BlogCard, { BlogCardSkeleton } from "@/components/SharedComponent/Blog/blogCard";
 import { collection, getDocs, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { BlogPost, BLOG_CATEGORIES, defaultBlogPosts } from "@/types/blog";
+import { isPostVisible, sortPostsByDate } from "@/utils/blogPosts";
+
+const PAGE_SIZE = 9;
+const LATEST_COUNT = 6;
 
 const BlogList: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [page, setPage] = useState<number>(1);
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
         const blogsRef = collection(db, "blogs");
-        const q = query(blogsRef);
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(query(blogsRef));
 
-        if (!snapshot.empty) {
-          const list: BlogPost[] = snapshot.docs
-            .map((doc) => ({
-              id: doc.id,
-              ...(doc.data() as Omit<BlogPost, "id">),
-            }))
-            .filter((p) => p.published !== false);
+        const list: BlogPost[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as Omit<BlogPost, "id">),
+        }));
 
-          list.sort((a, b) => {
-            if (a.order !== undefined && b.order !== undefined) {
-              return a.order - b.order;
-            }
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
-          });
-
-          if (list.length > 0) {
-            setPosts(list);
-          }
-        }
+        const visible = sortPostsByDate(list.filter((post) => isPostVisible(post)));
+        setPosts(visible.length > 0 ? visible : sortPostsByDate(defaultBlogPosts.filter((post) => isPostVisible(post))));
       } catch (err) {
         console.error("Error fetching blog list:", err);
+        setPosts(sortPostsByDate(defaultBlogPosts.filter((post) => isPostVisible(post))));
       } finally {
         setLoading(false);
       }
@@ -76,13 +69,26 @@ const BlogList: React.FC = () => {
     });
   }, [posts, selectedCategory, searchQuery]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagePosts = filteredPosts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategory, searchQuery]);
+
+  const goToPage = (next: number) => {
+    setPage(Math.min(Math.max(1, next), totalPages));
+    document.getElementById("blog-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <section className="flex flex-wrap justify-center pt-8 pb-20 dark:bg-darkmode" id="blog-list">
       <div className="container mx-auto max-w-6xl px-4">
-        
+
         {/* Search & Filter Controls Bar */}
         <div className="mb-10 flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-darklight p-4 rounded-2xl border border-gray-100 dark:border-dark_border shadow-xs">
-          
+
           {/* Search Input */}
           <div className="relative w-full md:w-80">
             <input
@@ -108,6 +114,7 @@ const BlogList: React.FC = () => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
                 className="absolute right-3 top-3 text-xs text-gray-400 hover:text-dark dark:hover:text-white"
               >
                 ✕
@@ -129,6 +136,7 @@ const BlogList: React.FC = () => {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
+                aria-pressed={isActive}
                 className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition cursor-pointer ${
                   isActive
                     ? "bg-primary text-white shadow-md shadow-primary/20 font-bold"
@@ -145,33 +153,62 @@ const BlogList: React.FC = () => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className="rounded-3xl bg-gray-100 dark:bg-darklight p-5 h-96 animate-pulse border border-border/40 dark:border-dark_border/40 flex flex-col justify-between"
-              >
-                <div className="h-52 bg-gray-200 dark:bg-darkmode rounded-2xl w-full" />
-                <div className="space-y-3 mt-4">
-                  <div className="h-4 bg-gray-200 dark:bg-darkmode rounded-md w-1/3" />
-                  <div className="h-5 bg-gray-200 dark:bg-darkmode rounded-md w-4/5" />
-                  <div className="h-3.5 bg-gray-200 dark:bg-darkmode rounded-md w-full" />
-                </div>
-              </div>
+              <BlogCardSkeleton key={i} widthClass="w-full" />
             ))}
           </div>
         ) : filteredPosts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-            {filteredPosts.map((blog, i) => (
-              <div
-                key={blog.id || i}
-                className="w-full"
-                data-aos="fade-up"
-                data-aos-delay={`${(i % 3) * 100}`}
-                data-aos-duration="600"
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+              {pagePosts.map((blog, i) => {
+                const rank = (currentPage - 1) * PAGE_SIZE + i;
+                return (
+                  <div key={blog.id || i} className="w-full">
+                    <BlogCard
+                      blog={blog}
+                      widthClass="w-full"
+                      latest={rank < LATEST_COUNT}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {totalPages > 1 && (
+              <nav
+                aria-label="Blog pagination"
+                className="mt-12 flex items-center justify-center gap-2"
               >
-                <BlogCard blog={blog} />
-              </div>
-            ))}
-          </div>
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold border border-border/70 dark:border-dark_border bg-white dark:bg-darklight text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => (
+                  <button
+                    key={number}
+                    onClick={() => goToPage(number)}
+                    aria-current={number === currentPage ? "page" : undefined}
+                    className={`h-10 min-w-10 px-3 rounded-xl text-sm font-bold transition ${
+                      number === currentPage
+                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                        : "border border-border/70 dark:border-dark_border bg-white dark:bg-darklight text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {number}
+                  </button>
+                ))}
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold border border-border/70 dark:border-dark_border bg-white dark:bg-darklight text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Next
+                </button>
+              </nav>
+            )}
+          </>
         ) : (
           <div className="text-center py-20 bg-white dark:bg-darklight rounded-2xl border border-gray-100 dark:border-dark_border">
             <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">

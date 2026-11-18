@@ -5,8 +5,8 @@ import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
 import { ThemeProvider } from "next-themes";
 import ScrollToTop from "@/components/ScrollToTop";
-import Aoscompo from "@/utils/aos";
 import NextTopLoader from "nextjs-toploader";
+import AsyncStylesheet from "@/components/SharedComponent/AsyncStylesheet";
 import { AuthDialogProvider } from "./context/AuthDialogContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { StructuredData } from "@/components/SEO/StructuredData";
@@ -172,10 +172,8 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/icon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-icon.png" />
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
-        />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <AsyncStylesheet href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css" />
         <StructuredData siteUrl={siteUrl} />
       </head>
       <body className={inter.className}>
@@ -187,14 +185,12 @@ export default function RootLayout({
               enableSystem={true}
               defaultTheme="system"
             >
-              <Aoscompo>
-                <VisitorTracker />
-                <AdvancedAnalyticsTracker />
-                <SectionTracker />
-                <Header />
-                {children}
-                <Footer />
-              </Aoscompo>
+              <VisitorTracker />
+              <AdvancedAnalyticsTracker />
+              <SectionTracker />
+              <Header />
+              {children}
+              <Footer />
               <ScrollToTop />
               <Toaster position="top-center" reverseOrder={false} />
             </ThemeProvider>

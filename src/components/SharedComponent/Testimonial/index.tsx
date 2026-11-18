@@ -178,7 +178,6 @@ const Testimonial: React.FC = () => {
                         src={getImgPath(testimonials[0].avatarUrl)}
                         alt={testimonials[0].name}
                         fill
-                        unoptimized
                         className='object-cover'
                       />
                     </div>
@@ -189,9 +188,9 @@ const Testimonial: React.FC = () => {
                   )}
 
                   <div>
-                    <h4 className='text-sm sm:text-base font-bold text-midnight_text dark:text-white'>
+                    <p className='text-sm sm:text-base font-bold text-midnight_text dark:text-white'>
                       {testimonials[0].name}
-                    </h4>
+                    </p>
                     <p className='text-xs text-grey dark:text-gray-400 font-medium line-clamp-1'>
                       {testimonials[0].role}
                     </p>
@@ -232,7 +231,7 @@ const Testimonial: React.FC = () => {
                                 src={getImgPath(item.avatarUrl)}
                                 alt={item.name}
                                 fill
-                                unoptimized
+                                sizes='44px'
                                 className='object-cover'
                               />
                             </div>
@@ -243,9 +242,9 @@ const Testimonial: React.FC = () => {
                           )}
 
                           <div className='overflow-hidden'>
-                            <h4 className='text-sm font-bold text-midnight_text dark:text-white truncate'>
+                            <p className='text-sm font-bold text-midnight_text dark:text-white truncate'>
                               {item.name}
-                            </h4>
+                            </p>
                             <p className='text-[11px] text-grey dark:text-gray-400 font-medium truncate'>
                               {item.role}
                             </p>

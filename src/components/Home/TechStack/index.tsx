@@ -20,7 +20,7 @@ function TechIcon({ item, color }: { item: TechItem; color?: string }) {
     return (
       <i
         className={`${item.iconValue} text-4xl transition-transform duration-300 group-hover:scale-110`}
-        aria-label={item.name}
+        aria-hidden="true"
       />
     );
   }
@@ -29,7 +29,7 @@ function TechIcon({ item, color }: { item: TechItem; color?: string }) {
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={item.iconValue}
-        alt={item.name}
+        alt=""
         className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
         onError={(e) => {
           (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -41,8 +41,7 @@ function TechIcon({ item, color }: { item: TechItem; color?: string }) {
   return (
     <span
       className="text-4xl leading-none transition-transform duration-300 group-hover:scale-110"
-      role="img"
-      aria-label={item.name}
+      aria-hidden="true"
     >
       {item.iconValue}
     </span>
@@ -149,7 +148,7 @@ export default function TechStack() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* Section Header */}
-        <div className="text-center mb-12" data-aos="fade-up">
+        <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
             <span className="w-2 h-2 rounded-full bg-primary" />
             <span className="text-xs font-bold uppercase tracking-widest text-primary">
@@ -166,7 +165,7 @@ export default function TechStack() {
 
         {/* Category Filter Tabs */}
         {categories.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2 mb-10" data-aos="fade-up" data-aos-delay="100">
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
             <button
               onClick={() => setActiveCategory("all")}
               className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all cursor-pointer ${
@@ -204,8 +203,6 @@ export default function TechStack() {
         ) : (
           <div
             className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3.5"
-            data-aos="fade-up"
-            data-aos-delay="150"
           >
             {filteredItems.map((item) => {
               const cat = categories.find((c) => c.id === item.categoryId);
@@ -372,7 +369,6 @@ export default function TechStack() {
         {activeCategory === "all" && categories.length > 0 && (
           <div
             className="flex flex-wrap justify-center gap-4 mt-10 pt-8 border-t border-gray-100 dark:border-white/[0.07]"
-            data-aos="fade-up"
           >
             {categories.map((cat) => (
               <button

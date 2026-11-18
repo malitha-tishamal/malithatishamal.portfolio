@@ -34,16 +34,12 @@ const Progresswork = ({ isColorMode }: { isColorMode: Boolean }) => {
               alt='logo'
               width={375}
               height={0}
-              quality={100}
               style={{ width: '100%', height: 'auto' }}
               className='md:block hidden'
             />
           </div>
           <div
-            className='md:col-span-6'
-            data-aos='fade-left'
-            data-aos-delay='200'
-            data-aos-duration='1000'>
+            className='md:col-span-6'>
             <div className='flex gap-2 items-center'>
               <span className='w-3 h-3 rounded-full bg-success'></span>
               <span className='font-medium text-midnight_text text-sm dark:text-white/50'>

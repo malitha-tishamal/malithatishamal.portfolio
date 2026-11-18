@@ -1,101 +1,201 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Icon } from "@iconify/react";
 import { BlogPost } from "@/types/blog";
-import { format } from "date-fns";
+import { formatBlogDate } from "@/utils/blogDate";
+import { RelativeTimePill } from "@/components/SharedComponent/RelativeTimePill";
 
-interface BlogCardProps {
-  blog: BlogPost;
-}
+/**
+ * Fixed-size blog card shared by the homepage marquee and the /blog grid.
+ * Every text block reserves its clamped space and the footer is pinned, so all
+ * cards line up whatever the title/excerpt length is.
+ */
 
-const BlogCard: React.FC<BlogCardProps> = ({ blog }) => {
-  const { title, coverImage, excerpt, date, slug, id, category, readingTime } = blog;
-  const postUrl = `/blog/${slug || id}`;
+export const BLOG_CARD_WIDTH = "w-[85vw] shrink-0 sm:w-[320px] xl:w-[400px]";
 
-  const formattedDate = (() => {
-    try {
-      return format(new Date(date), "dd MMM yyyy");
-    } catch {
-      return date;
-    }
-  })();
+const CATEGORY_ICONS: Record<string, string> = {
+  "technology & ai": "solar:cpu-bold-duotone",
+  "web development": "solar:code-square-bold-duotone",
+  "cloud & devops": "solar:cloud-bold-duotone",
+  cybersecurity: "solar:shield-keyhole-bold-duotone",
+  "software architecture": "solar:server-square-bold-duotone",
+  "tutorials & guides": "solar:book-2-bold-duotone",
+};
+
+function CoverPlaceholder({ category, title }: { category?: string; title: string }) {
+  const icon =
+    CATEGORY_ICONS[(category || "").toLowerCase()] || "solar:document-text-bold-duotone";
+  const initial = (title.trim()[0] || "B").toUpperCase();
 
   return (
-    <div className="group relative bg-white dark:bg-darklight rounded-2xl overflow-hidden border border-gray-100 dark:border-dark_border hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-      {/* Cover Image Container */}
-      <div className="relative h-56 w-full overflow-hidden bg-gray-100 dark:bg-darkmode">
-        <Link href={postUrl} aria-label={title} className="block w-full h-full">
-          <Image
-            src={coverImage || "/images/blog/blog_1.png"}
-            alt={title}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            unoptimized
-          />
-        </Link>
-
-        {/* Category Pill on Top-Left */}
-        <div className="absolute top-3.5 left-3.5 z-10">
-          <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-primary text-white shadow-sm backdrop-blur-xs">
-            {category || "Technology"}
-          </span>
-        </div>
-
-        {/* Reading Time on Top-Right */}
-        {readingTime && (
-          <div className="absolute top-3.5 right-3.5 z-10">
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-black/60 text-white backdrop-blur-xs flex items-center gap-1">
-              ⏱ {readingTime}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Card Body */}
-      <div className="p-6 flex flex-col flex-1">
-        {/* Date */}
-        <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2.5 flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          {formattedDate}
-        </span>
-
-        {/* Title */}
-        <h3 className="mb-3">
-          <Link
-            href={postUrl}
-            className="font-bold text-dark dark:text-white group-hover:text-primary transition-colors text-lg sm:text-xl leading-snug line-clamp-2"
-          >
-            {title}
-          </Link>
-        </h3>
-
-        {/* Excerpt */}
-        {excerpt && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed mb-4">
-            {excerpt}
-          </p>
-        )}
-
-        {/* Read More Link Button */}
-        <div className="mt-auto pt-4 border-t border-gray-100 dark:border-dark_border/60 flex items-center justify-between">
-          <Link
-            href={postUrl}
-            className="text-xs sm:text-sm font-bold text-primary hover:text-blue-700 dark:hover:text-blue-400 inline-flex items-center gap-1.5 transition group-hover:gap-2.5"
-          >
-            <span>Read Article</span>
-            <svg className="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
-        </div>
-      </div>
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-700 via-[#2563EB] to-blue-500">
+      <span className="absolute text-[9rem] leading-none font-black text-white/10 select-none">
+        {initial}
+      </span>
+      <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 shadow-lg ring-1 ring-white/25 backdrop-blur-xs">
+        <Icon icon={icon} width={30} height={30} className="text-white" />
+      </span>
     </div>
   );
+}
+
+export interface BlogCardProps {
+  blog: BlogPost;
+  /** One of the six newest posts → blue "Latest · …" pill. */
+  latest?: boolean;
+  widthClass?: string;
+  /** Eagerly load the first cards that are visible on load. */
+  priority?: boolean;
+  className?: string;
+}
+
+const BlogCard: React.FC<BlogCardProps> = ({
+  blog,
+  latest = false,
+  widthClass = BLOG_CARD_WIDTH,
+  priority = false,
+  className = "",
+}) => {
+  const { title, coverImage, coverImageAlt, excerpt, date, slug, id, category, readingTime } =
+    blog;
+  const postUrl = `/blog/${slug || id}`;
+  const [failed, setFailed] = useState(false);
+  const source = (coverImage || "").trim();
+
+  useEffect(() => {
+    setFailed(false);
+  }, [source]);
+
+  return (
+    <Link
+      href={postUrl}
+      data-blog-card=""
+      className={`group relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xs transition-shadow duration-300 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}>
+      {/* Fixed 16:10 cover — no layout shift while images load */}
+      <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/40 dark:to-darkmode">
+        {source && !failed ? (
+          <Image
+            src={source}
+            alt={coverImageAlt?.trim() || title}
+            fill
+            sizes="(max-width: 640px) 85vw, (max-width: 1280px) 320px, 400px"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            onError={() => setFailed(true)}
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <CoverPlaceholder category={category} title={title} />
+        )}
+
+        <span className="absolute top-3 left-3 z-10 max-w-[52%] truncate rounded-full bg-primary px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap text-white uppercase shadow-sm">
+          {category || "Technology"}
+        </span>
+
+        {readingTime ? (
+          <span className="absolute top-3 right-3 z-10 flex max-w-[40%] items-center gap-1 truncate rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-white backdrop-blur-xs">
+            <svg
+              className="h-3 w-3 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {readingTime}
+          </span>
+        ) : null}
+
+        <RelativeTimePill
+          date={date}
+          latest={latest}
+          verb="published"
+          className="absolute bottom-3 left-3"
+        />
+      </div>
+
+      {/* Body — fixed line boxes keep every footer on one line */}
+      <div className="flex flex-1 flex-col p-5">
+        <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap text-gray-500 dark:text-gray-400">
+          <svg
+            className="h-3.5 w-3.5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          {formatBlogDate(date)}
+        </span>
+
+        <h3
+          title={title}
+          className="mb-2 line-clamp-2 min-h-[3.5rem] text-lg leading-snug font-bold break-words text-dark transition-colors group-hover:text-primary dark:text-white">
+          {title}
+        </h3>
+
+        <p className="mb-4 line-clamp-3 min-h-[4.5rem] overflow-hidden text-sm leading-relaxed break-words text-gray-600 dark:text-gray-400">
+          {excerpt}
+        </p>
+
+        <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark_border/60">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary transition-colors group-hover:text-blue-700 sm:text-sm dark:group-hover:text-blue-400">
+            <span>Read Article</span>
+            <svg
+              className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
 };
+
+/** Skeleton with the exact card geometry, used while Firestore is loading. */
+export const BlogCardSkeleton: React.FC<{ widthClass?: string }> = ({
+  widthClass = BLOG_CARD_WIDTH,
+}) => (
+  <div
+    data-content-card=""
+    className={`flex shrink-0 animate-pulse flex-col overflow-hidden rounded-2xl border border-border/40 bg-gray-100 dark:border-dark_border/40 dark:bg-darklight ${widthClass}`}>
+    <div className="aspect-[16/10] w-full shrink-0 bg-gray-200 dark:bg-darkmode" />
+    <div className="flex flex-1 flex-col p-5">
+      <div className="mb-3 h-3 w-24 rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mb-2 h-5 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mb-2 h-5 w-2/3 rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mb-2 h-3.5 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mb-2 h-3.5 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="h-3.5 w-1/2 rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-4 dark:border-dark_border/40">
+        <div className="h-3.5 w-24 rounded-md bg-gray-200 dark:bg-darkmode" />
+      </div>
+    </div>
+  </div>
+);
 
 export default BlogCard;

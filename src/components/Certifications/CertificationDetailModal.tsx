@@ -50,7 +50,6 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
                   width={40}
                   height={40}
                   className="object-contain"
-                  unoptimized
                 />
               ) : (
                 <span className="font-bold text-xs">CERT</span>
@@ -97,7 +96,6 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
                   fill
                   className="object-contain p-2"
                   priority={idx === 0}
-                  unoptimized
                 />
               </div>
             ))}

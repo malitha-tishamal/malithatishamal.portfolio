@@ -79,7 +79,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const coverImage = post.coverImage || `${DEFAULT_SITE_URL}/images/hero/hero-image.png`;
 
   return {
-    title,
+    // generateSeoTitle already ends with the site name — skip the root template.
+    title: { absolute: title },
     description,
     keywords,
     authors: [{ name: post.author?.name || "Malitha Tishamal", url: DEFAULT_SITE_URL }],

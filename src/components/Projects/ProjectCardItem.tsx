@@ -4,7 +4,8 @@ import React from 'react'
 import Image from 'next/image'
 import { ProjectItem } from '@/types/project'
 import { PortfolioMediaCrop, isVideoUrl } from '@/types/portfolio'
-import { getImgPath } from '@/utils/image'
+import { getImgPath, getVideoSrc } from '@/utils/image'
+import { LazyVideo } from '@/components/SharedComponent/LazyVideo'
 import { getVisitSiteTarget } from '@/types/landingPage'
 import {
   FEATURED_PROJECTS_DEFAULTS,
@@ -18,8 +19,8 @@ interface ProjectCardItemProps {
   tagsShown?: number
   descriptionLines?: number
   showVisitSite?: boolean
-  /** "Latest · …" pill text, provided by the section that ranks the cards. */
-  latestLabel?: string
+  /** One of the six newest projects → blue "Latest · …" pill. */
+  latest?: boolean
   /** Width override (cards are fixed-width in the marquee, `w-full` in admin). */
   widthClass?: string
   className?: string
@@ -79,7 +80,7 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
   tagsShown = FEATURED_PROJECTS_DEFAULTS.tagsShown,
   descriptionLines = FEATURED_PROJECTS_DEFAULTS.descriptionLines,
   showVisitSite = FEATURED_PROJECTS_DEFAULTS.showVisitSite,
-  latestLabel,
+  latest = false,
   widthClass,
   className,
 }) => {
@@ -145,13 +146,8 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
 
     return isVideoUrl(src) ? (
       <div className='absolute inset-0' style={wrapStyle}>
-        <video
-          src={getImgPath(src)}
-          muted
-          loop
-          autoPlay
-          playsInline
-          preload='metadata'
+        <LazyVideo
+          src={getVideoSrc(src)}
           className={`h-full w-full ${slotFit === 'contain' ? 'bg-black object-contain' : 'object-cover'}`}
         />
       </div>
@@ -161,7 +157,6 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
           src={getImgPath(src)}
           alt={alt}
           fill
-          unoptimized
           loading='lazy'
           sizes='(max-width: 640px) 85vw, (max-width: 1280px) 320px, 380px'
           style={{
@@ -183,14 +178,10 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
     media = (
       <div className='relative h-full w-full overflow-hidden'>
         <div className='absolute inset-0' style={cropWrapStyle(videoCrop)}>
-          <video
-            src={getImgPath(videoSrc)}
+          <LazyVideo
+            src={getVideoSrc(videoSrc)}
             poster={videoThumb ? getImgPath(videoThumb) : undefined}
-            muted
             loop={playbackMode === 'autoplay_loop'}
-            autoPlay={playbackMode === 'autoplay_loop'}
-            playsInline
-            preload='metadata'
             style={{ objectPosition: `${videoCrop?.ox ?? 50}% ${videoCrop?.oy ?? 50}%` }}
             className={`h-full w-full ${
               videoCrop?.fit === 'contain' ? 'bg-black object-contain' : 'object-cover'
@@ -249,7 +240,6 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
           src={getImgPath(cover)}
           alt={project.altText || `${project.title} – Software & Engineering by Malitha Tishamal`}
           fill
-          unoptimized
           loading='lazy'
           sizes='(max-width: 640px) 85vw, (max-width: 1280px) 320px, 380px'
           style={{ objectPosition: `${ox}% ${oy}%` }}
@@ -265,7 +255,9 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
     <ContentCard
       media={media}
       typeLabel={project.subtitle || 'Project'}
-      latestLabel={latestLabel}
+      relativeDate={project.updatedAt || project.createdAt}
+      relativeVerb='updated'
+      latest={latest}
       photoChip={images.length > 1 && !isVideo ? `+${images.length} Photos` : undefined}
       title={project.title}
       description={descriptionText}

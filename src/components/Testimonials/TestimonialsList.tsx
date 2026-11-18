@@ -237,7 +237,6 @@ export const TestimonialsList: React.FC = () => {
                       src={getImgPath(item.avatarUrl)}
                       alt={item.name}
                       fill
-                      unoptimized
                       className='object-cover'
                     />
                   </div>

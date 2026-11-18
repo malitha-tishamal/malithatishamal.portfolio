@@ -150,7 +150,6 @@ const Header: React.FC = () => {
                       width={24}
                       height={24}
                       className='w-full h-full object-cover'
-                      unoptimized
                     />
                   ) : (
                     userName.charAt(0).toUpperCase()
@@ -227,9 +226,7 @@ const Header: React.FC = () => {
                   alt={userName}
                   width={96}
                   height={96}
-                  quality={100}
                   className='w-full h-full object-cover'
-                  unoptimized
                 />
               ) : (
                 <span className='text-3xl font-bold text-primary'>

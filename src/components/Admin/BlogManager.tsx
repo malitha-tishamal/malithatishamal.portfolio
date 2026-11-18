@@ -14,6 +14,7 @@ import {
 import { db } from "@/lib/firebase";
 import { BlogPost, BLOG_CATEGORIES, defaultBlogPosts, RelatedLink } from "@/types/blog";
 import { uploadToCloudinary } from "@/utils/cloudinary";
+import { checkCoverImage } from "@/utils/blogImage";
 import { generateSeoTitle, generateSeoDescription, generateSeoKeywords } from "@/utils/seo";
 import toast from "react-hot-toast";
 
@@ -35,6 +36,7 @@ export const BlogManager: React.FC = () => {
     excerpt: "",
     category: "Technology & AI",
     coverImage: "/images/blog/blog_1.png",
+    coverImageAlt: "",
     content: "",
     additionalImages: [],
     author: {
@@ -137,6 +139,7 @@ export const BlogManager: React.FC = () => {
       excerpt: "",
       category: "Technology & AI",
       coverImage: "/images/blog/blog_1.png",
+      coverImageAlt: "",
       content: `## Article Overview\n\nWrite your article introduction here.\n\n### Key Highlights\n\n- Highlight point 1\n- Highlight point 2\n\n> "Add an impactful quote or summary here."\n\n### In-Depth Breakdown\n\nDetailed explanations with diagrams and architecture discussions.`,
       additionalImages: [],
       author: {
@@ -324,6 +327,28 @@ export const BlogManager: React.FC = () => {
       return;
     }
 
+    const altText = formData.coverImageAlt?.trim() || "";
+    if (!altText) {
+      toast.error("Cover image alt text is required.");
+      return;
+    }
+
+    const coverImage = formData.coverImage?.trim() || "";
+    if (!coverImage) {
+      toast.error("Cover image is required.");
+      return;
+    }
+
+    if (saving) return;
+    setSaving(true);
+
+    const imageCheck = await checkCoverImage(coverImage);
+    if (!imageCheck.ok) {
+      setSaving(false);
+      toast.error(imageCheck.error || "Cover image is invalid.");
+      return;
+    }
+
     const postSlug = formData.slug?.trim() || generateSlug(formData.title);
     const postId = editingPost ? editingPost.id : `blog-${Date.now()}`;
 
@@ -334,7 +359,8 @@ export const BlogManager: React.FC = () => {
       subtitle: formData.subtitle?.trim() || "",
       excerpt: formData.excerpt?.trim() || formData.title.trim(),
       category: formData.category || "Technology & AI",
-      coverImage: formData.coverImage || "/images/blog/blog_1.png",
+      coverImage,
+      coverImageAlt: altText,
       content: formData.content || "",
       additionalImages: formData.additionalImages || [],
       author: {
@@ -731,6 +757,16 @@ export const BlogManager: React.FC = () => {
                         setFormData((prev) => ({ ...prev, coverImage: e.target.value }))
                       }
                       placeholder="Image URL or upload file..."
+                      className={inputCls}
+                    />
+                    <input
+                      type="text"
+                      value={formData.coverImageAlt || ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, coverImageAlt: e.target.value }))
+                      }
+                      placeholder="Alt text describing the cover image (required)"
+                      maxLength={160}
                       className={inputCls}
                     />
                     <div className="flex items-center gap-3">

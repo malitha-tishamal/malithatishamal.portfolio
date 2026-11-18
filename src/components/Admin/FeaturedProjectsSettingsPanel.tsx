@@ -377,7 +377,7 @@ export const FeaturedProjectsSettingsPanel: React.FC = () => {
               tagsShown={draft.tagsShown}
               descriptionLines={draft.descriptionLines}
               showVisitSite={draft.showVisitSite}
-              latestLabel="1 month ago"
+              latest
               widthClass="w-full"
             />
           </div>

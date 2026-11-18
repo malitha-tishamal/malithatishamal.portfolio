@@ -28,10 +28,7 @@ const PortfolioDetail = () => {
               </div>
             </div>
             <div
-              className='flex flex-col items-start bg-white shadow-[0px_20px_80px_0px_#68758D26] pt-10 lg:pl-14 pl-9 pb-8 lg:pr-40 pr-10 lg:w-[30%] w-full dark:bg-darklight'
-              data-aos='fade-left'
-              data-aos-delay='200'
-              data-aos-duration='1000'>
+              className='flex flex-col items-start bg-white shadow-[0px_20px_80px_0px_#68758D26] pt-10 lg:pl-14 pl-9 pb-8 lg:pr-40 pr-10 lg:w-[30%] w-full dark:bg-darklight'>
               <span className='pb-6 text-2xl text-primary'>Our services</span>
               <span className='pb-6 text-lg'>Brand Strategy</span>
               <span className='pb-6 text-lg'>Communications</span>

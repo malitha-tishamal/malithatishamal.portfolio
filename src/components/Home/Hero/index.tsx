@@ -136,10 +136,7 @@ const Hero = () => {
       <div className='container mx-auto max-w-6xl px-4 grid grid-cols-12 gap-6 relative z-10 items-center'>
         {/* Left Column: Headlines, Buttons, Signature & Contact Note */}
         <div
-          className='md:col-span-6 col-span-12 p-4 md:px-4 px-0 space-y-5 flex flex-col items-start justify-center'
-          data-aos='fade-right'
-          data-aos-delay='200'
-          data-aos-duration='1000'>
+          className='md:col-span-6 col-span-12 p-4 md:px-4 px-0 space-y-5 flex flex-col items-start justify-center'>
           {/* Badge */}
           <div className='flex gap-2 items-center'>
             <span className='w-3 h-3 rounded-full bg-success animate-pulse'></span>
@@ -186,8 +183,7 @@ const Hero = () => {
                 alt='Malitha Tishamal signature - Software Developer and Network Engineer'
                 width={170}
                 height={55}
-                quality={100}
-                unoptimized
+                sizes='170px'
                 className='h-11 w-auto object-contain dark:invert opacity-90 hover:opacity-100 transition-all'
               />
             </div>
@@ -236,9 +232,9 @@ const Hero = () => {
               alt='Malitha Tishamal - Expert Software Developer, DevOps Engineer and Network Specialist from Sri Lanka'
               width={460}
               height={460}
-              quality={100}
+              sizes='(max-width: 768px) 92vw, 460px'
               priority
-              unoptimized
+              fetchPriority='high'
               className="w-full h-full object-cover object-top rounded-3xl"
             />
           </div>

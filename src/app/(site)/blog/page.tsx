@@ -3,7 +3,7 @@ import BlogList from "@/components/Blog/BlogList";
 import HeroSub from "@/components/SharedComponent/HeroSub";
 
 export const metadata = {
-  title: "Blog & News | Malitha Tishamal",
+  title: { absolute: "Blog & News | Malitha Tishamal" },
   description: "Discover in-depth engineering articles, cloud architecture insights, and the latest tech developments.",
 };
 

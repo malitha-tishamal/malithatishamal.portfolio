@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { BlogPost } from "@/types/blog";
-import { format } from "date-fns";
 import toast from "react-hot-toast";
+import { formatBlogDate } from "@/utils/blogDate";
+import { DEFAULT_SITE_URL } from "@/utils/seo";
 
 interface BlogDetailViewProps {
   post: BlogPost;
@@ -15,15 +16,10 @@ interface BlogDetailViewProps {
 export const BlogDetailView: React.FC<BlogDetailViewProps> = ({ post, relatedPosts = [] }) => {
   const [activeLightboxImage, setActiveLightboxImage] = useState<string | null>(null);
 
-  const formattedDate = (() => {
-    try {
-      return format(new Date(post.date), "MMMM dd, yyyy");
-    } catch {
-      return post.date;
-    }
-  })();
+  const formattedDate = formatBlogDate(post.date);
 
-  const currentUrl = typeof window !== "undefined" ? window.location.href : `https://malithatishamal.com/blog/${post.slug}`;
+  // Canonical URL: identical on the server and after hydration.
+  const currentUrl = `${DEFAULT_SITE_URL}/blog/${post.slug || post.id}`;
 
   const handleCopyLink = () => {
     if (typeof navigator !== "undefined") {
@@ -191,7 +187,6 @@ export const BlogDetailView: React.FC<BlogDetailViewProps> = ({ post, relatedPos
                 alt={post.author?.name || "Author"}
                 fill
                 className="object-cover"
-                unoptimized
               />
             </div>
             <div>
@@ -255,7 +250,6 @@ export const BlogDetailView: React.FC<BlogDetailViewProps> = ({ post, relatedPos
               fill
               className="object-cover"
               priority
-              unoptimized
             />
           </div>
         )}
@@ -286,7 +280,6 @@ export const BlogDetailView: React.FC<BlogDetailViewProps> = ({ post, relatedPos
                     alt={`Article screenshot ${i + 1}`}
                     fill
                     className="object-cover group-hover:scale-105 transition duration-300"
-                    unoptimized
                   />
                   <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
                     <span className="text-xs font-semibold px-3 py-1 bg-black/60 rounded-full backdrop-blur-xs">
@@ -374,7 +367,6 @@ export const BlogDetailView: React.FC<BlogDetailViewProps> = ({ post, relatedPos
                       alt={rel.title}
                       fill
                       className="object-cover group-hover:scale-105 transition duration-300"
-                      unoptimized
                     />
                   </div>
                   <div className="p-4 flex flex-col flex-1">
@@ -405,7 +397,6 @@ export const BlogDetailView: React.FC<BlogDetailViewProps> = ({ post, relatedPos
               width={1200}
               height={800}
               className="max-h-[85vh] max-w-full object-contain rounded-xl"
-              unoptimized
             />
             <button
               onClick={() => setActiveLightboxImage(null)}

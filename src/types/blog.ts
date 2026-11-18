@@ -12,6 +12,8 @@ export interface BlogPost {
   excerpt: string;
   category: string;
   coverImage: string;
+  /** Screen-reader description of the cover; falls back to the title. */
+  coverImageAlt?: string;
   content: string; // Markdown or rich text paragraphs
   additionalImages?: string[];
   author: {
@@ -52,6 +54,7 @@ export const defaultBlogPosts: BlogPost[] = [
     excerpt: "Exploring the distributed system architecture, real-time synchronization, and stringent data security protocols used in MediQ antibiotic tracking.",
     category: "Software Architecture",
     coverImage: "/images/blog/blog_1.png",
+    coverImageAlt: "Illustration of a scalable hospital software architecture",
     content: `## The Critical Need for Real-Time Antibiotic Stewardship
 
 In modern hospital intensive care units and clinical environments, timely and precise antimicrobial management directly impacts patient survival rates and helps combat multi-drug resistant pathogens.
@@ -102,7 +105,8 @@ When developing **MediQ**, our core architectural goal was to eliminate clinical
     subtitle: "A deep dive into server actions, client cache synchronization, and robust security rules for production web applications.",
     excerpt: "Learn how to build blazing-fast full-stack web applications by combining Next.js App Router, Tailwind CSS, and Google Firebase Firestore.",
     category: "Web Development",
-    coverImage: "/images/blog/blog_2.png",
+    coverImage: "/images/blog/blog_2.jpg",
+    coverImageAlt: "Next.js App Router and Firestore real-time data flow",
     content: `## The Modern Full-Stack Frontier
 
 The transition from traditional server-rendered applications to hybrid React Server Components (RSC) and Cloud Native backends has revolutionized how we build digital products.
@@ -161,6 +165,7 @@ By eliminating bulky server side sessions and leveraging Cloudflare Edge caching
     excerpt: "Securing automated DevOps workflows using ephemeral secrets, container signing, and automated static vulnerability scanning.",
     category: "Cloud & DevOps",
     coverImage: "/images/blog/blog_3.png",
+    coverImageAlt: "Zero-trust CI/CD pipeline security layers",
     content: `## The Shift-Left Security Paradigm
 
 Modern continuous delivery pipelines are the backbone of rapid engineering teams—yet they frequently become prime targets for automated supply chain injection attacks.

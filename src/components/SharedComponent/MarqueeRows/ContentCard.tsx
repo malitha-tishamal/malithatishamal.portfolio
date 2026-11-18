@@ -1,6 +1,11 @@
 'use client'
 
 import React, { memo } from 'react'
+import {
+  RelativeTimePill,
+  type RelativeVerb,
+} from '@/components/SharedComponent/RelativeTimePill'
+import type { DateLike } from '@/utils/relativeTime'
 
 /**
  * Shared fixed-size content card for marquee sections (projects, certifications,
@@ -13,9 +18,13 @@ export interface ContentCardProps {
   media: React.ReactNode
   /** Top-left category pill, e.g. "FULL STACK WEB". */
   typeLabel?: string
-  /** "Latest · 1 month ago" pill. */
-  latestLabel?: string
-  /** Corner that carries the Latest pill (defaults to top-right). */
+  /** Real date the relative pill is computed from (updatedAt, issueDate, …). */
+  relativeDate?: DateLike
+  /** Noun used by the pill's aria label. */
+  relativeVerb?: RelativeVerb
+  /** Marks one of the six newest cards → blue "Latest · 3 days ago" pill. */
+  latest?: boolean
+  /** Corner that carries the pill (defaults to top-right). */
   latestPosition?: 'top-left' | 'top-right'
   /** Bottom-right chip, e.g. "+5 Photos". */
   photoChip?: string
@@ -67,7 +76,9 @@ export function splitVisibleTags(
 export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard({
   media,
   typeLabel,
-  latestLabel,
+  relativeDate,
+  relativeVerb = 'updated',
+  latest = false,
   latestPosition = 'top-right',
   photoChip,
   categoryLabel,
@@ -91,28 +102,21 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
   const { visible, hidden } = splitVisibleTags(tags, tagsShown)
   const clampLines = Math.min(MAX_DESCRIPTION_LINES, Math.max(1, Math.round(descriptionLines)))
 
-  const activate = () => {
-    if (interactive) onOpen?.()
-  }
-
   return (
     <article
-      onClick={interactive ? activate : undefined}
-      onKeyDown={
-        interactive
-          ? (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                activate()
-              }
-            }
-          : undefined
-      }
-      role={interactive ? 'button' : undefined}
-      tabIndex={interactive ? 0 : undefined}
-      aria-label={interactive ? openHint || `View details for ${title}` : undefined}
       data-content-card=''
-      className={`group relative flex shrink-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white p-4 shadow-xs transition-shadow duration-300 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden sm:p-5 dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}>
+      className={`group relative flex shrink-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white p-4 shadow-xs transition-shadow duration-300 hover:shadow-2xl sm:p-5 dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}>
+      {/* Stretched primary action: one real control per card, nested links and
+          buttons sit above it instead of inside it. */}
+      {interactive && (
+        <button
+          type='button'
+          onClick={() => onOpen?.()}
+          aria-label={openHint || `View details for ${title}`}
+          className='absolute inset-0 z-10 cursor-pointer rounded-3xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden'
+        />
+      )}
+
       {/* Media */}
       <div className='relative mb-3 aspect-[16/10] w-full shrink-0 overflow-hidden rounded-2xl border border-border/40 bg-gray-100 dark:border-dark_border/40 dark:bg-darkmode'>
         {media}
@@ -123,15 +127,13 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
           </span>
         )}
 
-        {latestLabel && (
-          <span
-            aria-label={`Latest, updated ${latestLabel}`}
-            className={`absolute top-2.5 z-20 max-w-[48%] truncate rounded-full bg-[#2563EB] px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap text-white shadow-md ring-1 ring-black/10 dark:ring-white/15 ${
-              latestPosition === 'top-left' ? 'left-2.5' : 'right-2.5'
-            }`}
-          >
-            Latest · {latestLabel}
-          </span>
+        {relativeDate && (
+          <RelativeTimePill
+            date={relativeDate}
+            latest={latest}
+            verb={relativeVerb}
+            className={`absolute top-2.5 ${latestPosition === 'top-left' ? 'left-2.5' : 'right-2.5'}`}
+          />
         )}
 
         {photoChip && (
@@ -150,7 +152,7 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
             </span>
           ) : null}
           {metaDateLabel ? (
-            <span className='shrink-0 text-[10px] font-medium whitespace-nowrap text-gray-400 dark:text-gray-500'>
+            <span className='shrink-0 text-[11px] font-medium whitespace-nowrap text-gray-500 dark:text-gray-400'>
               {metaDateLabel}
             </span>
           ) : null}
@@ -185,23 +187,23 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
           <span
             key={`${tag}-${index}`}
             title={tag}
-            className='max-w-full truncate rounded-md border border-blue-200/50 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600 sm:text-[11px] dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300'>
+            className='max-w-full truncate rounded-md border border-blue-200/50 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-600 sm:text-xs dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300'>
             {tag}
           </span>
         ))}
         {hidden.length > 0 && (
           <span
             title={hidden.join(' · ')}
-            className='rounded-md border border-border/50 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 sm:text-[11px] dark:border-dark_border dark:bg-darkmode dark:text-gray-300'>
+            className='rounded-md border border-border/50 bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 sm:text-xs dark:border-dark_border dark:bg-darkmode dark:text-gray-300'>
             +{hidden.length}
           </span>
         )}
       </div>
 
       {/* Footer — pinned, one line, identical across cards */}
-      <div className='mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3 text-xs font-semibold dark:border-dark_border/40'>
+      <div className='relative z-20 mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3 text-xs font-semibold dark:border-dark_border/40'>
         {dateLabel && !metaDateLabel ? (
-          <span className='shrink-0 text-[11px] font-normal text-gray-400 dark:text-gray-500'>
+          <span className='shrink-0 text-[11px] font-normal text-gray-500 dark:text-gray-400'>
             {dateLabel}
           </span>
         ) : null}

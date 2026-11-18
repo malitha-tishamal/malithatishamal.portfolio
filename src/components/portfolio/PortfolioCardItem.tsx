@@ -4,7 +4,8 @@ import React, { memo } from 'react'
 import Image from 'next/image'
 import { PortfolioItem, PortfolioMediaCrop, isVideoUrl } from '@/types/portfolio'
 import { ContentCard } from '@/components/SharedComponent/MarqueeRows/ContentCard'
-import { getImgPath } from '@/utils/image'
+import { LazyVideo } from '@/components/SharedComponent/LazyVideo'
+import { getImgPath, getVideoSrc } from '@/utils/image'
 
 interface PortfolioCardItemProps {
   item: PortfolioItem
@@ -14,7 +15,8 @@ interface PortfolioCardItemProps {
   onClick?: () => void
   /** Stable handler (preferred — keeps the card memoized). */
   onOpen?: (item: PortfolioItem) => void
-  latestLabel?: string
+  /** One of the six newest entries → blue "Latest · …" pill. */
+  latest?: boolean
   widthClass?: string
   className?: string
 }
@@ -72,6 +74,23 @@ const VideoMedia: React.FC<{ item: PortfolioItem; src: string; thumb: string }> 
   const contain = (crop?.fit || item.imageFit) === 'contain'
   const staticThumb = thumb && (mode === 'thumbnail_only' || mode === 'hover_play')
 
+  // Play only while the card is on screen: off-screen clips never download
+  // (preload="none") and on-screen ones pause when scrolled away.
+  React.useEffect(() => {
+    const video = videoRef.current
+    if (!video || mode !== 'autoplay_loop') return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) void video.play().catch(() => {})
+        else video.pause()
+      },
+      { threshold: 0.35 }
+    )
+    observer.observe(video)
+    return () => observer.disconnect()
+  }, [mode])
+
   if (staticThumb) {
     return (
       <div className='relative h-full w-full'>
@@ -79,7 +98,6 @@ const VideoMedia: React.FC<{ item: PortfolioItem; src: string; thumb: string }> 
           src={getImgPath(thumb)}
           alt={item.altText || item.title}
           fill
-          unoptimized
           sizes={IMAGE_SIZES}
           className='object-cover object-top'
         />
@@ -98,13 +116,12 @@ const VideoMedia: React.FC<{ item: PortfolioItem; src: string; thumb: string }> 
     <div className='absolute inset-0' style={cropStyle(crop)}>
       <video
         ref={videoRef}
-        src={getImgPath(src)}
+        src={getVideoSrc(src)}
         poster={thumb ? getImgPath(thumb) : undefined}
-        autoPlay
         muted
         loop
         playsInline
-        preload='metadata'
+        preload='none'
         onLoadedMetadata={(event) => {
           if (trimStart > 0) event.currentTarget.currentTime = trimStart
         }}
@@ -158,13 +175,8 @@ const PortfolioMedia: React.FC<{ item: PortfolioItem }> = memo(function Portfoli
     if (isVideoUrl(src)) {
       return (
         <div className='absolute inset-0' style={cropStyle(crop)}>
-          <video
-            src={getImgPath(src)}
-            muted
-            loop
-            autoPlay
-            playsInline
-            preload='metadata'
+          <LazyVideo
+            src={getVideoSrc(src)}
             className={`h-full w-full ${contain ? 'bg-black object-contain' : 'object-cover'}`}
           />
         </div>
@@ -177,7 +189,6 @@ const PortfolioMedia: React.FC<{ item: PortfolioItem }> = memo(function Portfoli
           src={getImgPath(src)}
           alt={label}
           fill
-          unoptimized
           loading='lazy'
           sizes={IMAGE_SIZES}
           style={positions}
@@ -234,7 +245,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = memo(function
   item,
   onClick,
   onOpen,
-  latestLabel,
+  latest = false,
   widthClass = 'w-[85vw] sm:w-[320px] xl:w-[380px]',
   className = '',
 }) {
@@ -244,8 +255,9 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = memo(function
   return (
     <ContentCard
       media={<PortfolioMedia item={item} />}
-      latestLabel={latestLabel}
-      latestPosition='top-left'
+      relativeDate={item.updatedAt || item.createdAt}
+      relativeVerb='updated'
+      latest={latest}
       photoChip={
         item.mediaType === 'video' || !!item.videoUrl
           ? undefined

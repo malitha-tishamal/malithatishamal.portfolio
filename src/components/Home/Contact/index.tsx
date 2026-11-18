@@ -187,9 +187,6 @@ const Contactform = () => {
           {/* ═══════════ LEFT COLUMN: CONTACT DETAILS ═══════════ */}
           <div
             className="row-start-1 col-start-1 row-end-2 md:col-end-7 col-end-12"
-            data-aos="fade-left"
-            data-aos-delay="200"
-            data-aos-duration="1000"
           >
             {/* Badge */}
             <div className="flex gap-2 items-center justify-start">
@@ -258,9 +255,7 @@ const Contactform = () => {
                       width={100}
                       height={24}
                       style={{ width: "auto", height: "auto" }}
-                      quality={100}
                       className="max-h-6 max-w-28 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                      unoptimized
                     />
                   ))}
                 </div>
@@ -270,9 +265,6 @@ const Contactform = () => {
 
           {/* ═══════════ RIGHT COLUMN: FORM CARD ═══════════ */}
           <div
-            data-aos="fade-right"
-            data-aos-delay="200"
-            data-aos-duration="1000"
             className="relative before:content-[''] before:absolute before:bg-[url('/images/contact/form-line.png')] before:bg-no-repeat before:w-[13rem] before:h-24 before:top-5% before:bg-contain before:left-[35%] before:z-1 before:translate-x-full lg:before:inline-block before:hidden after:content-[''] after:absolute after:bg-[url('/images/contact/from-round-line.png')] after:bg-no-repeat after:w-[6.3125rem] after:h-[6.3125rem] after:bg-contain after:top-1/2 after:-left-[25%] after:z-1 after:translate-x-1/2 after:translate-y-1/2 md:after:inline-block after:hidden md:row-start-1 row-start-2 md:col-start-8 col-start-1 row-end-2 col-end-13"
           >
             <div className="lg:mt-0 mt-8 bg-white dark:bg-darkmode max-w-[50rem] m-auto pt-[2.1875rem] pb-8 px-[2.375rem] rounded-2xl shadow-xl relative z-10 border border-border/40 dark:border-dark_border">
@@ -304,6 +296,7 @@ const Contactform = () => {
                   <div className="flex gap-4 w-full">
                     <input
                       name="firstName"
+                      aria-label="First name"
                       value={formData.firstName}
                       onChange={handleChange}
                       className="text-midnight_text w-full text-base transition-[0.5s] bg-transparent dark:border-dark_border dark:text-white px-[0.9375rem] py-[0.830rem] border border-border border-solid focus:border-primary dark:focus:border-primary placeholder:text-grey rounded-lg focus-visible:outline-0"
@@ -313,6 +306,7 @@ const Contactform = () => {
                     />
                     <input
                       name="lastName"
+                      aria-label="Last name"
                       value={formData.lastName}
                       onChange={handleChange}
                       type="text"
@@ -325,6 +319,7 @@ const Contactform = () => {
                   <div className="w-full">
                     <input
                       name="email"
+                      aria-label="Email address"
                       value={formData.email}
                       onChange={handleChange}
                       type="email"
@@ -338,6 +333,7 @@ const Contactform = () => {
                   <div className="w-full">
                     <input
                       name="country"
+                      aria-label="Country"
                       value={formData.country}
                       onChange={handleChange}
                       className="text-midnight_text w-full text-base transition-[0.5s] bg-transparent dark:border-dark_border dark:text-white px-[0.9375rem] py-[0.830rem] border border-border border-solid focus:border-primary dark:focus:border-primary placeholder:text-grey rounded-lg focus-visible:outline-0"
@@ -349,7 +345,7 @@ const Contactform = () => {
                   {/* Service / Category Selection */}
                   <div className="w-full">
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400">
+                      <label htmlFor="serviceCategory" className="block text-xs font-bold text-gray-500 dark:text-gray-400">
                         Interested Service / Project Category
                       </label>
                       {formData.serviceCategory && (
@@ -360,6 +356,7 @@ const Contactform = () => {
                     </div>
                     <div className="relative">
                       <select
+                        id="serviceCategory"
                         name="serviceCategory"
                         value={formData.serviceCategory}
                         onChange={handleChange as any}
@@ -387,6 +384,7 @@ const Contactform = () => {
                   <div className="w-full">
                     <textarea
                       name="message"
+                      aria-label="Project message"
                       value={formData.message}
                       onChange={handleChange}
                       className="text-midnight_text h-[9.375rem] w-full text-base transition-[0.5s] bg-transparent dark:border-dark_border dark:text-white px-[0.9375rem] py-[0.830rem] border border-border border-solid focus:border-primary dark:focus:border-primary placeholder:text-grey rounded-lg focus-visible:outline-0"

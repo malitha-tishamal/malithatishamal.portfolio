@@ -142,8 +142,6 @@ const Footer: FC = () => {
                   width={280}
                   height={90}
                   style={{ width: 'auto', height: '78px' }}
-                  quality={100}
-                  unoptimized
                 />
               </Link>
               <h2

@@ -92,7 +92,7 @@ const PortfolioCard: React.FC = () => {
         <MarqueeRows<PortfolioItem>
           items={items}
           renderCard={(item, ctx) => (
-            <PortfolioCardItem item={item} latestLabel={ctx.latestLabel} onOpen={handleOpen} />
+            <PortfolioCardItem item={item} latest={ctx.latest} onOpen={handleOpen} />
           )}
           getKey={getPortfolioKey}
           getUpdatedAt={getPortfolioUpdatedAt}

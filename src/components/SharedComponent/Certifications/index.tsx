@@ -125,10 +125,10 @@ const Certifications: React.FC = () => {
             No certifications published yet.
           </p>
         }
-        renderCard={(item, { latestLabel }) => (
+        renderCard={(item, { latest }) => (
           <CertificationCardItem
             item={item}
-            latestLabel={latestLabel}
+            latest={latest}
             widthClass={CERT_CARD_WIDTH}
             onPreview={setSelectedItem}
           />

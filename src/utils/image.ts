@@ -31,3 +31,20 @@ export const getDataPath = (path: string): string => {
   
   return `${basePath}${path}`;
 };
+
+/**
+ * Card videos render at ≤640 px CSS width, but Cloudinary serves the original
+ * 9–10 MB upload unless a transformation is asked for. Requesting a 640 px,
+ * low-quality rendition brings the same clip down to ~1 MB. URLs that already
+ * carry a transformation (or are not Cloudinary) pass through untouched.
+ */
+export const getVideoSrc = (url: string): string => {
+  if (!url) return url;
+  const path = getImgPath(url);
+  const marker = "/video/upload/";
+  const index = path.indexOf(marker);
+  if (index === -1) return path;
+  const rest = path.slice(index + marker.length);
+  if (!/^v\d+\//.test(rest)) return path;
+  return `${path.slice(0, index + marker.length)}q_auto:low,w_640/${rest}`;
+};

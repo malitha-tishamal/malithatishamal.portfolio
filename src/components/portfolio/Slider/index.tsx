@@ -40,7 +40,6 @@ const SlickSlider = () => {
             alt={item.alt}
             width={400}
             height={150}
-            quality={100}
             className='rounded-lg'
             style={{ width: '100%', height: 'auto' }}
           />

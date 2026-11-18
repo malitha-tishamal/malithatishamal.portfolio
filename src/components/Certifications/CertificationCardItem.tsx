@@ -8,9 +8,11 @@ import {
   trackCertificationHover,
 } from "@/utils/certificationAnalytics";
 import { splitVisibleTags } from "@/components/SharedComponent/MarqueeRows/ContentCard";
+import { RelativeTimePill } from "@/components/SharedComponent/RelativeTimePill";
 import {
   formatCertificateDate,
   formatCertificateExpiry,
+  getCertificateIssueDate,
 } from "@/utils/certificateDate";
 
 /** Fixed card width used by the marquee; the detail grid uses `w-full`. */
@@ -22,7 +24,8 @@ const TAG_BUDGET = 72;
 interface CertificationCardItemProps {
   item: CertificationItem;
   onPreview: (item: CertificationItem) => void;
-  latestLabel?: string;
+  /** One of the six newest certificates → blue "Latest · …" pill. */
+  latest?: boolean;
   widthClass?: string;
   className?: string;
 }
@@ -55,7 +58,7 @@ async function copyToClipboard(text: string): Promise<boolean> {
 export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
   item,
   onPreview,
-  latestLabel,
+  latest = false,
   widthClass = "w-full",
   className = "",
 }) => {
@@ -126,7 +129,6 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           sizes={CARD_SIZES}
           loading="lazy"
           className="object-contain p-0.5 transition duration-300 group-hover/preview:scale-[1.02]"
-          unoptimized
           onError={() => setImgFailed((prev) => ({ ...prev, [idx]: true }))}
         />
       ) : (
@@ -166,7 +168,6 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
               sizes={CARD_SIZES}
               loading="lazy"
               className="object-contain p-1 transition duration-300 group-hover/preview:scale-[1.02]"
-              unoptimized
               onError={() => setImgFailed((prev) => ({ ...prev, [activeImageIndex]: true }))}
             />
           ) : (
@@ -208,7 +209,6 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           sizes={CARD_SIZES}
           loading="lazy"
           className="object-contain p-1 transition duration-300 group-hover/preview:scale-[1.02]"
-          unoptimized
           onError={() => setImgFailed((prev) => ({ ...prev, 0: true }))}
         />
       );
@@ -241,21 +241,19 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
 
   return (
     <article
-      role="button"
-      tabIndex={0}
-      aria-label={`View certificate details for ${item.title}`}
-      onClick={handlePreview}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          handlePreview();
-        }
-      }}
       onMouseEnter={() => trackCertificationHover(item.id)}
       data-content-card=""
-      className={`group relative flex shrink-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white p-4 shadow-xs transition-shadow duration-300 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden sm:p-5 dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}
+      className={`group relative flex shrink-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white p-4 shadow-xs transition-shadow duration-300 hover:shadow-2xl sm:p-5 dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}
     >
+      {/* Stretched primary action. Real <button>, so the article keeps its
+          landmark semantics and nested controls stay separate. */}
+      <button
+        type="button"
+        onClick={handlePreview}
+        aria-label={`View certificate details for ${item.title}`}
+        className="absolute inset-0 z-10 cursor-pointer rounded-3xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden"
+      />
+
       {/* Header — logo, two-line title, one-line issuer */}
       <div className="mb-3 flex h-[62px] shrink-0 items-start gap-3">
         <div
@@ -333,13 +331,13 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
               onClick={handleCopyId}
               onKeyDown={stop}
               aria-label={copied ? "Credential ID copied" : "Copy credential ID"}
-              className="shrink-0 rounded text-[11px] font-bold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+              className="relative z-20 -mx-1 -my-2 inline-flex min-h-[32px] shrink-0 items-center justify-center rounded px-1 py-2 text-[11px] font-bold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
             >
               {copied ? "Copied" : "Copy"}
             </button>
           </>
         ) : (
-          <span className="min-w-0 flex-1 truncate text-gray-400 italic dark:text-gray-500">
+          <span className="min-w-0 flex-1 truncate text-gray-500 italic dark:text-gray-400">
             No credential ID
           </span>
         )}
@@ -351,7 +349,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           <span
             key={`${skill}-${index}`}
             title={skill}
-            className="max-w-full truncate rounded-md border border-blue-200/50 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600 sm:text-[11px] dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300"
+            className="max-w-full truncate rounded-md border border-blue-200/50 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-600 sm:text-xs dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300"
           >
             {skill}
           </span>
@@ -359,7 +357,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         {hiddenTags.length > 0 && (
           <span
             title={hiddenTags.join(" · ")}
-            className="rounded-md border border-border/50 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 sm:text-[11px] dark:border-dark_border dark:bg-darkmode dark:text-gray-300"
+            className="rounded-md border border-border/50 bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 sm:text-xs dark:border-dark_border dark:bg-darkmode dark:text-gray-300"
           >
             +{hiddenTags.length}
           </span>
@@ -370,14 +368,12 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
       <div className="relative mb-3.5 aspect-video w-full shrink-0 overflow-hidden rounded-xl border border-border/70 bg-slate-900/5 p-1.5 dark:border-dark_border dark:bg-slate-950/40">
         <div className="relative h-full w-full">{renderCertificatePreview()}</div>
 
-        {latestLabel && (
-          <span
-            aria-label={`Latest, issued ${latestLabel}`}
-            className="absolute top-2 right-2 z-20 max-w-[60%] truncate rounded-full bg-[#2563EB] px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap text-white shadow-md ring-1 ring-black/10 dark:ring-white/15"
-          >
-            Latest · {latestLabel}
-          </span>
-        )}
+        <RelativeTimePill
+          date={getCertificateIssueDate(item)}
+          latest={latest}
+          verb="issued"
+          className="absolute top-2 right-2"
+        />
 
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
           <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-dark shadow-md dark:bg-darklight/90 dark:text-white">
@@ -407,7 +403,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
       </div>
 
       {/* CTA — pinned to the bottom, same height on every card */}
-      <div className="mt-auto shrink-0 pt-1">
+      <div className="relative z-20 mt-auto shrink-0 pt-1">
         {item.credentialUrl ? (
           <a
             href={item.credentialUrl}
@@ -418,7 +414,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
               trackCertificationClick(item.id);
             }}
             onKeyDown={stop}
-            className="flex h-9 w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/30 bg-primary/5 px-3 text-xs font-bold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-white focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden dark:text-blue-300 dark:hover:text-white"
+            className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/30 bg-primary/5 px-3 text-xs font-bold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-white focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden dark:text-blue-300 dark:hover:text-white"
           >
             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path

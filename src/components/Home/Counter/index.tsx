@@ -283,9 +283,6 @@ const Counter = ({ isColorMode }: { isColorMode: boolean }) => {
             <div
               key={stat.key}
               className="flex flex-col items-center gap-3"
-              data-aos="fade-up"
-              data-aos-delay={`${index * 150}`}
-              data-aos-duration="800"
             >
               {stat.icon}
               <span className="text-4xl md:text-5xl font-bold text-midnight_text dark:text-white leading-none">

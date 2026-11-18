@@ -128,7 +128,6 @@ const Services: React.FC = () => {
         <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
           <div
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-3.5"
-            data-aos="fade-up"
           >
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             <span className="font-extrabold uppercase tracking-wider text-xs text-primary">
@@ -138,16 +137,12 @@ const Services: React.FC = () => {
 
           <h2
             className="text-3xl sm:text-4xl font-extrabold text-midnight_text dark:text-white leading-tight tracking-tight mb-3"
-            data-aos="fade-up"
-            data-aos-delay="100"
           >
             {sectionContent.heading || "Services Specifically Designed For Your Technical Needs"}
           </h2>
 
           <p
             className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-xl mx-auto"
-            data-aos="fade-up"
-            data-aos-delay="200"
           >
             {sectionContent.subheading ||
               "From full-stack development to automated cloud infrastructure and security hardening, engineered for high reliability."}
@@ -178,8 +173,7 @@ const Services: React.FC = () => {
                 <div
                   key={item.id}
                   onClick={() => setSelectedService(item)}
-                  data-aos="fade-up"
-                  data-aos-delay={`${(index % 3) * 100}`}
+                  style={{ "--svc-accent": accent } as React.CSSProperties}
                   className="group relative cursor-pointer bg-white dark:bg-darkmode rounded-2xl border border-slate-200/80 dark:border-dark_border p-5 sm:p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50 dark:hover:border-primary/50 flex flex-col justify-between overflow-hidden"
                 >
                   {/* Top subtle highlight gradient on hover */}
@@ -203,10 +197,9 @@ const Services: React.FC = () => {
 
                       <div className="flex items-center gap-1.5">
                         <span
-                          className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                          className="svc-accent-text px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
                           style={{
                             backgroundColor: `${accent}12`,
-                            color: accent,
                             border: `1px solid ${accent}25`,
                           }}
                         >
@@ -223,10 +216,7 @@ const Services: React.FC = () => {
                       {item.title}
                     </h3>
                     {item.tagline && (
-                      <p
-                        className="text-[11px] font-semibold mt-1"
-                        style={{ color: accent }}
-                      >
+                      <p className="svc-accent-text text-[11px] font-semibold mt-1">
                         {item.tagline}
                       </p>
                     )}
@@ -251,8 +241,7 @@ const Services: React.FC = () => {
                         ))}
                         {item.technologies.length > 3 && (
                           <span
-                            className="px-1.5 py-0.5 text-[10px] font-bold"
-                            style={{ color: accent }}
+                            className="svc-accent-text px-1.5 py-0.5 text-[10px] font-bold"
                           >
                             +{item.technologies.length - 3}
                           </span>

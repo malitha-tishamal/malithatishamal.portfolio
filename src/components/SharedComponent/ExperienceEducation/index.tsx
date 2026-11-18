@@ -115,8 +115,8 @@ const OrganizationLogo: React.FC<{
         alt={organization}
         width={size === "lg" ? 64 : 48}
         height={size === "lg" ? 64 : 48}
+        sizes={size === "lg" ? "64px" : "48px"}
         className="w-full h-full object-contain"
-        unoptimized
         onError={() => setHasError(true)}
       />
     </div>
@@ -159,11 +159,12 @@ const MediaThumbnail: React.FC<{
     <div
       className={`relative ${className} rounded-md overflow-hidden bg-white dark:bg-darkmode border border-purple-200 dark:border-purple-800 shrink-0 shadow-2xs`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src={displaySrc}
         alt={title || "Attachment"}
-        className="w-full h-full object-cover group-hover/med:scale-110 transition-transform duration-200"
+        fill
+        sizes='40px'
+        className="object-cover group-hover/med:scale-110 transition-transform duration-200"
         onError={() => setHasError(true)}
       />
     </div>
@@ -258,7 +259,7 @@ export const ExperienceEducation: React.FC = () => {
       <div className="container mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 relative">
         
         {/* Section Heading */}
-        <div className="text-center max-w-2xl mx-auto mb-10" data-aos="fade-up">
+        <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-primary/25 shadow-2xs mb-2.5">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-primary">
@@ -302,7 +303,6 @@ export const ExperienceEducation: React.FC = () => {
           
             {/* ═══════════ LEFT COLUMN: WORK & VOLUNTEER EXPERIENCE ═══════════ */}
             <div
-              data-aos="fade-right"
               className="bg-white/95 dark:bg-darklight/95 backdrop-blur-xl rounded-3xl border border-slate-200/90 dark:border-dark_border p-4 sm:p-6 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between"
             >
               {/* Top gradient accent bar */}
@@ -556,7 +556,6 @@ export const ExperienceEducation: React.FC = () => {
 
             {/* ═══════════ RIGHT COLUMN: EDUCATION ═══════════ */}
             <div
-              data-aos="fade-left"
               className="bg-white/95 dark:bg-darklight/95 backdrop-blur-xl rounded-3xl border border-slate-200/90 dark:border-dark_border p-4 sm:p-6 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between"
             >
               {/* Top gradient accent bar */}

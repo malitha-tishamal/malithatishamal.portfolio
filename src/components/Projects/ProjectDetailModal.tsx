@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Image from 'next/image'
 import { ProjectItem } from '@/types/project'
 import { PortfolioBlock, isVideoUrl } from '@/types/portfolio'
-import { getImgPath } from '@/utils/image'
+import { getImgPath, getVideoSrc } from '@/utils/image'
 import { sanitizeHtml } from '@/utils/sanitize'
 
 interface ProjectDetailModalProps {
@@ -146,7 +146,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   alt={b.caption || project.title}
                   width={1200}
                   height={800}
-                  unoptimized
                   className='w-full h-auto object-cover max-h-[500px]'
                 />
               ) : null}
@@ -164,8 +163,9 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             key={b.id}
             className='relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black'>
             <video
-              src={getImgPath(b.src || '')}
+              src={getVideoSrc(b.src || '')}
               controls
+              preload='none'
               autoPlay={b.autoplay}
               muted={b.autoplay}
               loop
@@ -187,7 +187,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     src={getImgPath(img)}
                     alt={`${project.title} ${gi + 1}`}
                     fill
-                    unoptimized
                     className='object-cover'
                   />
                 </div>
@@ -218,7 +217,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   src={getImgPath(b.src)}
                   alt={b.caption || project.title}
                   fill
-                  unoptimized
                   className='object-cover hover:scale-105 transition-transform duration-500'
                 />
               ) : (
@@ -466,11 +464,12 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       onClick={() => setActiveVideoIdx(tile.vi)}
                       className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black group cursor-pointer ${tileH}`}>
                       <video
-                        src={getImgPath(tile.src)}
+                        src={getVideoSrc(tile.src)}
                         muted
                         loop
                         autoPlay
                         playsInline
+                        preload='metadata'
                         className='w-full h-full object-contain'
                       />
                       <div className='absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center'>
@@ -494,7 +493,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       src={getImgPath(tile.src)}
                       alt={`${project.title} Screenshot ${ti + 1}`}
                       fill
-                      unoptimized
                       className={`${
                         galleryFit === 'contain'
                           ? 'object-contain p-2'
@@ -568,7 +566,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               src={getImgPath(nonVideoImages[activePhotoIdx])}
               alt='Enlarged Screenshot'
               fill
-              unoptimized
               className='object-contain'
             />
           </div>

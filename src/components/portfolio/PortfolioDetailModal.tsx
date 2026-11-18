@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import { PortfolioItem, PortfolioBlock, PortfolioMediaCrop, isVideoUrl } from '@/types/portfolio'
-import { getImgPath } from '@/utils/image'
+import { getImgPath, getVideoSrc } from '@/utils/image'
 import { sanitizeHtml } from '@/utils/sanitize'
 
 interface PortfolioDetailModalProps {
@@ -122,7 +122,6 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
                 src={getImgPath(b.src || '')}
                 alt={b.caption || item.title}
                 fill
-                unoptimized
                 className='object-contain'
               />
             </div>
@@ -139,9 +138,10 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
             key={b.id}
             className='rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black'>
             <video
-              src={getImgPath(b.src || '')}
+              src={getVideoSrc(b.src || '')}
               poster={b.caption ? getImgPath(b.caption) : undefined}
               controls
+              preload='none'
               autoPlay={!!b.autoplay}
               muted={!!b.autoplay}
               loop={!!b.autoplay}
@@ -163,7 +163,6 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
                     src={getImgPath(img)}
                     alt={`${item.title} ${gi + 1}`}
                     fill
-                    unoptimized
                     className='object-cover'
                   />
                 </div>
@@ -194,7 +193,6 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
                   src={getImgPath(b.src)}
                   alt={b.caption || item.title}
                   fill
-                  unoptimized
                   className='object-cover hover:scale-105 transition-transform duration-500'
                 />
               ) : (
@@ -417,7 +415,7 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
                       onClick={() => setActiveVideoIdx(tile.vi)}
                       className={`relative rounded-2xl overflow-hidden border border-border/60 dark:border-dark_border bg-black group cursor-pointer ${tileH}`}>
                       <video
-                        src={getImgPath(tile.src)}
+                        src={getVideoSrc(tile.src)}
                         poster={tile.vi === 0 && videoThumb ? getImgPath(videoThumb) : undefined}
                         muted
                         loop
@@ -455,7 +453,6 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
                       src={getImgPath(tile.src)}
                       alt={`${item.title} Photo ${pi + 1}`}
                       fill
-                      unoptimized
                       style={c ? { objectPosition: `${c.ox}% ${c.oy}%` } : undefined}
                       className={`${
                         modalImageFit === 'contain'
@@ -612,7 +609,6 @@ export const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({ item
                 src={getImgPath(nonVideoImages[activePhotoIdx])}
                 alt='Enlarged Preview'
                 fill
-                unoptimized
                 style={
                   cropFor(nonVideoImages[activePhotoIdx])
                     ? {

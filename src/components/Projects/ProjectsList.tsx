@@ -12,7 +12,7 @@ import { ProjectCardItem } from './ProjectCardItem'
 import { ProjectDetailModal } from './ProjectDetailModal'
 import { FEATURED_GRID_CLASSES } from '@/types/featuredProjects'
 import { useFeaturedProjectsSettings } from '@/hooks/useFeaturedProjectsSettings'
-import { formatRelativeTime, toDateValue } from '@/utils/relativeTime'
+import { toDateValue } from '@/utils/relativeTime'
 
 const LATEST_COUNT = 6
 
@@ -38,7 +38,13 @@ export const ProjectsList: React.FC = () => {
                 id: docSnap.id,
               })
             })
-            fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+            // Newest first on the same field the "Latest" pill reads, so the
+            // six blue badges are always the first six cards.
+            fetched.sort((a, b) => {
+              const aTime = toDateValue(a.updatedAt || a.createdAt)?.getTime() ?? 0
+              const bTime = toDateValue(b.updatedAt || b.createdAt)?.getTime() ?? 0
+              return bTime - aTime || (a.displayOrder || 0) - (b.displayOrder || 0)
+            })
             setProjects(fetched)
           } else {
             setProjects([])
@@ -67,20 +73,19 @@ export const ProjectsList: React.FC = () => {
     ])
   )
 
-  // "Latest · 1 month ago" labels for the six most recently updated projects.
-  const latestLabels = useMemo(() => {
-    const labels = new Map<string, string>()
-    projects
-      .map((project) => ({
-        project,
-        date: toDateValue(project.updatedAt || project.createdAt),
-      }))
-      .sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0))
-      .slice(0, LATEST_COUNT)
-      .forEach(({ project, date }) => {
-        if (date) labels.set(project.id, formatRelativeTime(date))
-      })
-    return labels
+  // The six most recently updated projects carry the blue "Latest · …" pill.
+  const latestIds = useMemo(() => {
+    return new Set(
+      projects
+        .map((project) => ({
+          project,
+          date: toDateValue(project.updatedAt || project.createdAt),
+        }))
+        .filter((entry) => entry.date)
+        .sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0))
+        .slice(0, LATEST_COUNT)
+        .map((entry) => entry.project.id)
+    )
   }, [projects])
 
   // Filtered projects
@@ -191,7 +196,7 @@ export const ProjectsList: React.FC = () => {
                 tagsShown={settings.tagsShown}
                 descriptionLines={settings.descriptionLines}
                 showVisitSite={settings.showVisitSite}
-                latestLabel={latestLabels.get(project.id)}
+                latest={latestIds.has(project.id)}
                 widthClass='w-full'
                 onClick={() => setSelectedProject(project)}
               />

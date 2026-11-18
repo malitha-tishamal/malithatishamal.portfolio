@@ -308,31 +308,9 @@ const collectLocationInfo = async () => {
     // Silently continue without location if blocked or offline
   }
 
-  // Try to get GPS coordinates (requires user permission)
-  if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-      });
-      location.gpsCoordinates = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        altitude: position.coords.altitude,
-        heading: position.coords.heading,
-        speed: position.coords.speed,
-      };
-      location.gpsPermission = 'granted';
-    } catch (error: any) {
-      if (error.code === 1) {
-        location.gpsPermission = 'denied';
-      } else if (error.code === 2) {
-        location.gpsPermission = 'unknown';
-      } else {
-        location.gpsPermission = 'prompt';
-      }
-    }
-  }
+  // GPS is intentionally not requested: it triggers a blocked geolocation
+  // prompt on first paint and fills the console with permissions-policy errors.
+  // IP-derived city/region above is enough for analytics.
 
   // Remove undefined values before returning
   Object.keys(location).forEach(key => {
@@ -437,9 +415,6 @@ const collectBrowserInfo = () => {
     if ('permissions' in navigator) {
       (navigator as any).permissions.query({ name: 'notifications' }).then((result: any) => {
         browser.permissionStates.notifications = result.state;
-      }).catch(() => {});
-      (navigator as any).permissions.query({ name: 'geolocation' }).then((result: any) => {
-        browser.permissionStates.geolocation = result.state;
       }).catch(() => {});
     }
   }

@@ -40,10 +40,10 @@
   --z-index-2: 2;
   --z-index-999: 999;
 
-  --color-primary: #2f73f2;
+  --color-primary: #2563eb;
   --color-secondary: #547593;
   --color-midnight_text: #102d47;
-  --color-grey: #668199;
+  --color-grey: #4f6b82;
   --color-border: #ccd7e1;
   --color-success: #3cd278;
   --color-section: #f8fafc;
@@ -51,6 +51,9 @@
   --color-darklight: #000f30;
   --color-dark_border: #224767;
   --color-Sky-blue-mist: #c0d5fb;
+
+  /* gray-400 text was 2.5:1 on white; darkened to clear WCAG AA (4.97:1) */
+  --color-gray-400: #667085;
 
   --background-image-gradient-radial: radial-gradient(var(--tw-gradient-stops));
   --background-image-gradient-conic: conic-gradient(
@@ -157,4 +160,32 @@ body {
   .marquee-lane {
     --gutter: clamp(56px, 7vw, 104px);
   }
+}
+
+/* ── Theme-following colour overrides ────────────────────────────────────────
+   The brand blue is dark enough for AA on white (#2563eb, 5.17:1) but only
+   3.66:1 on the #000f30 dark surface, and gray-400 needs a lighter value there.
+   Redefining the theme variables inside `.dark` keeps every `text-primary` and
+   `text-gray-400` utility accessible in both themes without touching markup. */
+.dark {
+  --color-primary: #6ba6ff;
+  --color-grey: #a8bacb;
+  --color-gray-400: #9aa3b2;
+  --color-gray-500: #a9b2c0;
+}
+
+/* Solid brand surfaces keep their saturated fill in dark mode; only the text
+   variant is lightened above. */
+.dark .bg-primary,
+.dark .hover\:bg-primary:hover {
+  background-color: #1d4ed8;
+}
+
+/* Data-driven accent colours (service cards) are brand hex values that lose
+   contrast on the dark surface; lighten them only for text in dark mode. */
+.svc-accent-text {
+  color: var(--svc-accent, currentColor);
+}
+.dark .svc-accent-text {
+  color: color-mix(in srgb, var(--svc-accent, currentColor) 45%, white);
 }

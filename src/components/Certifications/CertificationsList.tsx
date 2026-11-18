@@ -13,6 +13,9 @@ import {
 import { CertificationCardItem } from "./CertificationCardItem";
 import { CertificationDetailModal } from "./CertificationDetailModal";
 import { trackCertificationSectionView } from "@/utils/certificationAnalytics";
+import { getCertificateIssueDate } from "@/utils/certificateDate";
+
+const LATEST_COUNT = 6;
 
 export const CertificationsList: React.FC = () => {
   const [items, setItems] = useState<CertificationItem[]>([]);
@@ -39,7 +42,13 @@ export const CertificationsList: React.FC = () => {
                 id: docSnap.id,
               });
             });
-            fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            // Newest first on the same field the "Latest" pill reads, so the
+            // six blue badges are always the first six slides.
+            fetched.sort((a, b) => {
+              const aTime = getCertificateIssueDate(a)?.getTime() ?? 0;
+              const bTime = getCertificateIssueDate(b)?.getTime() ?? 0;
+              return bTime - aTime || (a.displayOrder || 0) - (b.displayOrder || 0);
+            });
             setItems(fetched.filter((c) => c.published !== false));
           } else {
             setItems([]);
@@ -107,6 +116,18 @@ export const CertificationsList: React.FC = () => {
   }, [items, selectedCategory, searchQuery]);
 
   const slidesToShow = Math.min(filtered.length, 3);
+
+  // The six newest certificates (same date field as the marquee sort).
+  const latestIds = useMemo(() => {
+    return new Set(
+      items
+        .map((item) => ({ item, date: getCertificateIssueDate(item) }))
+        .filter((entry) => entry.date)
+        .sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0))
+        .slice(0, LATEST_COUNT)
+        .map((entry) => entry.item.id)
+    );
+  }, [items]);
 
   const sliderSettings = {
     dots: false,
@@ -280,6 +301,7 @@ export const CertificationsList: React.FC = () => {
               <div key={item.id} className="px-3 py-2">
                 <CertificationCardItem
                   item={item}
+                  latest={latestIds.has(item.id)}
                   onPreview={(it) => {
                     if (!isDraggingRef.current) setSelectedItem(it);
                   }}

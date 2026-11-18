@@ -114,12 +114,12 @@ const ProjectsSection: React.FC = () => {
             No projects published yet.
           </p>
         }
-        renderCard={(project, { latestLabel }) => (
+        renderCard={(project, { latest }) => (
           <ProjectCardItem
             project={project}
             tagsShown={settings.tagsShown}
             showVisitSite={settings.showVisitSite}
-            latestLabel={latestLabel}
+            latest={latest}
             onClick={() => setSelectedProject(project)}
           />
         )}

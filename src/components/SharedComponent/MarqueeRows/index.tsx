@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { splitMarqueeRows } from './layout'
 import { MARQUEE_LANE } from './lane'
-import { formatRelativeTime, toDateValue, type DateLike } from '@/utils/relativeTime'
+import { toDateValue, type DateLike } from '@/utils/relativeTime'
 
 /**
  * Two-row, always-moving marquee. The first half of the (date-sorted) items
@@ -12,14 +12,17 @@ import { formatRelativeTime, toDateValue, type DateLike } from '@/utils/relative
  * inside one row, so a card can never show up in both rows.
  *
  * The rows are laid out edge to edge with a white side lane that reserves room
- * for the blue arrow buttons (64px from 900px up, 72px from 1280px up). The
- * track is clipped inside that lane, so cards always fade out before they can
- * reach an arrow.
+ * for the blue arrow buttons: `--gutter` is clamp(56px, 7vw, 104px) from 768px
+ * up (12px below), and each arrow is centred in that gutter. The track is
+ * clipped inside the lane, so cards always fade out before they reach an arrow.
  */
 
 export interface MarqueeItemContext {
   latest: boolean
-  latestLabel?: string
+  /** Position inside this row (used for eager-loading the first images). */
+  index: number
+  /** Which row this card belongs to. */
+  rowIndex: number
 }
 
 export interface MarqueeRowsProps<T> {
@@ -42,6 +45,14 @@ export interface MarqueeRowsProps<T> {
   ariaLabel?: string
   previousLabel?: string
   nextLabel?: string
+  /** Shorthand for the arrow labels: `posts` → "Previous posts", "Next posts". */
+  labelPrefix?: string
+  /** CSS length that overrides the shared `--gutter` for this section. */
+  gutter?: string
+  /** Section-level pause (Pause / Play control owned by the section). */
+  externalPaused?: boolean
+  /** Below `minForTwoRows`, render one static, manually scrollable row. */
+  staticSingleRow?: boolean
   className?: string
 }
 
@@ -136,7 +147,6 @@ interface MarqueeRowProps<T> {
   getKey: (item: T) => string
   latestIndices: number[]
   latestCount: number
-  dates: (Date | null)[]
   reverse: boolean
   speed: number
   reduced: boolean
@@ -146,6 +156,10 @@ interface MarqueeRowProps<T> {
   previousLabel: string
   nextLabel: string
   disabled: boolean
+  gutter?: string
+  externalPaused: boolean
+  /** One-row fallback: no autoplay, no clones — only manual scrolling. */
+  staticMode: boolean
 }
 
 function MarqueeRow<T>({
@@ -154,7 +168,6 @@ function MarqueeRow<T>({
   getKey,
   latestIndices,
   latestCount,
-  dates,
   reverse,
   speed,
   reduced,
@@ -164,6 +177,9 @@ function MarqueeRow<T>({
   previousLabel,
   nextLabel,
   disabled,
+  gutter,
+  externalPaused,
+  staticMode,
 }: MarqueeRowProps<T>) {
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const trackRef = useRef<HTMLDivElement | null>(null)
@@ -177,7 +193,8 @@ function MarqueeRow<T>({
     remaining: 0,
     paused: false,
     dragging: false,
-    hidden: false,
+    // Fail-open: the section starts moving until an observer entry says otherwise.
+    inView: true,
     resumeTimer: undefined as number | undefined,
     dragStartX: 0,
     dragStartOffset: 0,
@@ -185,35 +202,54 @@ function MarqueeRow<T>({
   })
 
   const direction = reverse ? 1 : -1
+  // Reduced motion and the one-row fallback both mean "manual scrolling only".
+  const motionOff = reduced || staticMode
+
+  const externalPausedRef = useRef(externalPaused)
+  useEffect(() => {
+    externalPausedRef.current = externalPaused
+  }, [externalPaused])
 
   const makeContext = (index: number): MarqueeItemContext => {
     const latest = (latestIndices[index] ?? index) < latestCount
-    const date = dates[index]
     return {
       latest,
-      latestLabel: latest && date ? formatRelativeTime(date) : undefined,
+      index,
+      rowIndex,
     }
   }
 
   useEffect(() => {
-    if (reduced) return
+    if (motionOff) return
     cloneRef.current?.setAttribute('inert', '')
-  }, [reduced, items.length])
+  }, [motionOff, items.length])
 
   useEffect(() => {
-    const onVisibility = () => {
-      engine.current.hidden = document.hidden
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [])
+    const element = viewportRef.current
+    if (!element || motionOff) return
+
+    // Seed from real geometry so a silent observer never leaves the row frozen.
+    const rect = element.getBoundingClientRect()
+    engine.current.inView = rect.top < window.innerHeight && rect.bottom > 0
+
+    if (typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry) engine.current.inView = entry.isIntersecting
+      },
+      { rootMargin: '0px 0px -10% 0px' }
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [motionOff])
 
   useEffect(() => {
     const track = trackRef.current
     const copy = copyRef.current
     if (!track || !copy) return
 
-    if (reduced) {
+    if (motionOff) {
       track.style.transform = ''
       return
     }
@@ -238,7 +274,7 @@ function MarqueeRow<T>({
       last = now
       const width = state.width
 
-      if (width > 0 && !state.hidden) {
+      if (width > 0 && !document.hidden) {
         if (state.remaining !== 0 && !state.dragging) {
           // Arrow nudge: travel an exact card distance, then hand back to autoplay.
           const step =
@@ -246,7 +282,7 @@ function MarqueeRow<T>({
           state.offset += step
           state.remaining -= step
           if (Math.abs(state.remaining) < 0.01) state.remaining = 0
-        } else if (!state.paused && !state.dragging) {
+        } else if (!state.paused && !state.dragging && state.inView && !externalPausedRef.current) {
           state.offset += direction * speed * delta
         }
 
@@ -266,7 +302,7 @@ function MarqueeRow<T>({
       cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [reduced, speed, direction, items.length])
+  }, [motionOff, speed, direction, items.length])
 
   const clearResume = () => {
     if (engine.current.resumeTimer) {
@@ -291,7 +327,7 @@ function MarqueeRow<T>({
   const dragCleanupRef = useRef<(() => void) | null>(null)
 
   const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (reduced) return
+    if (motionOff) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     const state = engine.current
     state.dragging = true
@@ -344,7 +380,7 @@ function MarqueeRow<T>({
     (forward: boolean) => {
       const state = engine.current
       const step = cardStep()
-      if (reduced) {
+      if (motionOff) {
         viewportRef.current?.scrollBy({
           left: forward ? step : -step,
           behavior: 'smooth',
@@ -356,11 +392,11 @@ function MarqueeRow<T>({
       pause()
       scheduleResume(1000)
     },
-    [direction, pause, reduced, scheduleResume]
+    [direction, pause, motionOff, scheduleResume]
   )
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (reduced) return
+    if (motionOff) return
     if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
     engine.current.offset -= event.deltaX
     pause()
@@ -380,7 +416,9 @@ function MarqueeRow<T>({
 
   return (
     <div className='relative' data-marquee-row={rowIndex}>
-      <div className={`${MARQUEE_LANE} relative`}>
+      <div
+        className={`${MARQUEE_LANE} relative`}
+        style={gutter ? ({ '--gutter': gutter } as React.CSSProperties) : undefined}>
         {/* Phones / small tablets: each row carries its own compact pair above it */}
         <div className='mb-3 flex items-center justify-end gap-3 min-[900px]:hidden'>
           <ArrowButton
@@ -420,17 +458,17 @@ function MarqueeRow<T>({
           onWheel={handleWheel}
           onClickCapture={suppressClickIfDragged}
           className={`focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden ${
-            reduced ? 'overflow-x-auto pb-2' : 'overflow-clip'
+            motionOff ? 'overflow-x-auto pb-2' : 'overflow-clip'
           }`}
           style={{
             maskImage: FADE_MASK,
             WebkitMaskImage: FADE_MASK,
-            touchAction: reduced ? 'pan-x' : 'pan-y',
+            touchAction: motionOff ? 'pan-x' : 'pan-y',
           }}>
           <div
             ref={trackRef}
             className='flex w-max will-change-transform'
-            style={reduced ? undefined : { transform: 'translate3d(0,0,0)' }}>
+            style={motionOff ? undefined : { transform: 'translate3d(0,0,0)' }}>
             <div ref={copyRef} className='flex gap-6 pr-6'>
               {items.map((item, index) => (
                 <div
@@ -441,7 +479,7 @@ function MarqueeRow<T>({
                 </div>
               ))}
             </div>
-            {!reduced && (
+            {!motionOff && (
               <div ref={cloneRef} aria-hidden='true' className='flex gap-6 pr-6'>
                 {items.map((item, index) => (
                   <div
@@ -495,12 +533,18 @@ export function MarqueeRows<T>({
   renderSkeleton,
   emptyState,
   ariaLabel = 'Content carousel',
-  previousLabel = 'Previous items',
-  nextLabel = 'Next items',
+  previousLabel,
+  nextLabel,
+  labelPrefix,
+  gutter,
+  externalPaused = false,
+  staticSingleRow = false,
   className = '',
 }: MarqueeRowsProps<T>) {
   const [reduced, setReduced] = useState(false)
   const instanceId = useId().replace(/:/g, '')
+  const previousText = previousLabel ?? (labelPrefix ? `Previous ${labelPrefix}` : 'Previous items')
+  const nextText = nextLabel ?? (labelPrefix ? `Next ${labelPrefix}` : 'Next items')
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -522,11 +566,6 @@ export function MarqueeRows<T>({
       .map((entry) => entry.item)
   }, [items, getUpdatedAt])
 
-  const dates = useMemo(
-    () => ordered.map((item) => (getUpdatedAt ? toDateValue(getUpdatedAt(item)) : null)),
-    [ordered, getUpdatedAt]
-  )
-
   const rows = useMemo(
     () => splitMarqueeRows(ordered, rowCount, minForTwoRows),
     [ordered, rowCount, minForTwoRows]
@@ -542,7 +581,10 @@ export function MarqueeRows<T>({
       <div className={className} aria-busy='true' aria-label={`Loading ${ariaLabel}`}>
         <div className='space-y-6'>
           {skeletonRows.map((row, rowIndex) => (
-            <div key={rowIndex} className={`${MARQUEE_LANE} relative`}>
+            <div
+              key={rowIndex}
+              className={`${MARQUEE_LANE} relative`}
+              style={gutter ? ({ '--gutter': gutter } as React.CSSProperties) : undefined}>
               {/* Reserve each row's mobile control strip so cards do not jump */}
               <div className='mb-3 h-12 min-[900px]:hidden' aria-hidden='true' />
               <div
@@ -580,6 +622,7 @@ export function MarqueeRows<T>({
   }
 
   const multiRow = rows.length > 1
+  const staticMode = staticSingleRow && !multiRow
 
   return (
     <div className={`relative ${className}`} role='group' aria-label={ariaLabel}>
@@ -594,16 +637,18 @@ export function MarqueeRows<T>({
               getKey={getKey}
               latestIndices={row.map((item) => ordered.indexOf(item))}
               latestCount={latestCount}
-              dates={row.map((item) => dates[ordered.indexOf(item)] ?? null)}
               reverse={rowIndex > 0}
               speed={speed}
               reduced={reduced}
               rowIndex={rowIndex}
               rowId={`${instanceId}-row-${rowIndex}`}
               ariaLabel={`${ariaLabel}${multiRow ? ` row ${rowIndex + 1}` : ''}`}
-              previousLabel={`${previousLabel}${suffix}`}
-              nextLabel={`${nextLabel}${suffix}`}
+              previousLabel={`${previousText}${suffix}`}
+              nextLabel={`${nextText}${suffix}`}
               disabled={row.length < 2}
+              gutter={gutter}
+              externalPaused={externalPaused}
+              staticMode={staticMode}
             />
           )
         })}
