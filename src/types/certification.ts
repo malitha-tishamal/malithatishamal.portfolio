@@ -1,3 +1,5 @@
+import type { DateLike } from "@/utils/relativeTime";
+
 export type CertificateImageLayout = "side-by-side" | "stacked" | "single" | "tabs";
 
 export interface CertificationItem {
@@ -7,8 +9,10 @@ export interface CertificationItem {
   issuerLogo?: string;
   logoShape?: "rounded" | "circle" | "square";
   logoBgColor?: string; // e.g. "transparent", "#ffffff", "#0b1120", "#049fd9", etc.
-  issueDate: string; // e.g. "Mar 2026"
+  issueDate: string; // real date text: ISO ("2026-09-11") or "September 2026"
   expirationDate?: string; // e.g. "No Expiration" or "Mar 2029"
+  createdAt?: DateLike; // fallback when the issue date cannot be read
+  updatedAt?: DateLike;
   credentialId?: string; // e.g. "e4e1215f-35c6-4416-8d4c-83407362d262"
   credentialUrl?: string; // e.g. "https://www.credly.com/..."
   certificateImage?: string; // Primary image URL (legacy / first image)

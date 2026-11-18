@@ -98,19 +98,11 @@ export interface PortfolioItem {
 }
 
 export interface PortfolioSliderSettings {
-  autoplay: boolean;
-  autoplaySpeed: number; // ms, e.g. 3000
-  transitionSpeed: number; // ms, e.g. 600
-  pauseOnHover: boolean;
   /** Continuous homepage marquee speed in px/s (40–60). */
   speed: number;
 }
 
 export const defaultPortfolioSliderSettings: PortfolioSliderSettings = {
-  autoplay: true,
-  autoplaySpeed: 3000,
-  transitionSpeed: 600,
-  pauseOnHover: true,
   speed: 50,
 };
 

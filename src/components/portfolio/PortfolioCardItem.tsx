@@ -172,7 +172,7 @@ const PortfolioMedia: React.FC<{ item: PortfolioItem }> = memo(function Portfoli
     }
 
     return (
-      <div className={`absolute inset-0 ${contain ? 'bg-gray-50 dark:bg-black/40' : ''}`} style={cropStyle(crop)}>
+      <div className={`absolute inset-0 ${contain ? 'dark:bg-black/40' : ''}`} style={cropStyle(crop)}>
         <Image
           src={getImgPath(src)}
           alt={label}

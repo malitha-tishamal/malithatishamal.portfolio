@@ -48,7 +48,8 @@ const MAX_DESCRIPTION_LINES = 3
 /** Fit tag chips into the two-row budget; the rest go to the "+N" chip. */
 export function splitVisibleTags(
   tags: string[],
-  tagsShown = 8
+  tagsShown = 8,
+  budget = TAG_CHAR_BUDGET
 ): { visible: string[]; hidden: string[] } {
   const visible: string[] = []
   let used = 0
@@ -56,7 +57,7 @@ export function splitVisibleTags(
     if (visible.length >= tagsShown) break
     const cost = tag.length + 2
     const reserve = visible.length + 1 < tags.length ? TAG_HIDDEN_RESERVE : 0
-    if (visible.length > 0 && used + cost + reserve > TAG_CHAR_BUDGET) break
+    if (visible.length > 0 && used + cost + reserve > budget) break
     visible.push(tag)
     used += cost
   }

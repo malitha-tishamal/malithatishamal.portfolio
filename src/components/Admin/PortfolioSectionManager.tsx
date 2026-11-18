@@ -203,7 +203,25 @@ export const PortfolioSectionManager: React.FC = () => {
     }
   }, []);
 
-  // Save homepage slider settings (read by homepage carousel)
+  // Subscribe to the homepage marquee settings so the slider reflects Firestore
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(doc(db, "siteContent", "portfolio"), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as Partial<PortfolioSliderSettings>;
+          const speed = Number(data.speed);
+          if (Number.isFinite(speed)) {
+            setSliderSettings({ speed: Math.min(60, Math.max(40, speed)) });
+          }
+        }
+      });
+      return () => unsub();
+    } catch (e) {
+      console.warn("Portfolio marquee settings listener error:", e);
+    }
+  }, []);
+
+  // Save homepage marquee settings (read by the homepage marquee)
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {

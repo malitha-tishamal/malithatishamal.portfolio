@@ -8,6 +8,7 @@ import { ProjectItem, defaultProjects } from '@/types/project'
 import { ProjectCardItem } from '@/components/Projects/ProjectCardItem'
 import { ProjectDetailModal } from '@/components/Projects/ProjectDetailModal'
 import { MarqueeRows } from '@/components/SharedComponent/MarqueeRows'
+import { MARQUEE_LANE } from '@/components/SharedComponent/MarqueeRows/lane'
 import { useFeaturedProjectsSettings } from '@/hooks/useFeaturedProjectsSettings'
 
 const LATEST_COUNT = 6
@@ -57,8 +58,9 @@ const ProjectsSection: React.FC = () => {
   }, [])
 
   return (
-    <section id='projects' className='py-16 sm:py-24 scroll-mt-24 bg-white dark:bg-darkmode transition-colors'>
-      <div className='container mx-auto max-w-6xl px-4 sm:px-6'>
+    <section id='projects' className='overflow-x-clip py-16 sm:py-24 scroll-mt-24 bg-white dark:bg-darkmode transition-colors'>
+      {/* Heading keeps the centred container; the rows below break out full width */}
+      <div className={`mx-auto w-full max-w-[1280px] ${MARQUEE_LANE}`}>
         {/* Section Header (Matching Reference Style with View More Link) */}
         <div className='flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10'>
           <div>
@@ -92,34 +94,38 @@ const ProjectsSection: React.FC = () => {
             </Link>
           </div>
         </div>
+      </div>
 
-        {/* Two-row endless marquee — equal-size cards, no card in both rows */}
-        <MarqueeRows<ProjectItem>
-          items={projects}
-          getKey={getProjectKey}
-          getUpdatedAt={getProjectUpdatedAt}
-          latestCount={LATEST_COUNT}
-          speed={50}
-          rowCount={2}
-          loading={loading}
-          skeletonCount={8}
-          ariaLabel='Featured projects'
-          emptyState={
-            <p className='text-sm font-semibold text-gray-500 dark:text-gray-400'>
-              No projects published yet.
-            </p>
-          }
-          renderCard={(project, { latestLabel }) => (
-            <ProjectCardItem
-              project={project}
-              tagsShown={settings.tagsShown}
-              showVisitSite={settings.showVisitSite}
-              latestLabel={latestLabel}
-              onClick={() => setSelectedProject(project)}
-            />
-          )}
-        />
+      {/* Two-row endless marquee — full-bleed rows, no card in both rows */}
+      <MarqueeRows<ProjectItem>
+        items={projects}
+        getKey={getProjectKey}
+        getUpdatedAt={getProjectUpdatedAt}
+        latestCount={LATEST_COUNT}
+        speed={50}
+        rowCount={2}
+        loading={loading}
+        skeletonCount={8}
+        ariaLabel='Featured projects'
+        previousLabel='Previous projects'
+        nextLabel='Next projects'
+        emptyState={
+          <p className='text-sm font-semibold text-gray-500 dark:text-gray-400'>
+            No projects published yet.
+          </p>
+        }
+        renderCard={(project, { latestLabel }) => (
+          <ProjectCardItem
+            project={project}
+            tagsShown={settings.tagsShown}
+            showVisitSite={settings.showVisitSite}
+            latestLabel={latestLabel}
+            onClick={() => setSelectedProject(project)}
+          />
+        )}
+      />
 
+      <div className={`mx-auto w-full max-w-[1280px] ${MARQUEE_LANE}`}>
         {/* Bottom View All Button */}
         <div className='text-center pt-10'>
           <Link

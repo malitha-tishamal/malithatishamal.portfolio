@@ -1,11 +1,12 @@
 import React from 'react'
 import Link from 'next/link'
 import PortfolioCard from '@/components/SharedComponent/portfollio/Portfolio-card'
+import { MARQUEE_LANE } from '@/components/SharedComponent/MarqueeRows/lane'
 
 const Portfolio = () => {
   return (
-    <section id='portfolio' className='dark:bg-darkmode pt-8 pb-4'>
-      <div className='text-center lg:px-0 px-8'>
+    <section id='portfolio' className='overflow-x-clip dark:bg-darkmode pt-8 pb-4'>
+      <div className={`mx-auto w-full max-w-[1280px] text-center ${MARQUEE_LANE}`}>
         <div
           className='flex gap-2 items-center justify-center'
           data-aos='fade-right'
@@ -35,7 +36,7 @@ const Portfolio = () => {
       <PortfolioCard />
 
       {/* VIEW ALL BUTTON (Direct link to /portfolio) */}
-      <div className='text-center pt-6 pb-12' data-aos='fade-up'>
+      <div className={`mx-auto w-full max-w-[1280px] text-center pt-6 pb-12 ${MARQUEE_LANE}`} data-aos='fade-up'>
         <Link
           href='/portfolio'
           className='inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl bg-primary hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 group cursor-pointer'>

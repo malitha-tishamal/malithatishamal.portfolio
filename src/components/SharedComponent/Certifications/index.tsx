@@ -1,36 +1,32 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import { collection, doc, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { CertificationItem, defaultCertifications } from "@/types/certification";
 import {
-  CertificationItem,
-  CertificationSettings,
-  defaultCertifications,
-  defaultCertificationSettings,
-} from "@/types/certification";
-import { CertificationCardItem } from "@/components/Certifications/CertificationCardItem";
+  CERT_CARD_WIDTH,
+  CertificationCardItem,
+  CertificationCardSkeleton,
+} from "@/components/Certifications/CertificationCardItem";
 import { CertificationDetailModal } from "@/components/Certifications/CertificationDetailModal";
+import { MarqueeRows } from "@/components/SharedComponent/MarqueeRows";
+import { MARQUEE_LANE } from "@/components/SharedComponent/MarqueeRows/lane";
+import { getCertificateIssueDate } from "@/utils/certificateDate";
+
+const LATEST_COUNT = 6;
+const SCROLL_SPEED = 50;
 
 const Certifications: React.FC = () => {
   const [items, setItems] = useState<CertificationItem[]>([]);
-  const [settings, setSettings] = useState<CertificationSettings>(defaultCertificationSettings);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedItem, setSelectedItem] = useState<CertificationItem | null>(null);
 
-  const sliderRef = useRef<Slider | null>(null);
-  const isDraggingRef = useRef<boolean>(false);
-
+  // Real-time Firestore sync
   useEffect(() => {
-    let unsubItems = () => {};
-    let unsubSettings = () => {};
-
     try {
-      unsubItems = onSnapshot(
+      const unsubscribe = onSnapshot(
         collection(db, "certifications"),
         (snapshot) => {
           if (!snapshot.empty) {
@@ -41,7 +37,6 @@ const Certifications: React.FC = () => {
                 id: docSnap.id,
               });
             });
-            fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
             setItems(fetched.filter((c) => c.published !== false));
           } else {
             setItems(defaultCertifications);
@@ -54,221 +49,94 @@ const Certifications: React.FC = () => {
           setLoading(false);
         }
       );
-
-      unsubSettings = onSnapshot(
-        doc(db, "siteContent", "certifications"),
-        (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data() as Partial<CertificationSettings>;
-            setSettings({
-              autoplay: data.autoplay !== undefined ? data.autoplay : defaultCertificationSettings.autoplay,
-              autoplaySpeed: Number(data.autoplaySpeed) || defaultCertificationSettings.autoplaySpeed,
-              transitionSpeed: Number(data.transitionSpeed) || defaultCertificationSettings.transitionSpeed,
-              pauseOnHover: data.pauseOnHover !== undefined ? data.pauseOnHover : defaultCertificationSettings.pauseOnHover,
-            });
-          }
-        },
-        (error) => {
-          console.warn("Certifications settings listener notice:", error.message);
-        }
-      );
+      return () => unsubscribe();
     } catch (err) {
-      console.error("Error setting up certifications listeners:", err);
+      console.error("Error setting up certifications listener:", err);
       setItems(defaultCertifications);
       setLoading(false);
     }
-
-    return () => {
-      unsubItems();
-      unsubSettings();
-    };
   }, []);
 
-  const sliderSettings = {
-    dots: false,
-    arrows: false,
-    infinite: items.length > 3,
-    speed: settings.transitionSpeed,
-    autoplay: settings.autoplay,
-    autoplaySpeed: settings.autoplaySpeed,
-    pauseOnHover: settings.pauseOnHover,
-    slidesToShow: Math.min(items.length, 3),
-    slidesToScroll: 1,
-    swipe: true,
-    swipeToSlide: true,
-    draggable: true,
-    touchMove: true,
-    touchThreshold: 8,
-    cssEase: "ease-out",
-    waitForAnimate: false,
-    beforeChange: () => {
-      isDraggingRef.current = true;
-    },
-    afterChange: () => {
-      setTimeout(() => {
-        isDraggingRef.current = false;
-      }, 80);
-    },
-    responsive: [
-      {
-        breakpoint: 1280,
-        settings: {
-          slidesToShow: Math.min(items.length, 3),
-          slidesToScroll: 1,
-          swipeToSlide: true,
-        },
-      },
-      {
-        breakpoint: 1024,
-        settings: {
-          slidesToShow: Math.min(items.length, 2),
-          slidesToScroll: 1,
-          swipeToSlide: true,
-        },
-      },
-      {
-        breakpoint: 640,
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-          swipeToSlide: true,
-        },
-      },
-    ],
-  };
-
   return (
-    <section id="certifications" className="py-16 md:py-20 dark:bg-darkmode">
-      <div className="container mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-        
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
+    <section
+      id="certifications"
+      className="overflow-x-clip scroll-mt-24 bg-white py-16 transition-colors sm:py-24 dark:bg-darkmode"
+    >
+      {/* Heading keeps the centred container; the rows below break out full width */}
+      <div className={`mx-auto w-full max-w-[1280px] ${MARQUEE_LANE}`}>
+        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                Credentials & Accreditation
+            <div className="mb-2 flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-primary" />
+              <span className="text-xs font-bold tracking-wider text-primary uppercase">
+                Credentials &amp; Accreditation
               </span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-midnight_text dark:text-white leading-tight">
-              Licenses & Certifications
+            <h2 className="text-3xl font-extrabold text-midnight_text sm:text-4xl dark:text-white">
+              Licenses &amp; Certifications
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-xl">
-              Industry-recognized technical certifications, security credentials, and specialized engineering badges.
+            <p className="mt-1 max-w-xl text-sm font-medium text-grey sm:text-base dark:text-gray-300">
+              Industry-recognized technical certifications, security credentials, and
+              specialized engineering badges.
             </p>
           </div>
 
-          <Link
-            href="/certifications"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-darklight border border-border/80 dark:border-dark_border text-midnight_text dark:text-white font-bold text-xs sm:text-sm hover:border-primary hover:text-primary transition shadow-xs group shrink-0 cursor-pointer"
-          >
-            <span>View All Certifications</span>
-            <svg
-              className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="shrink-0">
+            <Link
+              href="/certifications"
+              className="group inline-flex items-center gap-2 text-sm font-bold text-midnight_text transition-colors hover:text-primary dark:text-white dark:hover:text-primary"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </Link>
+              <span>View All Certifications</span>
+              <svg
+                className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                  d="M14 5l7 7m0 0l-7 7m7-7H3"
+                />
+              </svg>
+            </Link>
+          </div>
         </div>
-
-        {/* Carousel Slider or Centered Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="rounded-2xl bg-gray-100 dark:bg-darklight p-6 h-96 animate-pulse border border-border/40 dark:border-dark_border/40 flex flex-col justify-between"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gray-200 dark:bg-darkmode rounded-xl shrink-0" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 bg-gray-200 dark:bg-darkmode rounded-md w-3/4" />
-                    <div className="h-3 bg-gray-200 dark:bg-darkmode rounded-md w-1/2" />
-                  </div>
-                </div>
-                <div className="h-48 bg-gray-200 dark:bg-darkmode rounded-xl w-full" />
-                <div className="h-10 bg-gray-200 dark:bg-darkmode rounded-xl w-full mt-4" />
-              </div>
-            ))}
-          </div>
-        ) : items.length === 1 ? (
-          <div className="max-w-md mx-auto py-2">
-            <CertificationCardItem
-              item={items[0]}
-              onPreview={(it) => setSelectedItem(it)}
-            />
-          </div>
-        ) : items.length === 2 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto py-2">
-            {items.map((item) => (
-              <CertificationCardItem
-                key={item.id}
-                item={item}
-                onPreview={(it) => setSelectedItem(it)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="relative lg:px-12 md:px-10 sm:px-8 px-4 slider-container select-none group">
-            {/* LEFT SCROLL ARROW BUTTON */}
-            <button
-              type="button"
-              onClick={() => sliderRef.current?.slickPrev()}
-              aria-label="Scroll Left"
-              className="absolute left-0 sm:left-1 md:left-2 lg:left-3 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-white dark:bg-darklight border-2 border-primary text-primary dark:text-blue-400 hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white hover:border-primary shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/40 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95"
-              title="Scroll Left"
-            >
-              <svg
-                className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 stroke-current stroke-[2.5] -translate-x-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-
-            {/* RIGHT SCROLL ARROW BUTTON */}
-            <button
-              type="button"
-              onClick={() => sliderRef.current?.slickNext()}
-              aria-label="Scroll Right"
-              className="absolute right-0 sm:right-1 md:right-2 lg:right-3 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-white dark:bg-darklight border-2 border-primary text-primary dark:text-blue-400 hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white hover:border-primary shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/40 transition-all duration-300 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95"
-              title="Scroll Right"
-            >
-              <svg
-                className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 stroke-current stroke-[2.5] translate-x-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-
-            <Slider ref={sliderRef} {...sliderSettings}>
-              {items.map((item) => (
-                <div key={item.id} className="px-3 pb-4 h-full">
-                  <CertificationCardItem
-                    item={item}
-                    onPreview={(it) => {
-                      if (!isDraggingRef.current) setSelectedItem(it);
-                    }}
-                  />
-                </div>
-              ))}
-            </Slider>
-          </div>
-        )}
-
       </div>
 
-      {/* Detail / Preview Lightbox Modal */}
-      <CertificationDetailModal
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
+      {/* Two-row endless marquee — full-bleed rows, no card in both rows */}
+      <MarqueeRows<CertificationItem>
+        items={items}
+        getKey={(item) => item.id}
+        getUpdatedAt={getCertificateIssueDate}
+        latestCount={LATEST_COUNT}
+        speed={SCROLL_SPEED}
+        rowCount={2}
+        loading={loading}
+        skeletonCount={8}
+        renderSkeleton={() => <CertificationCardSkeleton widthClass={CERT_CARD_WIDTH} />}
+        ariaLabel="Certifications"
+        previousLabel="Previous certificates"
+        nextLabel="Next certificates"
+        emptyState={
+          <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+            No certifications published yet.
+          </p>
+        }
+        renderCard={(item, { latestLabel }) => (
+          <CertificationCardItem
+            item={item}
+            latestLabel={latestLabel}
+            widthClass={CERT_CARD_WIDTH}
+            onPreview={setSelectedItem}
+          />
+        )}
       />
+
+      {/* Detail / Preview Lightbox Modal */}
+      <CertificationDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
     </section>
   );
 };

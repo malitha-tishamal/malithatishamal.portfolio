@@ -88,7 +88,7 @@ const PortfolioCard: React.FC = () => {
 
   return (
     <div className='dark:bg-darkmode'>
-      <div className='relative m-auto max-w-[1600px] pb-2 sm:px-4 lg:px-8'>
+      <div className='relative w-full pb-2'>
         <MarqueeRows<PortfolioItem>
           items={items}
           renderCard={(item, ctx) => (
@@ -102,6 +102,8 @@ const PortfolioCard: React.FC = () => {
           skeletonCount={8}
           metaRow
           ariaLabel='Portfolio showcase'
+          previousLabel='Previous portfolio items'
+          nextLabel='Next portfolio items'
           emptyState={
             <div className='px-6'>
               <p className='text-base font-bold text-dark dark:text-white'>No portfolio items yet</p>

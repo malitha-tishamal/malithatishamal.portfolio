@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Image from "next/image";
 import { CertificationItem, getCertificateImages } from "@/types/certification";
 import { sanitizeHtml } from "@/utils/sanitize";
+import { formatCertificateDate, formatCertificateExpiry } from "@/utils/certificateDate";
 
 interface CertificationDetailModalProps {
   item: CertificationItem | null;
@@ -14,6 +15,15 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
   item,
   onClose,
 }) => {
+  useEffect(() => {
+    if (!item) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [item, onClose]);
+
   if (!item) return null;
 
   const certificateImages = getCertificateImages(item);
@@ -24,6 +34,9 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${item.title} certificate details`}
         onClick={(e) => e.stopPropagation()}
         className="bg-white dark:bg-darklight rounded-3xl border border-border dark:border-dark_border shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 my-auto"
       >
@@ -118,7 +131,7 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
               Issue Date
             </span>
             <p className="text-sm font-semibold text-dark dark:text-white">
-              {item.issueDate}
+              {formatCertificateDate(item.issueDate)}
             </p>
           </div>
           <div>
@@ -126,7 +139,7 @@ export const CertificationDetailModal: React.FC<CertificationDetailModalProps> =
               Expiration Date
             </span>
             <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-              {item.expirationDate || "No Expiration"}
+              {formatCertificateExpiry(item.expirationDate)}
             </p>
           </div>
           {item.credentialId && (

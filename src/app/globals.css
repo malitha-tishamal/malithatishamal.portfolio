@@ -139,3 +139,25 @@ body {
 .blog-details h3 {
   @apply mb-6 text-2xl font-bold dark:text-white sm:text-[28px] sm:leading-[40px];
 }
+
+/* Horizontal lane for the card marquee rows and the section headings. Keeps the
+   first card aligned with the heading and reserves the white side space for the
+   48px arrows. Plain CSS (unlayered) so the cascade can't reorder it. */
+.marquee-lane {
+  padding-inline: 12px;
+}
+@media (min-width: 640px) {
+  .marquee-lane {
+    padding-inline: 16px;
+  }
+}
+@media (min-width: 900px) {
+  .marquee-lane {
+    padding-inline: 64px;
+  }
+}
+@media (min-width: 1280px) {
+  .marquee-lane {
+    padding-inline: 72px;
+  }
+}
