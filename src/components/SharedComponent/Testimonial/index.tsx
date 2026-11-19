@@ -11,9 +11,13 @@ import { AddReviewModal } from './AddReviewModal'
 
 const CARD_GAP = 20
 
-const Testimonial: React.FC = () => {
-  const [testimonials, setTestimonials] = useState<TestimonialItem[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
+interface TestimonialProps {
+  initialItems?: TestimonialItem[];
+}
+
+const Testimonial: React.FC<TestimonialProps> = ({ initialItems }) => {
+  const [testimonials, setTestimonials] = useState<TestimonialItem[]>(initialItems || [])
+  const [loading, setLoading] = useState<boolean>(!initialItems)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [active, setActive] = useState(0)
   const [hovered, setHovered] = useState(false)
@@ -22,6 +26,7 @@ const Testimonial: React.FC = () => {
 
   // Real-time Firestore sync
   useEffect(() => {
+    if (initialItems && initialItems.length > 0) return;
     try {
       const unsubscribe = onSnapshot(
         collection(db, 'testimonials'),

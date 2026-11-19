@@ -10,20 +10,28 @@ import { ProjectDetailModal } from '@/components/Projects/ProjectDetailModal'
 import { MarqueeRows } from '@/components/SharedComponent/MarqueeRows'
 import { MARQUEE_LANE } from '@/components/SharedComponent/MarqueeRows/lane'
 import { useFeaturedProjectsSettings } from '@/hooks/useFeaturedProjectsSettings'
+import { FeaturedProjectsSettings } from '@/types/featuredProjects'
 
 const LATEST_COUNT = 6
 
 const getProjectKey = (project: ProjectItem) => project.id
 const getProjectUpdatedAt = (project: ProjectItem) => project.updatedAt || project.createdAt
 
-const ProjectsSection: React.FC = () => {
-  const [projects, setProjects] = useState<ProjectItem[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
+interface ProjectsSectionProps {
+  initialProjects?: ProjectItem[];
+  initialSettings?: FeaturedProjectsSettings;
+}
+
+const ProjectsSection: React.FC<ProjectsSectionProps> = ({ initialProjects, initialSettings }) => {
+  const [projects, setProjects] = useState<ProjectItem[]>(initialProjects || [])
+  const [loading, setLoading] = useState<boolean>(!initialProjects)
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
-  const settings = useFeaturedProjectsSettings()
+  const liveSettings = useFeaturedProjectsSettings()
+  const settings = initialSettings || liveSettings
 
   // Real-time Firestore sync
   useEffect(() => {
+    if (initialProjects && initialProjects.length > 0) return;
     try {
       const unsubscribe = onSnapshot(
         collection(db, 'projects'),
@@ -114,9 +122,10 @@ const ProjectsSection: React.FC = () => {
             No projects published yet.
           </p>
         }
-        renderCard={(project, { latest }) => (
+        renderCard={(project, { latest, index, rowIndex }) => (
           <ProjectCardItem
             project={project}
+            priority={rowIndex === 0 && index === 0}
             tagsShown={settings.tagsShown}
             showVisitSite={settings.showVisitSite}
             latest={latest}

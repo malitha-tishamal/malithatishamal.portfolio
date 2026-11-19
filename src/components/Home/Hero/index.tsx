@@ -7,12 +7,17 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { HeroContent, defaultHeroContent } from '@/types/hero'
 
-const Hero = () => {
-  const [heroData, setHeroData] = useState<HeroContent>(defaultHeroContent)
+interface HeroProps {
+  initialData?: HeroContent;
+}
+
+const Hero: React.FC<HeroProps> = ({ initialData }) => {
+  const [heroData, setHeroData] = useState<HeroContent>(initialData || defaultHeroContent)
   const [isCvModalOpen, setIsCvModalOpen] = useState(false)
 
   // Real-time Firestore sync with defaultHeroContent fallback
   useEffect(() => {
+    if (initialData) return;
     try {
       const docRef = doc(db, 'siteContent', 'hero')
       const unsubscribe = onSnapshot(

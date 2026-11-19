@@ -19,9 +19,13 @@ const MIN_FOR_TWO_ROWS = 6;
 const fallbackPosts = () =>
   sortPostsByDate(defaultBlogPosts.filter((post) => isPostVisible(post)));
 
-const Blog: React.FC = () => {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+interface BlogProps {
+  initialPosts?: BlogPost[];
+}
+
+const Blog: React.FC<BlogProps> = ({ initialPosts }) => {
+  const [posts, setPosts] = useState<BlogPost[]>(initialPosts || []);
+  const [loading, setLoading] = useState<boolean>(!initialPosts);
   const [paused, setPaused] = useState<boolean>(false);
   const [reduced, setReduced] = useState<boolean>(false);
 
@@ -34,6 +38,7 @@ const Blog: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (initialPosts && initialPosts.length > 0) return;
     let active = true;
 
     const useFallback = () => {

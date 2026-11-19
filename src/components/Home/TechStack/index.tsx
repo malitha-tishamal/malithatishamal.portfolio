@@ -80,8 +80,14 @@ function ProficiencyDots({
   );
 }
 
+interface TechStackProps {
+  initialItems?: TechItem[];
+  initialCategories?: TechCategory[];
+  initialSection?: TechStackSection;
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function TechStack() {
+export default function TechStack({ initialItems, initialCategories, initialSection }: TechStackProps = {}) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -90,25 +96,27 @@ export default function TechStack() {
   const isDark = mounted ? resolvedTheme === "dark" : false;
 
   const [sectionContent, setSectionContent] = useState<TechStackSection>(
-    defaultTechStackSection
+    initialSection || defaultTechStackSection
   );
-  const [categories, setCategories] = useState<TechCategory[]>([]);
-  const [items, setItems] = useState<TechItem[]>([]);
+  const [categories, setCategories] = useState<TechCategory[]>(initialCategories || []);
+  const [items, setItems] = useState<TechItem[]>(initialItems || []);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [selectedItem, setSelectedItem] = useState<TechItem | null>(null);
 
   // Load section heading content
   useEffect(() => {
+    if (initialSection) return;
     const unsub = onSnapshot(doc(db, "siteContent", "techstack"), (snap) => {
       if (snap.exists()) {
         setSectionContent({ ...defaultTechStackSection, ...(snap.data() as TechStackSection) });
       }
     });
     return () => unsub();
-  }, []);
+  }, [initialSection]);
 
   // Load categories
   useEffect(() => {
+    if (initialCategories && initialCategories.length > 0) return;
     const unsub = onSnapshot(collection(db, "techCategories"), (snap) => {
       const cats: TechCategory[] = snap.docs
         .map((d) => ({ id: d.id, ...(d.data() as Omit<TechCategory, "id">) }))
@@ -117,10 +125,11 @@ export default function TechStack() {
       setCategories(cats);
     });
     return () => unsub();
-  }, []);
+  }, [initialCategories]);
 
   // Load tech items
   useEffect(() => {
+    if (initialItems && initialItems.length > 0) return;
     const unsub = onSnapshot(collection(db, "techItems"), (snap) => {
       const techItems: TechItem[] = snap.docs
         .map((d) => ({ id: d.id, ...(d.data() as Omit<TechItem, "id">) }))
@@ -129,7 +138,7 @@ export default function TechStack() {
       setItems(techItems);
     });
     return () => unsub();
-  }, []);
+  }, [initialItems]);
 
   const filteredItems =
     activeCategory === "all"

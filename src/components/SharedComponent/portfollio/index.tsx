@@ -3,7 +3,9 @@ import Link from 'next/link'
 import PortfolioCard from '@/components/SharedComponent/portfollio/Portfolio-card'
 import { MARQUEE_LANE } from '@/components/SharedComponent/MarqueeRows/lane'
 
-const Portfolio = () => {
+import { PortfolioItem } from '@/types/portfolio'
+
+const Portfolio: React.FC<{ initialItems?: PortfolioItem[] }> = ({ initialItems }) => {
   return (
     <section id='portfolio' className='overflow-x-clip dark:bg-darkmode pt-8 pb-4'>
       <div className={`mx-auto w-full max-w-[1280px] text-center ${MARQUEE_LANE}`}>
@@ -27,7 +29,7 @@ const Portfolio = () => {
       </div>
 
       {/* Portfolio Carousel Slider */}
-      <PortfolioCard />
+      <PortfolioCard initialItems={initialItems} />
 
       {/* VIEW ALL BUTTON (Direct link to /portfolio) */}
       <div className={`mx-auto w-full max-w-[1280px] text-center pt-6 pb-12 ${MARQUEE_LANE}`}>

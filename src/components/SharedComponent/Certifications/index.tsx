@@ -18,13 +18,18 @@ import { getCertificateIssueDate } from "@/utils/certificateDate";
 const LATEST_COUNT = 6;
 const SCROLL_SPEED = 50;
 
-const Certifications: React.FC = () => {
-  const [items, setItems] = useState<CertificationItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+interface CertificationsProps {
+  initialItems?: CertificationItem[];
+}
+
+const Certifications: React.FC<CertificationsProps> = ({ initialItems }) => {
+  const [items, setItems] = useState<CertificationItem[]>(initialItems || []);
+  const [loading, setLoading] = useState<boolean>(!initialItems);
   const [selectedItem, setSelectedItem] = useState<CertificationItem | null>(null);
 
   // Real-time Firestore sync
   useEffect(() => {
+    if (initialItems && initialItems.length > 0) return;
     try {
       const unsubscribe = onSnapshot(
         collection(db, "certifications"),

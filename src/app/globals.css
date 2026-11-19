@@ -218,10 +218,17 @@ body {
 /* Data-driven accent colours (service cards) are brand hex values that lose
    contrast on the dark surface; lighten them only for text in dark mode. */
 .svc-accent-text {
-  color: var(--svc-accent, currentColor);
+  color: color-mix(in srgb, var(--svc-accent, currentColor) 75%, black);
 }
 .dark .svc-accent-text {
-  color: color-mix(in srgb, var(--svc-accent, currentColor) 45%, white);
+  color: color-mix(in srgb, var(--svc-accent, currentColor) 40%, white);
+}
+
+.exp-accent-text {
+  color: color-mix(in srgb, var(--exp-accent, #0a66c2) 75%, black);
+}
+.dark .exp-accent-text {
+  color: color-mix(in srgb, var(--exp-accent, #0a66c2) 40%, white);
 }
 
 /* ── Marquee ─────────────────────────────────────────────────────────────────

@@ -17,19 +17,24 @@ import { getCertificateIssueDate } from "@/utils/certificateDate";
 
 const LATEST_COUNT = 6;
 
-export const CertificationsList: React.FC = () => {
-  const [items, setItems] = useState<CertificationItem[]>([]);
+interface CertificationsListProps {
+  initialItems?: CertificationItem[];
+}
+
+export const CertificationsList: React.FC<CertificationsListProps> = ({ initialItems }) => {
+  const [items, setItems] = useState<CertificationItem[]>(initialItems || []);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [selectedItem, setSelectedItem] = useState<CertificationItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!initialItems);
 
   const sliderRef = useRef<Slider | null>(null);
   const isDraggingRef = useRef<boolean>(false);
 
   useEffect(() => {
     trackCertificationSectionView();
+    if (initialItems && initialItems.length > 0) return;
     try {
       const unsubscribeCerts = onSnapshot(
         collection(db, "certifications"),
@@ -115,6 +120,24 @@ export const CertificationsList: React.FC = () => {
     });
   }, [items, selectedCategory, searchQuery]);
 
+  // Prevent focusable elements in cloned slick slides from breaking aria-hidden-focus accessibility
+  useEffect(() => {
+    const sanitizeClones = () => {
+      if (typeof document === "undefined") return;
+      const clonedSlides = document.querySelectorAll(".slick-cloned");
+      clonedSlides.forEach((slide) => {
+        slide.setAttribute("inert", "");
+        slide.querySelectorAll("a, button, [tabindex]").forEach((el) => {
+          el.setAttribute("tabindex", "-1");
+          el.setAttribute("aria-hidden", "true");
+        });
+      });
+    };
+    sanitizeClones();
+    const timer = setTimeout(sanitizeClones, 200);
+    return () => clearTimeout(timer);
+  }, [filtered, loading]);
+
   const slidesToShow = Math.min(filtered.length, 3);
 
   // The six newest certificates (same date field as the marquee sort).
@@ -149,6 +172,15 @@ export const CertificationsList: React.FC = () => {
     afterChange: () => {
       setTimeout(() => {
         isDraggingRef.current = false;
+        if (typeof document !== "undefined") {
+          document.querySelectorAll(".slick-cloned").forEach((slide) => {
+            slide.setAttribute("inert", "");
+            slide.querySelectorAll("a, button, [tabindex]").forEach((el) => {
+              el.setAttribute("tabindex", "-1");
+              el.setAttribute("aria-hidden", "true");
+            });
+          });
+        }
       }, 80);
     },
     responsive: [

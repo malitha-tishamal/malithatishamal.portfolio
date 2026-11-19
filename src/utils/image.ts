@@ -1,3 +1,8 @@
+export const PLACEHOLDER_COVER = "/images/portfolio/cozycasa.png";
+
+export const isDefaultPlaceholder = (url?: string): boolean =>
+  !url || url.includes("cozycasa.png") || url.trim() === "";
+
 export const getImgPath = (path: string): string => {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
   

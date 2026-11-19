@@ -121,25 +121,40 @@ function AnimatedNumber({
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-const Counter = ({ isColorMode }: { isColorMode: boolean }) => {
-  const [config, setConfig] = useState<CounterConfig>(defaultConfig);
-  const [testimonialCount, setTestimonialCount] = useState(0);
-  const [avgRating, setAvgRating] = useState(0);
-  const [projectsThisYear, setProjectsThisYear] = useState(0);
-  const [totalProjects, setTotalProjects] = useState(0);
+interface CounterProps {
+  isColorMode: boolean;
+  initialData?: {
+    config?: any;
+    testimonialCount?: number;
+    avgRating?: number;
+    projectsThisYear?: number;
+    totalProjects?: number;
+  };
+}
+
+const Counter = ({ isColorMode, initialData }: CounterProps) => {
+  const [config, setConfig] = useState<CounterConfig>(
+    initialData?.config ? { ...defaultConfig, ...initialData.config } : defaultConfig
+  );
+  const [testimonialCount, setTestimonialCount] = useState(initialData?.testimonialCount || 0);
+  const [avgRating, setAvgRating] = useState(initialData?.avgRating || 0);
+  const [projectsThisYear, setProjectsThisYear] = useState(initialData?.projectsThisYear || 0);
+  const [totalProjects, setTotalProjects] = useState(initialData?.totalProjects || 0);
 
   const currentYear = new Date().getFullYear();
 
   // Load counter config
   useEffect(() => {
+    if (initialData) return;
     const unsub = onSnapshot(doc(db, "siteContent", "counter"), (snap) => {
       if (snap.exists()) setConfig({ ...defaultConfig, ...(snap.data() as CounterConfig) });
     });
     return () => unsub();
-  }, []);
+  }, [initialData]);
 
   // Load testimonials — count + avg rating
   useEffect(() => {
+    if (initialData) return;
     const unsub = onSnapshot(collection(db, "testimonials"), (snap) => {
       let count = 0;
       let ratingSum = 0;
@@ -158,10 +173,11 @@ const Counter = ({ isColorMode }: { isColorMode: boolean }) => {
       setAvgRating(ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0);
     });
     return () => unsub();
-  }, []);
+  }, [initialData]);
 
   // Load projects — count all + this year
   useEffect(() => {
+    if (initialData) return;
     const unsub = onSnapshot(collection(db, "projects"), (snap) => {
       let thisYear = 0;
       let total = 0;
@@ -179,7 +195,7 @@ const Counter = ({ isColorMode }: { isColorMode: boolean }) => {
       setTotalProjects(total);
     });
     return () => unsub();
-  }, [currentYear]);
+  }, [currentYear, initialData]);
 
   // Final values (override or auto)
   const finalTestimonials = config.testimonialsOverride > 0 ? config.testimonialsOverride : testimonialCount;

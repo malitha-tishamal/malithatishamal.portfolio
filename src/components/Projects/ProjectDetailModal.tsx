@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Image from 'next/image'
 import { ProjectItem } from '@/types/project'
 import { PortfolioBlock, isVideoUrl } from '@/types/portfolio'
-import { getImgPath, getVideoSrc } from '@/utils/image'
+import { getImgPath, getVideoSrc, PLACEHOLDER_COVER, isDefaultPlaceholder } from '@/utils/image'
 import { sanitizeHtml } from '@/utils/sanitize'
 
 interface ProjectDetailModalProps {
@@ -45,26 +45,23 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     return 'Recently'
   }
 
-  // Combine cover image and gallery images (prioritizing real non-placeholder image in slot 0)
-  const isDefaultPlaceholder = (url?: string) =>
-    !url || url.includes('/images/portfolio/cozycasa.png') || url.trim() === ''
+  // Combine cover image and gallery images (prioritizing real non-placeholder image)
   const cov = project.coverImage?.trim() || ''
-  const first = project.images && project.images.length > 0 ? project.images[0]?.trim() || '' : ''
-  const primaryCover =
-    (!isDefaultPlaceholder(first) ? first : !isDefaultPlaceholder(cov) ? cov : first || cov) ||
-    '/images/portfolio/cozycasa.png'
+  const nonPlaceholderCover = !isDefaultPlaceholder(cov) ? cov : ''
+  const validImages = (project.images || [])
+    .map((img) => img?.trim() || '')
+    .filter((img) => !isDefaultPlaceholder(img))
 
-  const rawImages = project.images && project.images.length > 0 ? project.images : []
-  const allImages = Array.from(
-    new Set([
-      primaryCover,
-      ...rawImages.slice(1),
-      ...(project.coverImage ? [project.coverImage] : []),
-    ])
-  ).filter((img) => img && img.trim().length > 0 && !isDefaultPlaceholder(img))
-  if (allImages.length === 0) {
-    allImages.push('/images/portfolio/cozycasa.png')
-  }
+  const primaryCover =
+    nonPlaceholderCover ||
+    (validImages.length > 0 ? validImages[0] : '') ||
+    cov ||
+    (project.images && project.images[0]) ||
+    PLACEHOLDER_COVER
+
+  const allImages = validImages.length > 0
+    ? Array.from(new Set([primaryCover, ...validImages]))
+    : [primaryCover]
 
   // Every video on the item: explicit videoUrl + any video URLs stored in image slots
   const videoSources = [

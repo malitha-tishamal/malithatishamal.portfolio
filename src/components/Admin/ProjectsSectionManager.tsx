@@ -31,7 +31,7 @@ import {
 import { uploadToCloudinary } from "@/utils/cloudinary";
 import { ProjectCardItem } from "@/components/Projects/ProjectCardItem";
 import { ProjectDetailModal } from "@/components/Projects/ProjectDetailModal";
-import { getImgPath } from "@/utils/image";
+import { getImgPath, isDefaultPlaceholder } from "@/utils/image";
 import {
   generateSeoTitle,
   generateSeoDescription,
@@ -593,6 +593,18 @@ export const ProjectsSectionManager: React.FC = () => {
     toast.success("Crop applied cleanly!");
   };
 
+  const triggerRevalidate = async () => {
+    try {
+      await fetch("/api/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "projects", path: "/" }),
+      });
+    } catch (e) {
+      console.warn("Revalidation notice:", e);
+    }
+  };
+
   // Live save current media crops to Firestore
   const handleLiveSaveMedia = async () => {
     if (!editingId) {
@@ -601,8 +613,13 @@ export const ProjectsSectionManager: React.FC = () => {
     }
     setLiveSaving(true);
     try {
-      const cleanImages = images.filter((img) => img && img.trim().length > 0);
-      const primaryCover = (cleanImages.length > 0 && cleanImages[0]) ? cleanImages[0] : (coverImage || "");
+      const cleanImages = images.filter((img) => img && img.trim().length > 0 && !isDefaultPlaceholder(img));
+      const primaryCover =
+        (cleanImages.length > 0 && cleanImages[0])
+          ? cleanImages[0]
+          : (coverImage.trim() && !isDefaultPlaceholder(coverImage.trim()))
+          ? coverImage.trim()
+          : (images.length > 0 && images[0]) ? images[0] : coverImage || "";
       if (cleanImages.length > 0) {
         cleanImages[0] = primaryCover;
       } else if (primaryCover) {
@@ -631,6 +648,12 @@ export const ProjectsSectionManager: React.FC = () => {
         payload.videoTrim = { start: videoTrimStart, end: videoTrimEnd };
       }
       await updateDoc(doc(db, "projects", editingId), stripUndefined(payload));
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === editingId ? { ...p, ...payload, coverImage: primaryCover, images: cleanImages } : p
+        )
+      );
+      triggerRevalidate();
       toast.success("Live card updated!");
     } catch (err: any) {
       console.error("Live save error:", err);
@@ -691,23 +714,20 @@ export const ProjectsSectionManager: React.FC = () => {
     setContentBlocks(item.contentBlocks || []);
     setTagsInput(item.tags ? item.tags.join(", ") : "");
     setDisplayOrder(item.displayOrder || 1);
-    const isDefaultPlaceholder = (url?: string) =>
-      !url || url.includes("/images/portfolio/cozycasa.png") || url.trim() === "";
     const cov = item.coverImage?.trim() || "";
     const firstImg = item.images && item.images.length > 0 ? (item.images[0]?.trim() || "") : "";
-    let primaryCover = "/images/portfolio/cozycasa.png";
-    if (!isDefaultPlaceholder(firstImg) && isDefaultPlaceholder(cov)) {
-      primaryCover = firstImg;
-    } else if (!isDefaultPlaceholder(cov) && isDefaultPlaceholder(firstImg)) {
+    let primaryCover = "";
+    if (!isDefaultPlaceholder(cov)) {
       primaryCover = cov;
     } else if (!isDefaultPlaceholder(firstImg)) {
       primaryCover = firstImg;
-    } else if (!isDefaultPlaceholder(cov)) {
-      primaryCover = cov;
     }
 
-    const baseImages = item.images && item.images.length > 0 ? [...item.images] : [primaryCover];
-    baseImages[0] = primaryCover;
+    const validImgs = (item.images || []).filter((img) => !isDefaultPlaceholder(img));
+    const baseImages = validImgs.length > 0 ? [...validImgs] : (primaryCover ? [primaryCover] : [""]);
+    if (primaryCover) {
+      baseImages[0] = primaryCover;
+    }
     setCoverImage(primaryCover);
     setImages(baseImages);
     setImageLayout(item.imageLayout || (baseImages.length >= 4 ? "grid_4" : baseImages.length >= 2 ? "split_horizontal_2" : "single"));
@@ -721,7 +741,7 @@ export const ProjectsSectionManager: React.FC = () => {
     setCoverCrop(item.coverCrop || { ...defaultMediaCrop, fit: (item.imageFit === "contain" ? "contain" : "cover") as "cover" | "contain" });
 
     // Additional gallery images (exclude duplicates of card photos if user wants)
-    setGalleryImages(item.images && item.images.length > 1 ? item.images.slice(1) : []);
+    setGalleryImages(validImgs.length > 1 ? validImgs.slice(1) : []);
 
     // Video media support
     const isVid = item.mediaType === "video" || !!item.videoUrl || (baseImages.length === 1 && isVideoUrl(baseImages[0]));
@@ -761,12 +781,22 @@ export const ProjectsSectionManager: React.FC = () => {
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
 
-    const validCardImages = images.filter((img) => img && img.trim().length > 0);
-    const validGallery = galleryImages.filter((img) => img && img.trim().length > 0);
+    const validCardImages = images.filter((img) => img && img.trim().length > 0 && !isDefaultPlaceholder(img));
+    const validGallery = galleryImages.filter((img) => img && img.trim().length > 0 && !isDefaultPlaceholder(img));
     const primaryCover =
       (validCardImages.length > 0 && validCardImages[0])
         ? validCardImages[0]
+        : (coverImage.trim() && !isDefaultPlaceholder(coverImage.trim()))
+        ? coverImage.trim()
+        : (images.length > 0 && images[0])
+        ? images[0]
         : (coverImage.trim() || "/images/portfolio/cozycasa.png");
+
+    if (validCardImages.length > 0) {
+      validCardImages[0] = primaryCover;
+    } else if (primaryCover && !isDefaultPlaceholder(primaryCover)) {
+      validCardImages.push(primaryCover);
+    }
     const combinedAllImages = Array.from(new Set([primaryCover, ...validCardImages, ...validGallery]));
 
     const nowFormatted = new Date().toLocaleDateString("en-US", {
@@ -829,6 +859,16 @@ export const ProjectsSectionManager: React.FC = () => {
 
     try {
       await setDoc(doc(db, "projects", id), stripUndefined(itemData));
+      setProjects((prev) => {
+        const idx = prev.findIndex((p) => p.id === id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = itemData;
+          return next;
+        }
+        return [...prev, itemData];
+      });
+      triggerRevalidate();
       toast.success(
         editingId ? "Project updated successfully!" : "New project created successfully!"
       );

@@ -10,14 +10,22 @@ import {
   defaultServicesContent,
 } from "@/types/service";
 
-const Services: React.FC = () => {
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [sectionContent, setSectionContent] = useState<ServicesSectionContent>(defaultServicesContent);
-  const [loading, setLoading] = useState<boolean>(true);
+interface ServicesProps {
+  initialServices?: ServiceItem[];
+  initialContent?: ServicesSectionContent;
+}
+
+const Services: React.FC<ServicesProps> = ({ initialServices, initialContent }) => {
+  const [services, setServices] = useState<ServiceItem[]>(initialServices || []);
+  const [sectionContent, setSectionContent] = useState<ServicesSectionContent>(
+    initialContent || defaultServicesContent
+  );
+  const [loading, setLoading] = useState<boolean>(!initialServices);
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
 
   // 1. Subscribe to Services Collection
   useEffect(() => {
+    if (initialServices && initialServices.length > 0) return;
     try {
       const unsub = onSnapshot(
         collection(db, "services"),
@@ -49,10 +57,11 @@ const Services: React.FC = () => {
       setServices(defaultServices);
       setLoading(false);
     }
-  }, []);
+  }, [initialServices]);
 
   // 2. Subscribe to Section Settings
   useEffect(() => {
+    if (initialContent) return;
     try {
       const unsubSettings = onSnapshot(
         doc(db, "siteContent", "services"),
@@ -258,8 +267,7 @@ const Services: React.FC = () => {
                       <button
                         type="button"
                         onClick={(e) => handleContactService(e, item.title)}
-                        className="px-3 py-1.5 rounded-xl text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95"
-                        style={{ backgroundColor: accent }}
+                        className="px-3 py-1.5 rounded-xl text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600"
                       >
                         <span>💬</span>
                         <span>Contact</span>

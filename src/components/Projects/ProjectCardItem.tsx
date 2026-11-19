@@ -4,7 +4,7 @@ import React from 'react'
 import Image from 'next/image'
 import { ProjectItem } from '@/types/project'
 import { PortfolioMediaCrop, isVideoUrl } from '@/types/portfolio'
-import { getImgPath, getVideoSrc } from '@/utils/image'
+import { getImgPath, getVideoSrc, PLACEHOLDER_COVER, isDefaultPlaceholder } from '@/utils/image'
 import { LazyVideo } from '@/components/SharedComponent/LazyVideo'
 import { getVisitSiteTarget } from '@/types/landingPage'
 import {
@@ -27,11 +27,6 @@ interface ProjectCardItemProps {
   /** Above-the-fold card: load its cover eagerly so it can be the LCP image. */
   priority?: boolean
 }
-
-const PLACEHOLDER_COVER = '/images/portfolio/cozycasa.png'
-
-const isDefaultPlaceholder = (url?: string) =>
-  !url || url.includes(PLACEHOLDER_COVER) || url.trim() === ''
 
 const formatDate = (val: unknown): string => {
   if (!val) return 'Recently'
@@ -87,27 +82,22 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
   className,
   priority = false,
 }) => {
-  const rawImages =
-    project.images && project.images.length > 0
-      ? project.images
-      : project.coverImage
-      ? [project.coverImage]
-      : []
   const cov = project.coverImage?.trim() || ''
-  const first = rawImages.length > 0 ? rawImages[0]?.trim() || '' : ''
+  const nonPlaceholderCover = !isDefaultPlaceholder(cov) ? cov : ''
+  const validImages = (project.images || [])
+    .map((img) => img?.trim() || '')
+    .filter((img) => !isDefaultPlaceholder(img))
 
-  let primaryCover = PLACEHOLDER_COVER
-  if (!isDefaultPlaceholder(first) && isDefaultPlaceholder(cov)) {
-    primaryCover = first
-  } else if (!isDefaultPlaceholder(cov) && isDefaultPlaceholder(first)) {
-    primaryCover = cov
-  } else if (!isDefaultPlaceholder(first)) {
-    primaryCover = first
-  } else if (!isDefaultPlaceholder(cov)) {
-    primaryCover = cov
-  }
+  const primaryCover =
+    nonPlaceholderCover ||
+    (validImages.length > 0 ? validImages[0] : '') ||
+    cov ||
+    (project.images && project.images[0]) ||
+    PLACEHOLDER_COVER
 
-  const images = rawImages.length > 0 ? [primaryCover, ...rawImages.slice(1)] : [primaryCover]
+  const images = validImages.length > 0
+    ? Array.from(new Set([primaryCover, ...validImages]))
+    : [primaryCover]
   const cover = primaryCover
   const hasCover = !isDefaultPlaceholder(cover)
 

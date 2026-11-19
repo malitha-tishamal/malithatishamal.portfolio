@@ -20,14 +20,19 @@ const MAX_SPEED = 60
 const getPortfolioKey = (item: PortfolioItem) => item.id
 const getPortfolioUpdatedAt = (item: PortfolioItem) => item.updatedAt || item.createdAt
 
-const PortfolioCard: React.FC = () => {
-  const [items, setItems] = useState<PortfolioItem[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
+interface PortfolioCardProps {
+  initialItems?: PortfolioItem[];
+}
+
+const PortfolioCard: React.FC<PortfolioCardProps> = ({ initialItems }) => {
+  const [items, setItems] = useState<PortfolioItem[]>(initialItems || [])
+  const [loading, setLoading] = useState<boolean>(!initialItems)
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
   const [speed, setSpeed] = useState<number>(defaultPortfolioSliderSettings.speed)
 
   // Real-time Firestore sync for portfolio items
   useEffect(() => {
+    if (initialItems && initialItems.length > 0) return;
     try {
       const unsubscribe = onSnapshot(
         collection(db, 'portfolio'),

@@ -171,16 +171,21 @@ const MediaThumbnail: React.FC<{
   );
 };
 
+interface ExperienceEducationProps {
+  initialExperiences?: ExperienceItem[];
+}
+
 // ── Main ExperienceEducation Component ──────────────────────────────────────
-export const ExperienceEducation: React.FC = () => {
-  const [items, setItems] = useState<ExperienceItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+export const ExperienceEducation: React.FC<ExperienceEducationProps> = ({ initialExperiences }) => {
+  const [items, setItems] = useState<ExperienceItem[]>(initialExperiences || []);
+  const [loading, setLoading] = useState<boolean>(!initialExperiences);
   const [activeExpFilter, setActiveExpFilter] = useState<"all" | "work" | "volunteer">("all");
   const [selectedItem, setSelectedItem] = useState<ExperienceItem | null>(null);
   const [previewMedia, setPreviewMedia] = useState<ExperienceMedia | null>(null);
 
   // Real-time Firestore sync
   useEffect(() => {
+    if (initialExperiences && initialExperiences.length > 0) return;
     try {
       const unsubscribe = onSnapshot(
         collection(db, "experiences"),
@@ -424,12 +429,12 @@ export const ExperienceEducation: React.FC = () => {
 
                               {item.employmentType && (
                                 <span
-                                  className="px-2 py-0.2 text-[9px] font-bold rounded-full border"
+                                  className="exp-accent-text px-2 py-0.2 text-[9px] font-bold rounded-full border"
                                   style={{
-                                    color: badge,
+                                    "--exp-accent": badge,
                                     borderColor: `${badge}40`,
                                     backgroundColor: `${badge}15`,
-                                  }}
+                                  } as React.CSSProperties}
                                 >
                                   {item.employmentType}
                                 </span>
@@ -485,18 +490,13 @@ export const ExperienceEducation: React.FC = () => {
                         {item.skills && item.skills.length > 0 && (
                           <div className="mt-2.5 flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-dark_border/60">
                             <div
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold"
-                              style={{
-                                color: accent,
-                                backgroundColor: `${accent}12`,
-                                border: `1px solid ${accent}25`,
-                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-blue-500/10 dark:bg-sky-400/10 border border-blue-500/20 dark:border-sky-400/20 text-blue-700 dark:text-sky-300"
                             >
                               <span>💎</span>
                               <span className="text-slate-600 dark:text-slate-300 font-medium">
                                 {item.skills.slice(0, 3).join(", ")}
                                 {item.skills.length > 3 && (
-                                  <strong className="font-bold ml-1" style={{ color: accent }}>
+                                  <strong className="font-bold ml-1 text-blue-700 dark:text-sky-300">
                                     +{item.skills.length - 3} more
                                   </strong>
                                 )}
@@ -639,12 +639,12 @@ export const ExperienceEducation: React.FC = () => {
                               {/* Ongoing Pulse Badge */}
                               {item.isCurrent && (
                                 <span
-                                  className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[9px] font-extrabold border"
+                                  className="exp-accent-text inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[9px] font-extrabold border"
                                   style={{
-                                    color: eduAccent,
+                                    "--exp-accent": eduAccent,
                                     borderColor: `${eduAccent}40`,
                                     backgroundColor: `${eduAccent}18`,
-                                  }}
+                                  } as React.CSSProperties}
                                 >
                                   <span
                                     className="w-1.5 h-1.5 rounded-full animate-pulse"
@@ -656,12 +656,12 @@ export const ExperienceEducation: React.FC = () => {
 
                               {item.employmentType && (
                                 <span
-                                  className="px-2 py-0.2 text-[9px] font-bold rounded-full border"
+                                  className="exp-accent-text px-2 py-0.2 text-[9px] font-bold rounded-full border"
                                   style={{
-                                    color: eduBadge,
+                                    "--exp-accent": eduBadge,
                                     borderColor: `${eduBadge}40`,
                                     backgroundColor: `${eduBadge}15`,
-                                  }}
+                                  } as React.CSSProperties}
                                 >
                                   {item.employmentType}
                                 </span>
@@ -669,7 +669,7 @@ export const ExperienceEducation: React.FC = () => {
                             </div>
 
                             {/* Degree / Program Title */}
-                            <p className="text-xs font-semibold" style={{ color: eduAccent }}>
+                            <p className="exp-accent-text text-xs font-semibold" style={{ "--exp-accent": eduAccent } as React.CSSProperties}>
                               {item.title}
                               {item.fieldOfStudy && !item.title.includes(item.fieldOfStudy) && (
                                 <span className="text-gray-500 dark:text-gray-400 font-normal">
@@ -718,18 +718,13 @@ export const ExperienceEducation: React.FC = () => {
                         {item.skills && item.skills.length > 0 && (
                           <div className="mt-2.5 flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-dark_border/60">
                             <div
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold"
-                              style={{
-                                color: eduAccent,
-                                backgroundColor: `${eduAccent}12`,
-                                border: `1px solid ${eduAccent}25`,
-                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-purple-500/10 dark:bg-purple-400/10 border border-purple-500/20 dark:border-purple-400/20 text-purple-700 dark:text-purple-300"
                             >
                               <span>💎</span>
                               <span className="text-slate-600 dark:text-slate-300 font-medium">
                                 {item.skills.slice(0, 3).join(", ")}
                                 {item.skills.length > 3 && (
-                                  <strong className="font-bold ml-1" style={{ color: eduAccent }}>
+                                  <strong className="font-bold ml-1 text-purple-700 dark:text-purple-300">
                                     +{item.skills.length - 3} more
                                   </strong>
                                 )}
@@ -840,12 +835,12 @@ export const ExperienceEducation: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                     <span
-                      className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider"
+                      className="exp-accent-text px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider"
                       style={{
+                        "--exp-accent": selectedItem.accentColor || "#0a66c2",
                         backgroundColor: `${selectedItem.accentColor || "#0a66c2"}15`,
-                        color: selectedItem.accentColor || "#0a66c2",
                         border: `1px solid ${selectedItem.accentColor || "#0a66c2"}30`,
-                      }}
+                      } as React.CSSProperties}
                     >
                       {selectedItem.category === "education"
                         ? "🎓 Education"
@@ -958,12 +953,12 @@ export const ExperienceEducation: React.FC = () => {
                     {selectedItem.skills.map((skill, sIdx) => (
                       <span
                         key={sIdx}
-                        className="px-3 py-1 rounded-xl text-xs font-bold border transition hover:scale-105"
+                        className="exp-accent-text px-3 py-1 rounded-xl text-xs font-bold border transition hover:scale-105"
                         style={{
+                          "--exp-accent": selectedItem.accentColor || "#0a66c2",
                           backgroundColor: `${selectedItem.accentColor || "#0a66c2"}12`,
-                          color: selectedItem.accentColor || "#0a66c2",
                           borderColor: `${selectedItem.accentColor || "#0a66c2"}35`,
-                        }}
+                        } as React.CSSProperties}
                       >
                         {skill}
                       </span>

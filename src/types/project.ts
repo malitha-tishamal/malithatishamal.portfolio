@@ -11,6 +11,15 @@ import type { LandingPageStatus, LandingPageVersion } from "./landingPage";
 export type ProjectImageFit = "cover" | "contain" | "portrait_tall";
 
 export interface ProjectItem {
+  // Existing fields …
+  // SEO & URL fields
+  slug?: string; // URL‑friendly slug (generated from title)
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  noindex?: boolean;
+  canonical?: string;
+
   id: string;
   title: string;
   subtitle: string; // Category (e.g. Mobile App, Full Stack Web, DevOps & Cloud, AI & Machine Learning, IoT Systems, Cybersecurity)

@@ -474,7 +474,7 @@ function MarqueeRow<T>({
                 ))}
               </div>
               {!motionOff && (
-                <div ref={cloneRef} aria-hidden='true' className='flex gap-6 pr-6'>
+                <div ref={cloneRef} aria-hidden='true' inert={'' as any} className='flex gap-6 pr-6'>
                   {items.map((item, index) => (
                     <div
                       key={`clone-${getKey(item)}-${index}`}
