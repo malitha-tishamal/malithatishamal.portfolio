@@ -1,5 +1,4 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, GithubAuthProvider, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 
 const clean = (val?: string): string => {
@@ -28,12 +27,31 @@ if (!getApps().length) {
   app = getApp();
 }
 
-export const auth: Auth = getAuth(app);
 export const db: Firestore = getFirestore(app);
 
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
+// Auth is loaded on demand: importing firebase/auth eagerly pulls ~88 kB of JS
+// and starts the cross-origin auth iframe on every public page.
+type AuthModule = typeof import("firebase/auth");
+let authModulePromise: Promise<AuthModule> | null = null;
 
-export const githubProvider = new GithubAuthProvider();
+export function loadAuthModule(): Promise<AuthModule> {
+  if (!authModulePromise) {
+    authModulePromise = import("firebase/auth");
+  }
+  return authModulePromise;
+}
+
+export async function getFirebaseAuth() {
+  const { getAuth } = await loadAuthModule();
+  return getAuth(app);
+}
+
+export async function getSocialProviders() {
+  const mod = await loadAuthModule();
+  const googleProvider = new mod.GoogleAuthProvider();
+  googleProvider.setCustomParameters({ prompt: "select_account" });
+  const githubProvider = new mod.GithubAuthProvider();
+  return { googleProvider, githubProvider };
+}
 
 export default app;

@@ -282,6 +282,7 @@ const Footer: FC = () => {
             {enabledNavLinks.map(link => (
               <li key={link.label} className="text-base">
                 <Link
+                  prefetch={false}
                   href={link.href}
                   className="transition hover:underline"
                   style={{ color: subTextColor }}

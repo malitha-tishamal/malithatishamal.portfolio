@@ -1,19 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
-import {
-  User,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  signOut,
-  sendPasswordResetEmail,
-  sendEmailVerification,
-  updateProfile,
-  onAuthStateChanged,
-} from "firebase/auth";
+import type { User, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -21,7 +9,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { auth, db, googleProvider, githubProvider } from "@/lib/firebase";
+import { db, loadAuthModule, getFirebaseAuth, getSocialProviders } from "@/lib/firebase";
 
 export interface UserProfile {
   uid: string;
@@ -53,6 +41,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Local hint that a session may exist. Public pages only load the auth bundle
+// when this is set, so anonymous visitors never pay for firebase/auth.
+const AUTH_HINT_KEY = "mts_auth_session";
+
+const hasAuthHint = () => {
+  try {
+    return typeof window !== "undefined" && localStorage.getItem(AUTH_HINT_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const setAuthHint = (value: boolean) => {
+  try {
+    if (value) localStorage.setItem(AUTH_HINT_KEY, "1");
+    else localStorage.removeItem(AUTH_HINT_KEY);
+  } catch {
+    // Storage can be blocked (private mode); the header simply stays signed out.
+  }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -61,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Guard ref: true while a social popup is active
   // Prevents onAuthStateChanged from firing early signOut mid-popup
   const isSocialAuthInProgress = useRef<boolean>(false);
+  const startAuthListenerRef = useRef<(() => void) | null>(null);
 
   // Helper to fetch user profile from Firestore
   const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
@@ -78,6 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshUserProfile = async () => {
+    const auth = await getFirebaseAuth();
     if (auth.currentUser) {
       const profile = await fetchUserProfile(auth.currentUser.uid);
       setUserProfile(profile);
@@ -94,73 +105,120 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      // If a social popup flow is in-flight, skip onAuthStateChanged to prevent race conditions
-      if (isSocialAuthInProgress.current) {
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
 
-      if (fbUser) {
-        const cleanEmail = (fbUser.email || "").toLowerCase().trim();
-        const usesPassword = fbUser.providerData.some((p) => p.providerId === "password");
+    const start = async () => {
+      if (unsubscribe || cancelled) return;
+      const mod = await loadAuthModule();
+      if (cancelled || unsubscribe) return;
+      const auth = await getFirebaseAuth();
+      if (cancelled || unsubscribe) return;
 
-        // Password accounts must confirm their email before any session is
-        // accepted. Social providers verify the address themselves.
-        if (usesPassword && !fbUser.emailVerified) {
-          await signOut(auth);
-          setUser(null);
-          setUserProfile(null);
+      unsubscribe = mod.onAuthStateChanged(auth, async (fbUser) => {
+        // If a social popup flow is in-flight, skip onAuthStateChanged to prevent race conditions
+        if (isSocialAuthInProgress.current) {
           setLoading(false);
           return;
         }
 
-        let profile = await fetchUserProfile(fbUser.uid);
-        const isSuper = isInitialAdmin(cleanEmail);
+        if (fbUser) {
+          const cleanEmail = (fbUser.email || "").toLowerCase().trim();
+          const usesPassword = fbUser.providerData.some((p) => p.providerId === "password");
 
-        // Auto-approve the initial super admin so they can access the admin panel to approve others
-        if (isSuper && fbUser.emailVerified && profile && (!profile.isApproved || profile.status !== "approved" || profile.role !== "admin")) {
-          try {
-            await updateDoc(doc(db, "users", fbUser.uid), {
-              role: "admin",
-              status: "approved",
-              isApproved: true,
-              updatedAt: serverTimestamp(),
-            });
-            profile = {
-              ...profile,
-              role: "admin",
-              status: "approved",
-              isApproved: true,
-            };
-          } catch (e) {
-            console.warn("Could not auto-approve initial super admin:", e);
+          // Password accounts must confirm their email before any session is
+          // accepted. Social providers verify the address themselves.
+          if (usesPassword && !fbUser.emailVerified) {
+            await mod.signOut(auth);
+            setUser(null);
+            setUserProfile(null);
+            setLoading(false);
+            return;
           }
-        }
 
-        // If no profile document or if not approved, strictly reject session (no auto-login)
-        if (!profile || profile.status === "rejected" || profile.status !== "approved" || !profile.isApproved) {
-          await signOut(auth);
+          let profile = await fetchUserProfile(fbUser.uid);
+          const isSuper = isInitialAdmin(cleanEmail);
+
+          // Auto-approve the initial super admin so they can access the admin panel to approve others
+          if (isSuper && fbUser.emailVerified && profile && (!profile.isApproved || profile.status !== "approved" || profile.role !== "admin")) {
+            try {
+              await updateDoc(doc(db, "users", fbUser.uid), {
+                role: "admin",
+                status: "approved",
+                isApproved: true,
+                updatedAt: serverTimestamp(),
+              });
+              profile = {
+                ...profile,
+                role: "admin",
+                status: "approved",
+                isApproved: true,
+              };
+            } catch (e) {
+              console.warn("Could not auto-approve initial super admin:", e);
+            }
+          }
+
+          // If no profile document or if not approved, strictly reject session (no auto-login)
+          if (!profile || profile.status === "rejected" || profile.status !== "approved" || !profile.isApproved) {
+            await mod.signOut(auth);
+            setUser(null);
+            setUserProfile(null);
+            setLoading(false);
+            return;
+          }
+
+          setUser(fbUser);
+          setUserProfile(profile);
+          setAuthHint(true);
+        } else {
           setUser(null);
           setUserProfile(null);
-          setLoading(false);
-          return;
+          setAuthHint(false);
         }
+        setLoading(false);
+      });
+    };
+    startAuthListenerRef.current = () => void start();
 
-        setUser(fbUser);
-        setUserProfile(profile);
+    // Admin routes need the session right away to guard the panel. Public
+    // pages only restore an existing session (and therefore only load the
+    // auth chunk) when this browser has signed in before.
+    const isAdminRoute =
+      typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+    let idleId: number | undefined;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+
+    if (typeof window !== "undefined") {
+      if (isAdminRoute) {
+        void start();
+      } else if (!hasAuthHint()) {
+        setLoading(false);
+      } else if (typeof window.requestIdleCallback === "function") {
+        idleId = window.requestIdleCallback(() => void start(), { timeout: 2500 });
       } else {
-        setUser(null);
-        setUserProfile(null);
+        timerId = setTimeout(() => void start(), 1500);
       }
-      setLoading(false);
-    });
+    }
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      startAuthListenerRef.current = null;
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timerId !== undefined) clearTimeout(timerId);
+      unsubscribe?.();
+    };
   }, []);
 
   // Idle session timeout: signed-in accounts are signed out after 30 minutes
   // without interaction, limiting the window for an unattended admin session.
+  const endSession = async () => {
+    const mod = await loadAuthModule();
+    const auth = await getFirebaseAuth();
+    await mod.signOut(auth);
+    setAuthHint(false);
+  };
+
   useEffect(() => {
     if (!user) return;
 
@@ -174,7 +232,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       lastMark = now;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        void signOut(auth);
+        void endSession();
       }, IDLE_TIMEOUT_MS);
     };
 
@@ -187,7 +245,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     ];
     events.forEach((event) => window.addEventListener(event, reset, { passive: true }));
     timer = setTimeout(() => {
-      void signOut(auth);
+      void endSession();
     }, IDLE_TIMEOUT_MS);
 
     return () => {
@@ -198,6 +256,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Email/Password Sign Up -> verification email, ROLE: ADMIN, STATUS: PENDING, NO AUTO-LOGIN
   const signUpWithEmail = async (name: string, email: string, pass: string) => {
+    const { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } =
+      await loadAuthModule();
+    const auth = await getFirebaseAuth();
     const cleanEmail = email.toLowerCase().trim();
     const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
     if (name) {
@@ -252,6 +313,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Email/Password Sign In -> CHECKS VERIFICATION + APPROVAL
   const signInWithEmail = async (email: string, pass: string) => {
+    const { signInWithEmailAndPassword, sendEmailVerification, signOut } = await loadAuthModule();
+    const auth = await getFirebaseAuth();
     const cleanEmail = email.toLowerCase().trim();
     const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
 
@@ -327,14 +390,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     setUser(cred.user);
     setUserProfile(profile);
+    setAuthHint(true);
+    startAuthListenerRef.current?.();
     return profile;
   };
 
   // Social Sign In / Up Helper -> REGISTRATION CREATES ROLE: ADMIN, STATUS: PENDING, NO AUTO-LOGIN
   const handleSocialAuth = async (
-    providerInstance: typeof googleProvider | typeof githubProvider,
+    providerInstance: GoogleAuthProvider | GithubAuthProvider,
     providerName: "google" | "github"
   ) => {
+    const { signInWithPopup, signOut } = await loadAuthModule();
+    const auth = await getFirebaseAuth();
     isSocialAuthInProgress.current = true;
     try {
       const result = await signInWithPopup(auth, providerInstance);
@@ -413,6 +480,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(fbUser);
       setUserProfile(profile);
+      setAuthHint(true);
+      startAuthListenerRef.current?.();
       return profile;
     } catch (err: any) {
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
@@ -424,18 +493,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInWithGoogle = () => handleSocialAuth(googleProvider, "google");
-  const signInWithGithub = () => handleSocialAuth(githubProvider, "github");
+  const signInWithGoogle = async () => {
+    const { googleProvider } = await getSocialProviders();
+    return handleSocialAuth(googleProvider, "google");
+  };
+  const signInWithGithub = async () => {
+    const { githubProvider } = await getSocialProviders();
+    return handleSocialAuth(githubProvider, "github");
+  };
 
   // Reset Password
   const resetPassword = async (email: string) => {
     if (!email) throw new Error("Please enter your email address.");
+    const { sendPasswordResetEmail } = await loadAuthModule();
+    const auth = await getFirebaseAuth();
     await sendPasswordResetEmail(auth, email);
   };
 
   // Logout
   const logout = async () => {
-    await signOut(auth);
+    await endSession();
     setUser(null);
     setUserProfile(null);
   };

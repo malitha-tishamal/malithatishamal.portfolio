@@ -1,21 +1,24 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import Slider from 'react-slick'
-import 'slick-carousel/slick/slick.css'
-import 'slick-carousel/slick/slick-theme.css'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { TestimonialItem, defaultTestimonials } from '@/types/testimonial'
 import { getImgPath } from '@/utils/image'
 import { AddReviewModal } from './AddReviewModal'
 
+const CARD_GAP = 20
+
 const Testimonial: React.FC = () => {
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const [hovered, setHovered] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(false)
+  const trackRef = useRef<HTMLDivElement | null>(null)
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -55,6 +58,47 @@ const Testimonial: React.FC = () => {
     }
   }, [])
 
+  // Native scroll-snap carousel: no per-frame React state, honours reduced motion.
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const sync = () => setReducedMotion(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  const stepSize = () => {
+    const card = trackRef.current?.firstElementChild as HTMLElement | null
+    return card ? card.offsetWidth + CARD_GAP : 0
+  }
+
+  const goTo = (index: number) => {
+    const track = trackRef.current
+    const step = stepSize()
+    if (!track || !step) return
+    track.scrollTo({ left: index * step, behavior: reducedMotion ? 'auto' : 'smooth' })
+  }
+
+  const handleScroll = () => {
+    const track = trackRef.current
+    const step = stepSize()
+    if (!track || !step) return
+    const next = Math.round(track.scrollLeft / step)
+    setActive(Math.min(testimonials.length - 1, Math.max(0, next)))
+  }
+
+  useEffect(() => {
+    if (testimonials.length < 2 || hovered || reducedMotion) return
+    const timer = window.setInterval(() => {
+      const track = trackRef.current
+      const step = stepSize()
+      if (!track || !step) return
+      const next = (Math.round(track.scrollLeft / step) + 1) % testimonials.length
+      track.scrollTo({ left: next * step, behavior: 'smooth' })
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [testimonials.length, hovered, reducedMotion])
+
   // Calculate average rating
   const avgRating =
     testimonials.length > 0
@@ -63,26 +107,6 @@ const Testimonial: React.FC = () => {
           testimonials.length
         ).toFixed(1)
       : '5.0'
-
-  const sliderSettings = {
-    autoplay: true,
-    autoplaySpeed: 5000,
-    dots: true,
-    arrows: false,
-    infinite: testimonials.length > 1,
-    speed: 600,
-    slidesToShow: Math.min(testimonials.length, 2),
-    slidesToScroll: 1,
-    responsive: [
-      {
-        breakpoint: 1024,
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-        },
-      },
-    ],
-  }
 
   return (
     <section
@@ -199,10 +223,25 @@ const Testimonial: React.FC = () => {
               </div>
             ) : (
               /* Multi Testimonials Slider */
-              <div className='testimonial-slider-container'>
-                <Slider {...sliderSettings}>
-                  {testimonials.map((item) => (
-                    <div key={item.id} className='px-2.5 py-2'>
+              <div>
+                <div
+                  ref={trackRef}
+                  onScroll={handleScroll}
+                  onPointerEnter={() => setHovered(true)}
+                  onPointerLeave={() => setHovered(false)}
+                  onFocusCapture={() => setHovered(true)}
+                  onBlurCapture={() => setHovered(false)}
+                  role='region'
+                  aria-roledescription='carousel'
+                  aria-label='Client testimonials'
+                  className='flex gap-5 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+                  {testimonials.map((item, index) => (
+                    <div
+                      key={item.id}
+                      role='group'
+                      aria-roledescription='slide'
+                      aria-label={`Testimonial ${index + 1} of ${testimonials.length}`}
+                      className='snap-start shrink-0 w-full lg:w-[calc(50%-10px)]'>
                       <div className='p-6 sm:p-8 rounded-3xl bg-white dark:bg-darkmode border border-border/70 dark:border-dark_border shadow-md hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between relative min-h-[300px]'>
                         {/* Accent Top Border */}
                         <div className='absolute top-0 left-8 right-8 h-1 bg-gradient-to-r from-primary to-blue-400 rounded-b-md'></div>
@@ -253,7 +292,27 @@ const Testimonial: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                </Slider>
+                </div>
+
+                {testimonials.length > 1 && (
+                  <div className='flex items-center justify-center gap-1 mt-5'>
+                    {testimonials.map((item, index) => (
+                      <button
+                        key={item.id}
+                        type='button'
+                        onClick={() => goTo(index)}
+                        aria-label={`Go to testimonial ${index + 1}`}
+                        aria-current={index === active ? 'true' : undefined}
+                        className='min-h-11 min-w-11 flex items-center justify-center cursor-pointer'>
+                        <span
+                          className={`h-2.5 rounded-full transition-all duration-300 ${
+                            index === active ? 'w-7 bg-primary' : 'w-2.5 bg-gray-300 dark:bg-gray-600'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

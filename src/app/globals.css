@@ -248,5 +248,17 @@ body {
   .mq-track { animation: none; }
 }
 
-/* TEMP EXPERIMENT (removed after measurement) */
-[data-marquee-row] [role='region'] { mask-image: none !important; -webkit-mask-image: none !important; }
+/* Below-the-fold sections skip rendering until they approach the viewport.
+   Keeps style/layout work off the critical path without hiding content. */
+#services,
+#tech-stack,
+#experience-education,
+#certifications,
+#portfolio,
+#projects,
+#testimonials,
+#blog,
+#contact-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 700px;
+}

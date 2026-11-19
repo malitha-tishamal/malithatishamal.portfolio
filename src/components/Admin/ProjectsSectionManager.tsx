@@ -11,7 +11,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { db, getFirebaseAuth } from "@/lib/firebase";
 import { adminJson } from "@/utils/adminApi";
 import {
   ProjectItem,
@@ -856,7 +856,8 @@ export const ProjectsSectionManager: React.FC = () => {
             .filter(Boolean)
             .pop() ||
           "";
-        const token = await auth.currentUser?.getIdToken();
+        const { currentUser } = await getFirebaseAuth();
+        const token = await currentUser?.getIdToken();
         if (slug && token) {
           await adminJson("/api/admin/landing-page/remove", {
             token,
