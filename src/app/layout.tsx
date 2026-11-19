@@ -1,4 +1,3 @@
-import { Inter } from "next/font/google";
 import { Metadata, Viewport } from "next";
 import "./globals.css";
 import Header from "@/components/Layout/Header";
@@ -14,12 +13,6 @@ import VisitorTracker from "@/components/VisitorTracker";
 import { AdvancedAnalyticsTracker } from "@/components/AdvancedAnalyticsTracker";
 import { SectionTracker } from "@/components/SectionTracker";
 import { Toaster } from "react-hot-toast";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
-});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://malithatishamal.vercel.app";
 
@@ -172,11 +165,18 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/icon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-icon.png" />
+        <link
+          rel="preload"
+          href="/fonts/inter-latin-var.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <AsyncStylesheet href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css" />
         <StructuredData siteUrl={siteUrl} />
       </head>
-      <body className={inter.className}>
+      <body className="font-sans">
         <NextTopLoader color="#0a66c2" showSpinner={false} />
         <AuthProvider>
           <AuthDialogProvider>

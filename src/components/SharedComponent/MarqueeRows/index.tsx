@@ -60,9 +60,6 @@ export interface MarqueeRowsProps<T> {
 const FADE_MASK =
   'linear-gradient(to right, transparent 0, black 40px, black calc(100% - 40px), transparent 100%)'
 
-/** Arrow nudge: one 404px card step in roughly 400ms. */
-const NUDGE_SPEED = 1000
-
 /** Keep a translate offset inside (-width, 0] so the loop never jumps. */
 function wrapOffset(value: number, width: number): number {
   if (width <= 0) return value
@@ -182,33 +179,34 @@ function MarqueeRow<T>({
   staticMode,
 }: MarqueeRowProps<T>) {
   const viewportRef = useRef<HTMLDivElement | null>(null)
-  const trackRef = useRef<HTMLDivElement | null>(null)
+  const shiftRef = useRef<HTMLDivElement | null>(null)
   const copyRef = useRef<HTMLDivElement | null>(null)
   const cloneRef = useRef<HTMLDivElement | null>(null)
 
+  /**
+   * Autoplay is a compositor-only CSS animation (`mq-track`); JS never writes
+   * a frame. `shift` is a static phase offset applied by an inner wrapper for
+   * drag / wheel / arrow nudges, kept inside (-width, 0] so folding it can
+   * never reveal the seam between the two copies.
+   */
+  const [copyWidth, setCopyWidth] = useState(0)
+  const [shift, setShift] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [inView, setInView] = useState(true)
+  const shiftValueRef = useRef(0)
+  const widthRef = useRef(0)
+
   const engine = useRef({
-    offset: 0,
-    width: 0,
-    /** Remaining distance of a one-card arrow nudge, in px. */
-    remaining: 0,
-    paused: false,
-    dragging: false,
-    // Fail-open: the section starts moving until an observer entry says otherwise.
-    inView: true,
     resumeTimer: undefined as number | undefined,
+    dragging: false,
     dragStartX: 0,
-    dragStartOffset: 0,
+    dragStartShift: 0,
     moved: false,
   })
 
   const direction = reverse ? 1 : -1
   // Reduced motion and the one-row fallback both mean "manual scrolling only".
   const motionOff = reduced || staticMode
-
-  const externalPausedRef = useRef(externalPaused)
-  useEffect(() => {
-    externalPausedRef.current = externalPaused
-  }, [externalPaused])
 
   const makeContext = (index: number): MarqueeItemContext => {
     const latest = (latestIndices[index] ?? index) < latestCount
@@ -218,6 +216,11 @@ function MarqueeRow<T>({
       rowIndex,
     }
   }
+
+  const applyShift = useCallback((next: number) => {
+    shiftValueRef.current = next
+    setShift(next)
+  }, [])
 
   useEffect(() => {
     if (motionOff) return
@@ -230,13 +233,13 @@ function MarqueeRow<T>({
 
     // Seed from real geometry so a silent observer never leaves the row frozen.
     const rect = element.getBoundingClientRect()
-    engine.current.inView = rect.top < window.innerHeight && rect.bottom > 0
+    setInView(rect.top < window.innerHeight && rect.bottom > 0)
 
     if (typeof IntersectionObserver === 'undefined') return
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0]
-        if (entry) engine.current.inView = entry.isIntersecting
+        if (entry) setInView(entry.isIntersecting)
       },
       { rootMargin: '0px 0px -10% 0px' }
     )
@@ -245,64 +248,23 @@ function MarqueeRow<T>({
   }, [motionOff])
 
   useEffect(() => {
-    const track = trackRef.current
     const copy = copyRef.current
-    if (!track || !copy) return
-
-    if (motionOff) {
-      track.style.transform = ''
-      return
-    }
-
-    const state = engine.current
-    let frame = 0
-    let last = 0
+    if (!copy || motionOff) return
 
     const measure = () => {
-      state.width = copy.offsetWidth
-      if (state.width <= 0) return
-      state.offset = wrapOffset(state.offset, state.width)
+      const width = copy.offsetWidth
+      widthRef.current = width
+      setCopyWidth(width)
+      if (width > 0) applyShift(wrapOffset(shiftValueRef.current, width))
     }
 
     measure()
-    state.offset = direction < 0 ? 0 : -state.width
-    state.remaining = 0
-    track.style.transform = `translate3d(${state.offset}px,0,0)`
-
-    const tick = (now: number) => {
-      const delta = last ? Math.min(0.05, (now - last) / 1000) : 0
-      last = now
-      const width = state.width
-
-      if (width > 0 && !document.hidden) {
-        if (state.remaining !== 0 && !state.dragging) {
-          // Arrow nudge: travel an exact card distance, then hand back to autoplay.
-          const step =
-            Math.sign(state.remaining) * Math.min(Math.abs(state.remaining), NUDGE_SPEED * delta)
-          state.offset += step
-          state.remaining -= step
-          if (Math.abs(state.remaining) < 0.01) state.remaining = 0
-        } else if (!state.paused && !state.dragging && state.inView && !externalPausedRef.current) {
-          state.offset += direction * speed * delta
-        }
-
-        state.offset = wrapOffset(state.offset, width)
-        track.style.transform = `translate3d(${state.offset.toFixed(2)}px,0,0)`
-      }
-
-      frame = requestAnimationFrame(tick)
-    }
-
-    frame = requestAnimationFrame(tick)
     const observer = new ResizeObserver(measure)
     observer.observe(copy)
     document.fonts?.ready.then(measure).catch(() => undefined)
 
-    return () => {
-      cancelAnimationFrame(frame)
-      observer.disconnect()
-    }
-  }, [motionOff, speed, direction, items.length])
+    return () => observer.disconnect()
+  }, [motionOff, applyShift, items.length])
 
   const clearResume = () => {
     if (engine.current.resumeTimer) {
@@ -313,13 +275,13 @@ function MarqueeRow<T>({
 
   const pause = useCallback(() => {
     clearResume()
-    engine.current.paused = true
+    setPaused(true)
   }, [])
 
   const scheduleResume = useCallback((delay = 1000) => {
     clearResume()
     engine.current.resumeTimer = window.setTimeout(() => {
-      if (!engine.current.dragging) engine.current.paused = false
+      if (!engine.current.dragging) setPaused(false)
       engine.current.resumeTimer = undefined
     }, delay)
   }, [])
@@ -331,15 +293,14 @@ function MarqueeRow<T>({
     if (event.pointerType === 'mouse' && event.button !== 0) return
     const state = engine.current
     state.dragging = true
-    state.remaining = 0
     state.dragStartX = event.clientX
-    state.dragStartOffset = state.offset
+    state.dragStartShift = shiftValueRef.current
     pause()
 
     const onMove = (moveEvent: PointerEvent) => {
       const dx = moveEvent.clientX - state.dragStartX
       if (Math.abs(dx) > 6) state.moved = true
-      state.offset = state.dragStartOffset + dx
+      applyShift(wrapOffset(state.dragStartShift + dx, widthRef.current))
     }
     const onUp = () => {
       state.dragging = false
@@ -376,9 +337,13 @@ function MarqueeRow<T>({
     return (card?.getBoundingClientRect().width || 380) + 24
   }
 
+  /**
+   * One-card arrow nudge. Runs on the Web Animations API so the travel is
+   * compositor-driven; a wrap jump lands instantly because it is exactly one
+   * copy wide and therefore invisible.
+   */
   const nudge = useCallback(
     (forward: boolean) => {
-      const state = engine.current
       const step = cardStep()
       if (motionOff) {
         viewportRef.current?.scrollBy({
@@ -388,17 +353,33 @@ function MarqueeRow<T>({
         return
       }
       // Row 2 travels the other way, so "next" follows each row's own direction.
-      state.remaining += (forward ? direction : -direction) * step
+      const from = shiftValueRef.current
+      const to = wrapOffset(from + (forward ? direction : -direction) * step, widthRef.current)
+      applyShift(to)
+      const element = shiftRef.current
+      if (
+        element &&
+        typeof element.animate === 'function' &&
+        Math.abs(to - from) < widthRef.current / 2
+      ) {
+        element.animate(
+          [
+            { transform: `translate3d(${from}px, 0, 0)` },
+            { transform: `translate3d(${to}px, 0, 0)` },
+          ],
+          { duration: 420, easing: 'cubic-bezier(.22,.61,.36,1)' }
+        )
+      }
       pause()
       scheduleResume(1000)
     },
-    [direction, pause, motionOff, scheduleResume]
+    [applyShift, direction, motionOff, pause, scheduleResume]
   )
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     if (motionOff) return
     if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
-    engine.current.offset -= event.deltaX
+    applyShift(wrapOffset(shiftValueRef.current - event.deltaX, widthRef.current))
     pause()
     scheduleResume(1000)
   }
@@ -466,31 +447,45 @@ function MarqueeRow<T>({
             touchAction: motionOff ? 'pan-x' : 'pan-y',
           }}>
           <div
-            ref={trackRef}
-            className='flex w-max will-change-transform'
-            style={motionOff ? undefined : { transform: 'translate3d(0,0,0)' }}>
-            <div ref={copyRef} className='flex gap-6 pr-6'>
-              {items.map((item, index) => (
-                <div
-                  key={`${getKey(item)}-${index}`}
-                  data-marquee-card=''
-                  data-card-key={getKey(item)}>
-                  {renderCard(item, makeContext(index))}
-                </div>
-              ))}
-            </div>
-            {!motionOff && (
-              <div ref={cloneRef} aria-hidden='true' className='flex gap-6 pr-6'>
+            className={`flex w-max ${
+              motionOff ? '' : `mq-track ${direction < 0 ? 'mq-forward' : 'mq-reverse'}`
+            }`}
+            style={
+              motionOff
+                ? undefined
+                : ({
+                    '--mq-w': `${copyWidth}px`,
+                    '--mq-duration': copyWidth > 0 ? `${(copyWidth / speed).toFixed(2)}s` : '60s',
+                    animationPlayState: paused || !inView || externalPaused ? 'paused' : 'running',
+                  } as React.CSSProperties)
+            }>
+            <div
+              ref={shiftRef}
+              className='flex w-max'
+              style={motionOff ? undefined : { transform: `translate3d(${shift.toFixed(2)}px,0,0)` }}>
+              <div ref={copyRef} className='flex gap-6 pr-6'>
                 {items.map((item, index) => (
                   <div
-                    key={`clone-${getKey(item)}-${index}`}
+                    key={`${getKey(item)}-${index}`}
                     data-marquee-card=''
                     data-card-key={getKey(item)}>
                     {renderCard(item, makeContext(index))}
                   </div>
                 ))}
               </div>
-            )}
+              {!motionOff && (
+                <div ref={cloneRef} aria-hidden='true' className='flex gap-6 pr-6'>
+                  {items.map((item, index) => (
+                    <div
+                      key={`clone-${getKey(item)}-${index}`}
+                      data-marquee-card=''
+                      data-card-key={getKey(item)}>
+                      {renderCard(item, makeContext(index))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
