@@ -2,44 +2,30 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import BlogCard, { BlogCardSkeleton } from "@/components/SharedComponent/Blog/blogCard";
-import { collection, getDocs, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { BlogPost, BLOG_CATEGORIES, defaultBlogPosts } from "@/types/blog";
 import { isPostVisible, sortPostsByDate } from "@/utils/blogPosts";
 
 const PAGE_SIZE = 9;
 const LATEST_COUNT = 6;
 
-const BlogList: React.FC = () => {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+interface BlogListProps {
+  /** Server-rendered posts (the page is statically regenerated). */
+  initialPosts?: BlogPost[];
+}
+
+const resolveInitialPosts = (initialPosts?: BlogPost[]) => {
+  const visible = sortPostsByDate((initialPosts || []).filter((post) => isPostVisible(post)));
+  return visible.length > 0
+    ? visible
+    : sortPostsByDate(defaultBlogPosts.filter((post) => isPostVisible(post)));
+};
+
+const BlogList: React.FC<BlogListProps> = ({ initialPosts }) => {
+  const [posts] = useState<BlogPost[]>(() => resolveInitialPosts(initialPosts));
+  const loading = false;
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const blogsRef = collection(db, "blogs");
-        const snapshot = await getDocs(query(blogsRef));
-
-        const list: BlogPost[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<BlogPost, "id">),
-        }));
-
-        const visible = sortPostsByDate(list.filter((post) => isPostVisible(post)));
-        setPosts(visible.length > 0 ? visible : sortPostsByDate(defaultBlogPosts.filter((post) => isPostVisible(post))));
-      } catch (err) {
-        console.error("Error fetching blog list:", err);
-        setPosts(sortPostsByDate(defaultBlogPosts.filter((post) => isPostVisible(post))));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPosts();
-  }, []);
 
   // Collect all unique categories from posts
   const availableCategories = useMemo(() => {
@@ -167,6 +153,7 @@ const BlogList: React.FC = () => {
                       blog={blog}
                       widthClass="w-full"
                       latest={rank < LATEST_COUNT}
+                      priority={rank === 0}
                     />
                   </div>
                 );

@@ -3,13 +3,12 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import type { User, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db, loadAuthModule, getFirebaseAuth, getSocialProviders } from "@/lib/firebase";
+  loadAuthModule,
+  getFirebaseAuth,
+  getSocialProviders,
+  loadFirestore,
+  getDb,
+} from "@/lib/firebaseApp";
 
 export interface UserProfile {
   uid: string;
@@ -62,6 +61,13 @@ const setAuthHint = (value: boolean) => {
   }
 };
 
+/** Lazily resolves the Firestore SDK plus the shared database instance. */
+const fsCtx = async () => {
+  const mod = await loadFirestore();
+  const db = await getDb();
+  return { ...mod, db };
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -75,6 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Helper to fetch user profile from Firestore
   const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
     try {
+      const { doc, getDoc, db } = await fsCtx();
       const docRef = doc(db, "users", uid);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
@@ -142,6 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Auto-approve the initial super admin so they can access the admin panel to approve others
           if (isSuper && fbUser.emailVerified && profile && (!profile.isApproved || profile.status !== "approved" || profile.role !== "admin")) {
             try {
+              const { doc, updateDoc, serverTimestamp, db } = await fsCtx();
               await updateDoc(doc(db, "users", fbUser.uid), {
                 role: "admin",
                 status: "approved",
@@ -259,6 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } =
       await loadAuthModule();
     const auth = await getFirebaseAuth();
+    const { doc, setDoc, serverTimestamp, db } = await fsCtx();
     const cleanEmail = email.toLowerCase().trim();
     const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
     if (name) {
@@ -315,6 +324,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithEmail = async (email: string, pass: string) => {
     const { signInWithEmailAndPassword, sendEmailVerification, signOut } = await loadAuthModule();
     const auth = await getFirebaseAuth();
+    const { doc, setDoc, updateDoc, serverTimestamp, db } = await fsCtx();
     const cleanEmail = email.toLowerCase().trim();
     const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
 
@@ -402,6 +412,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   ) => {
     const { signInWithPopup, signOut } = await loadAuthModule();
     const auth = await getFirebaseAuth();
+    const { doc, setDoc, updateDoc, serverTimestamp, db } = await fsCtx();
     isSocialAuthInProgress.current = true;
     try {
       const result = await signInWithPopup(auth, providerInstance);

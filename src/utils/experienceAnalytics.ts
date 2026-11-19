@@ -1,5 +1,4 @@
-import { doc, setDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { withDb } from "@/lib/lazyFirestore";
 
 const hoverSessionKey = (itemId: string) => `exp_hover_${itemId}`;
 const sectionSessionKey = "exp_section_viewed";
@@ -10,6 +9,7 @@ const sectionSessionKey = "exp_section_viewed";
 export async function trackExperienceClick(itemId: string): Promise<void> {
   if (!itemId) return;
   try {
+    const { doc, setDoc, increment, db } = await withDb();
     await setDoc(
       doc(db, "experiences", itemId),
       { clickCount: increment(1) },
@@ -32,6 +32,7 @@ export async function trackExperienceHover(itemId: string): Promise<void> {
   sessionStorage.setItem(key, "1");
 
   try {
+    const { doc, setDoc, increment, db } = await withDb();
     await setDoc(
       doc(db, "experiences", itemId),
       { hoverCount: increment(1) },
@@ -55,6 +56,7 @@ export async function trackExperienceSectionView(): Promise<void> {
   }
 
   try {
+    const { doc, setDoc, increment, db } = await withDb();
     await setDoc(
       doc(db, "siteContent", "experienceAnalytics"),
       { sectionViewCount: increment(1) },

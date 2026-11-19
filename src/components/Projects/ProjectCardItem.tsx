@@ -24,6 +24,8 @@ interface ProjectCardItemProps {
   /** Width override (cards are fixed-width in the marquee, `w-full` in admin). */
   widthClass?: string
   className?: string
+  /** Above-the-fold card: load its cover eagerly so it can be the LCP image. */
+  priority?: boolean
 }
 
 const PLACEHOLDER_COVER = '/images/portfolio/cozycasa.png'
@@ -83,6 +85,7 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
   latest = false,
   widthClass,
   className,
+  priority = false,
 }) => {
   const rawImages =
     project.images && project.images.length > 0
@@ -157,7 +160,8 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
           src={getImgPath(src)}
           alt={alt}
           fill
-          loading='lazy'
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
           sizes='(max-width: 640px) 85vw, (max-width: 1280px) 320px, 380px'
           style={{
             objectPosition: isSlotContain
@@ -240,7 +244,8 @@ export const ProjectCardItem: React.FC<ProjectCardItemProps> = ({
           src={getImgPath(cover)}
           alt={project.altText || `${project.title} – Software & Engineering by Malitha Tishamal`}
           fill
-          loading='lazy'
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
           sizes='(max-width: 640px) 85vw, (max-width: 1280px) 320px, 380px'
           style={{ objectPosition: `${ox}% ${oy}%` }}
           className={`${

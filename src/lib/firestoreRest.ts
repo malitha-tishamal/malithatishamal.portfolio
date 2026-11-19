@@ -134,6 +134,50 @@ export async function getFirestoreDoc<T = Record<string, unknown>>(
   return fromFirestoreFields(data.fields) as T;
 }
 
+/** Read every document in a collection (public content only). */
+export async function getFirestoreCollection<T = Record<string, unknown>>(
+  collectionId: string,
+  options: FetchOptions & { limit?: number } = {}
+): Promise<Array<T & { id: string }>> {
+  const project = projectId();
+  if (!project) return [];
+  const url = withKey(
+    `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents:runQuery`
+  );
+  const structuredQuery: Record<string, unknown> = {
+    from: [{ collectionId }],
+  };
+  if (options.limit) structuredQuery.limit = options.limit;
+
+  const init: RequestInit & { next?: { revalidate?: number; tags?: string[] } } = {
+    method: "POST",
+    headers: authHeaders(options.idToken),
+    cache: options.cache ?? (options.revalidate !== undefined ? undefined : "no-store"),
+    next:
+      options.revalidate !== undefined
+        ? { revalidate: options.revalidate, tags: options.tags }
+        : undefined,
+    body: JSON.stringify({ structuredQuery }),
+  };
+
+  const resp = await fetch(url, init);
+  if (!resp.ok) {
+    throw new Error(`Firestore query failed (${resp.status}) for ${collectionId}`);
+  }
+  const rows = (await resp.json()) as Array<{
+    document?: { name: string; fields?: Record<string, any> };
+  }>;
+  const out: Array<T & { id: string }> = [];
+  for (const row of rows) {
+    if (!row.document) continue;
+    const id = row.document.name.split("/").pop() || "";
+    out.push({ id, ...(fromFirestoreFields(row.document.fields) as T) } as T & {
+      id: string;
+    });
+  }
+  return out;
+}
+
 /**
  * Create/merge a document with the admin's ID token. Fields listed in
  * `deleteFields` (or set to `undefined`) are removed from the document.

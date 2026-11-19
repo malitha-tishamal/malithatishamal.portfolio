@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { withDb } from '@/lib/lazyFirestore';
+import { whenIdleOrInteraction } from '@/lib/deferClientWork';
 import { collectAdvancedAnalytics, updateActivityData, getActivityData, endSession } from '@/utils/advancedAnalytics';
 import { AdvancedAnalyticsData } from '@/types/advancedAnalytics';
 import toast from 'react-hot-toast';
@@ -18,6 +18,7 @@ export const useAdvancedAnalytics = () => {
     if (fallbackData.length === 0) return;
     
     try {
+      const { collection, addDoc, serverTimestamp, db } = await withDb();
       for (const data of fallbackData) {
         if (data.saveFailed) {
           await addDoc(collection(db, 'advancedAnalytics'), {
@@ -35,9 +36,11 @@ export const useAdvancedAnalytics = () => {
   };
 
   useEffect(() => {
-    initializeAnalytics();
+    // Analytics writes are not part of the page load: wait for the visitor to
+    // engage (or 12 s of passive reading) before pulling in Firestore.
+    const stop = whenIdleOrInteraction(() => void initializeAnalytics(), 12000);
     return () => {
-      // Save data when component unmounts (user leaves page)
+      stop();
       saveAnalyticsOnExit();
     };
   }, []);
@@ -77,6 +80,7 @@ export const useAdvancedAnalytics = () => {
 
   const saveToFirestore = async (data: AdvancedAnalyticsData) => {
     try {
+      const { collection, addDoc, serverTimestamp, db } = await withDb();
       // Remove undefined values before saving to Firestore
       const cleanData = removeUndefinedValues(data);
       

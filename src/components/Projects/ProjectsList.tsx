@@ -1,8 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
-import { collection, onSnapshot } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import React, { useState, useMemo } from 'react'
 import {
   ProjectItem,
   defaultProjects,
@@ -10,60 +8,28 @@ import {
 } from '@/types/project'
 import { ProjectCardItem } from './ProjectCardItem'
 import { ProjectDetailModal } from './ProjectDetailModal'
-import { FEATURED_GRID_CLASSES } from '@/types/featuredProjects'
-import { useFeaturedProjectsSettings } from '@/hooks/useFeaturedProjectsSettings'
+import {
+  FEATURED_GRID_CLASSES,
+  FEATURED_PROJECTS_DEFAULTS,
+  type FeaturedProjectsSettings,
+} from '@/types/featuredProjects'
 import { toDateValue } from '@/utils/relativeTime'
 
 const LATEST_COUNT = 6
 
-export const ProjectsList: React.FC = () => {
-  const [projects, setProjects] = useState<ProjectItem[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
+interface ProjectsListProps {
+  /** Server-rendered rows; the page is statically regenerated. */
+  initialProjects?: ProjectItem[]
+  initialSettings?: FeaturedProjectsSettings
+}
+
+export const ProjectsList: React.FC<ProjectsListProps> = ({ initialProjects, initialSettings }) => {
+  const projects = useMemo(() => initialProjects ?? [], [initialProjects])
+  const loading = false
   const [activeCategory, setActiveCategory] = useState<string>('All Projects')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
-  const settings = useFeaturedProjectsSettings()
-
-  // Real-time Firestore sync
-  useEffect(() => {
-    try {
-      const unsubscribe = onSnapshot(
-        collection(db, 'projects'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const fetched: ProjectItem[] = []
-            snapshot.forEach((docSnap) => {
-              fetched.push({
-                ...(docSnap.data() as ProjectItem),
-                id: docSnap.id,
-              })
-            })
-            // Newest first on the same field the "Latest" pill reads, so the
-            // six blue badges are always the first six cards.
-            fetched.sort((a, b) => {
-              const aTime = toDateValue(a.updatedAt || a.createdAt)?.getTime() ?? 0
-              const bTime = toDateValue(b.updatedAt || b.createdAt)?.getTime() ?? 0
-              return bTime - aTime || (a.displayOrder || 0) - (b.displayOrder || 0)
-            })
-            setProjects(fetched)
-          } else {
-            setProjects([])
-          }
-          setLoading(false)
-        },
-        (error) => {
-          console.warn('Firestore projects listener notice:', error.message)
-          setProjects([])
-          setLoading(false)
-        }
-      )
-      return () => unsubscribe()
-    } catch (err) {
-      console.error('Error setting up projects listener:', err)
-      setProjects([])
-      setLoading(false)
-    }
-  }, [])
+  const settings = initialSettings ?? FEATURED_PROJECTS_DEFAULTS
 
   // Dynamic Categories from database
   const dynamicCategories = Array.from(
@@ -189,10 +155,11 @@ export const ProjectsList: React.FC = () => {
           </div>
         ) : (
           <div className={`grid ${FEATURED_GRID_CLASSES[settings.cardsPerRow]} gap-6 sm:gap-7 items-stretch`}>
-            {filteredProjects.map((project) => (
+            {filteredProjects.map((project, index) => (
               <ProjectCardItem
                 key={project.id}
                 project={project}
+                priority={index === 0}
                 tagsShown={settings.tagsShown}
                 descriptionLines={settings.descriptionLines}
                 showVisitSite={settings.showVisitSite}

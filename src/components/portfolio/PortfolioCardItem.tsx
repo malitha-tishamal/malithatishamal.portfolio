@@ -143,7 +143,7 @@ const VideoMedia: React.FC<{ item: PortfolioItem; src: string; thumb: string }> 
   )
 }
 
-const PortfolioMedia: React.FC<{ item: PortfolioItem }> = memo(function PortfolioMedia({ item }) {
+const PortfolioMedia: React.FC<{ item: PortfolioItem; priority?: boolean }> = memo(function PortfolioMedia({ item, priority = false }) {
   const images = item.images || []
   const videoSrc = item.videoUrl || images.find((src) => isVideoUrl(src)) || ''
   const isVideo =
@@ -189,7 +189,8 @@ const PortfolioMedia: React.FC<{ item: PortfolioItem }> = memo(function Portfoli
           src={getImgPath(src)}
           alt={label}
           fill
-          loading='lazy'
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
           sizes={IMAGE_SIZES}
           style={positions}
           className={contain ? 'object-contain p-3' : 'object-cover object-top'}
@@ -243,6 +244,7 @@ const PortfolioMedia: React.FC<{ item: PortfolioItem }> = memo(function Portfoli
 
 export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = memo(function PortfolioCardItem({
   item,
+  index = 0,
   onClick,
   onOpen,
   latest = false,
@@ -254,7 +256,7 @@ export const PortfolioCardItem: React.FC<PortfolioCardItemProps> = memo(function
 
   return (
     <ContentCard
-      media={<PortfolioMedia item={item} />}
+      media={<PortfolioMedia item={item} priority={index === 0} />}
       relativeDate={item.updatedAt || item.createdAt}
       relativeVerb='updated'
       latest={latest}

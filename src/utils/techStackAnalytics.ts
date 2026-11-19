@@ -1,5 +1,4 @@
-import { doc, setDoc, increment, collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { withDb } from "@/lib/lazyFirestore";
 import { TechItem } from "@/types/techstack";
 import { getClientIP, getTodayDate } from "@/utils/visitorTracking";
 
@@ -49,6 +48,7 @@ async function logActivity(
   eventType: "click" | "hover" | "modal_open"
 ) {
   try {
+    const { collection, addDoc, serverTimestamp, db } = await withDb();
     const ip = await getOrFetchIp();
     const { browser, device, userAgent } = getDeviceInfo();
     const today = getTodayDate();
@@ -84,6 +84,7 @@ export async function trackTechStackHover(item: TechItem): Promise<void> {
   sessionStorage.setItem(sessionKey, "1");
 
   try {
+    const { doc, setDoc, increment, db } = await withDb();
     // 1. Update item document
     await setDoc(
       doc(db, "techItems", item.id),
@@ -116,6 +117,7 @@ export async function trackTechStackClick(item: TechItem): Promise<void> {
   if (!item?.id) return;
 
   try {
+    const { doc, setDoc, increment, db } = await withDb();
     // 1. Update item document click & modalOpen counts
     await setDoc(
       doc(db, "techItems", item.id),

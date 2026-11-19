@@ -1,8 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { collection, doc, onSnapshot } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import React, { useState } from 'react'
 import {
   PortfolioItem,
   defaultPortfolioItems,
@@ -19,66 +17,19 @@ const normalizeCategory = (cat: string): string => {
   return c
 }
 
-const PortfolioList: React.FC = () => {
-  const [items, setItems] = useState<PortfolioItem[]>([])
-  const [customCategories, setCustomCategories] = useState<string[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
+interface PortfolioListProps {
+  /** Server-rendered rows (the page is statically regenerated). */
+  initialItems?: PortfolioItem[]
+  /** Extra categories configured in the admin panel. */
+  initialCategories?: string[]
+}
+
+const PortfolioList: React.FC<PortfolioListProps> = ({ initialItems, initialCategories }) => {
+  const items = initialItems ?? []
+  const customCategories = initialCategories ?? []
+  const loading = false
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('All Photos')
-
-  // Real-time custom categories from Firestore
-  useEffect(() => {
-    try {
-      const unsub = onSnapshot(doc(db, 'siteContent', 'portfolioCategories'), (snap) => {
-        if (snap.exists()) {
-          const data = snap.data()
-          if (Array.isArray(data.categories)) {
-            setCustomCategories(data.categories.filter(Boolean))
-          }
-        }
-      })
-      return () => unsub()
-    } catch (e) {
-      console.warn('Portfolio custom categories listener error:', e)
-    }
-  }, [])
-
-  // Real-time Firestore sync
-  useEffect(() => {
-    try {
-      const unsubscribe = onSnapshot(
-        collection(db, 'portfolio'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const fetched: PortfolioItem[] = []
-            snapshot.forEach((docSnap) => {
-              const data = docSnap.data() as PortfolioItem
-              fetched.push({
-                ...data,
-                id: docSnap.id,
-                subtitle: normalizeCategory(data.subtitle || 'Events'),
-              })
-            })
-            fetched.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
-            setItems(fetched)
-          } else {
-            setItems([])
-          }
-          setLoading(false)
-        },
-        (error) => {
-          console.warn('Firestore portfolio listener notice:', error.message)
-          setItems([])
-          setLoading(false)
-        }
-      )
-      return () => unsubscribe()
-    } catch (err) {
-      console.error('Error setting up portfolio listener:', err)
-      setItems([])
-      setLoading(false)
-    }
-  }, [])
 
   // Excluded obsolete categories
   const excludedCategories = new Set([

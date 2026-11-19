@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, increment, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { whenIdleOrInteraction } from '@/lib/deferClientWork';
 import { Visitor } from '@/types/visitor';
 import {
   getClientIP,
@@ -13,21 +12,41 @@ import {
   getCurrentPage,
 } from '@/utils/visitorTracking';
 
+type FirestoreModule = typeof import('firebase/firestore');
+
+/**
+ * Visitor counter + one-off visit record.
+ *
+ * Everything here is deferred to idle time and the Firestore SDK is imported
+ * dynamically, so analytics never competes with hydration or the LCP image.
+ */
 export const useVisitorTracking = () => {
   const [isTracking, setIsTracking] = useState(false);
   const [totalVisitors, setTotalVisitors] = useState(0);
 
   useEffect(() => {
-    const trackVisitor = async () => {
-      // Check if already visited today to avoid duplicate tracking
-      if (hasVisitedToday()) {
-        return;
-      }
+    let cancelled = false;
+    let unsub: (() => void) | undefined;
 
+    const start = async () => {
       try {
+        const [mod, { getDb }] = await Promise.all([
+          import('firebase/firestore'),
+          import('@/lib/firebaseApp'),
+        ]);
+        if (cancelled) return;
+        const db = await getDb();
+        if (cancelled) return;
+
+        unsub = mod.onSnapshot(mod.doc(db, 'siteContent', 'visitorCounter'), (snap) => {
+          if (snap.exists()) {
+            setTotalVisitors(snap.data()?.totalVisitors || 0);
+          }
+        });
+
+        if (hasVisitedToday()) return;
         setIsTracking(true);
 
-        // Get visitor information
         const ip = await getClientIP();
         const location = await getLocationFromIP(ip);
         const userAgent = getUserAgent();
@@ -35,7 +54,6 @@ export const useVisitorTracking = () => {
         const page = getCurrentPage();
         const today = getTodayDate();
 
-        // Create visitor document
         const visitorData: Omit<Visitor, 'id'> = {
           ip,
           location: {
@@ -53,65 +71,57 @@ export const useVisitorTracking = () => {
           ...(page && { page }),
         };
 
-        // Add visitor to Firestore
-        await addDoc(collection(db, 'visitors'), visitorData);
-
-        // Update daily stats
-        await updateDailyStats(today, location.country);
-
-        // Update total visitors count
-        await incrementTotalVisitors();
-
-        // Mark as visited today
+        await mod.addDoc(mod.collection(db, 'visitors'), visitorData);
+        await updateDailyStats(mod, db, today, location.country);
+        await incrementTotalVisitors(mod, db);
         markVisitedToday();
       } catch (error) {
         console.error('Error tracking visitor:', error);
       } finally {
-        setIsTracking(false);
+        if (!cancelled) setIsTracking(false);
       }
     };
 
-    trackVisitor();
-
-    // Listen for real-time updates to total visitors count
-    const counterRef = doc(db, 'siteContent', 'visitorCounter');
-    const unsubscribe = onSnapshot(counterRef, (doc) => {
-      if (doc.exists()) {
-        setTotalVisitors(doc.data()?.totalVisitors || 0);
-      }
-    });
-
-    return () => unsubscribe();
+    if (typeof window === "undefined") return;
+    const stop = whenIdleOrInteraction(() => void start(), 12000);
+    return () => {
+      cancelled = true;
+      stop();
+      unsub?.();
+    };
   }, []);
 
-  const updateDailyStats = async (date: string, country: string) => {
+  const updateDailyStats = async (
+    mod: FirestoreModule,
+    db: Awaited<ReturnType<typeof import('@/lib/firebaseApp').getDb>>,
+    date: string,
+    country: string
+  ) => {
     try {
-      const dailyStatsRef = doc(db, 'dailyStats', date);
-      const dailyStatsDoc = await getDoc(dailyStatsRef);
+      const dailyStatsRef = mod.doc(db, 'dailyStats', date);
+      const dailyStatsDoc = await mod.getDoc(dailyStatsRef);
 
       if (dailyStatsDoc.exists()) {
-        // Update existing daily stats
-        await setDoc(
+        await mod.setDoc(
           dailyStatsRef,
           {
-            totalVisitors: increment(1),
-            uniqueVisitors: increment(1),
-            [`locations.${country}`]: increment(1),
-            updatedAt: serverTimestamp(),
+            totalVisitors: mod.increment(1),
+            uniqueVisitors: mod.increment(1),
+            [`locations.${country}`]: mod.increment(1),
+            updatedAt: mod.serverTimestamp(),
           },
           { merge: true }
         );
       } else {
-        // Create new daily stats
-        await setDoc(dailyStatsRef, {
+        await mod.setDoc(dailyStatsRef, {
           date,
           totalVisitors: 1,
           uniqueVisitors: 1,
           locations: {
             [country]: 1,
           },
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
+          createdAt: mod.serverTimestamp(),
+          updatedAt: mod.serverTimestamp(),
         });
       }
     } catch (error) {
@@ -119,25 +129,26 @@ export const useVisitorTracking = () => {
     }
   };
 
-  const incrementTotalVisitors = async () => {
+  const incrementTotalVisitors = async (
+    mod: FirestoreModule,
+    db: Awaited<ReturnType<typeof import('@/lib/firebaseApp').getDb>>
+  ) => {
     try {
-      const counterRef = doc(db, 'siteContent', 'visitorCounter');
-      const counterDoc = await getDoc(counterRef);
-      
+      const counterRef = mod.doc(db, 'siteContent', 'visitorCounter');
+      const counterDoc = await mod.getDoc(counterRef);
+
       if (!counterDoc.exists()) {
-        // Initialize counter if it doesn't exist
-        await setDoc(counterRef, {
+        await mod.setDoc(counterRef, {
           totalVisitors: 1,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
+          createdAt: mod.serverTimestamp(),
+          updatedAt: mod.serverTimestamp(),
         });
       } else {
-        // Increment existing counter
-        await setDoc(
+        await mod.setDoc(
           counterRef,
           {
-            totalVisitors: increment(1),
-            updatedAt: serverTimestamp(),
+            totalVisitors: mod.increment(1),
+            updatedAt: mod.serverTimestamp(),
           },
           { merge: true }
         );

@@ -1,15 +1,12 @@
 'use client'
 
-import React, { FC, useState, useEffect } from 'react'
+import React, { FC, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { doc, onSnapshot, collection, serverTimestamp, setDoc, increment } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { getImgPath } from '@/utils/image'
 import { FooterContent, defaultFooterContent } from '@/types/footer'
 import toast from 'react-hot-toast'
-import { useVisitorTracking } from '@/hooks/useVisitorTracking'
 
 const SOCIAL_COLORS: Record<string, string> = {
   LinkedIn: 'bg-[#0A66C2]',
@@ -33,41 +30,20 @@ const SocialIcon = ({ platform, className = 'w-5 h-5' }: SocialIconProps) => {
   return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
 }
 
-const Footer: FC = () => {
+interface FooterProps {
+  /** Server-rendered footer document (sorted once per revalidation window). */
+  initialContent?: FooterContent
+  /** Server-rendered visitor total; live updates are not critical. */
+  initialVisitors?: number
+}
+
+const Footer: FC<FooterProps> = ({ initialContent, initialVisitors = 0 }) => {
   const pathUrl = usePathname()
-  const [data, setData] = useState<FooterContent>(defaultFooterContent)
+  const [data, setData] = useState<FooterContent>(initialContent ?? defaultFooterContent)
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
-  const { totalVisitors } = useVisitorTracking()
-
-  // Real-time Firestore sync
-  useEffect(() => {
-    try {
-      const unsub = onSnapshot(
-        doc(db, 'siteContent', 'footer'),
-        (snap) => {
-          if (snap.exists()) {
-            // The footer document is public. Older builds stored SMTP secrets
-            // in it — drop them from client state as defence in depth.
-            const raw = (snap.data() || {}) as Record<string, unknown>
-            delete raw.gmailSmtpAppPassword
-            delete raw.gmailSmtpUser
-            delete raw.gmailNotificationRecipient
-            delete raw.gmailSmtpEnabled
-            delete raw.newsletterNotificationEmail
-            setData({ ...defaultFooterContent, ...(raw as unknown as FooterContent) })
-          }
-        },
-        (err) => {
-          console.warn('Footer sync notice:', err.message)
-        }
-      )
-      return () => unsub()
-    } catch (err) {
-      console.error('Footer listener error:', err)
-    }
-  }, [])
+  const totalVisitors = initialVisitors
 
   if (pathUrl?.startsWith('/admin')) return null
 

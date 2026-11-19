@@ -13,6 +13,7 @@ import VisitorTracker from "@/components/VisitorTracker";
 import { AdvancedAnalyticsTracker } from "@/components/AdvancedAnalyticsTracker";
 import { SectionTracker } from "@/components/SectionTracker";
 import { Toaster } from "react-hot-toast";
+import { getFooterContentServer, getVisitorCountServer } from "@/lib/serverContent";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://malithatishamal.vercel.app";
 
@@ -155,11 +156,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [footerContent, totalVisitors] = await Promise.all([
+    getFooterContentServer(),
+    getVisitorCountServer(),
+  ]);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -190,7 +196,7 @@ export default function RootLayout({
               <SectionTracker />
               <Header />
               {children}
-              <Footer />
+              <Footer initialContent={footerContent} initialVisitors={totalVisitors} />
               <ScrollToTop />
               <Toaster position="top-center" reverseOrder={false} />
             </ThemeProvider>
