@@ -5,11 +5,13 @@ import Image from "next/image";
 import {
   collection,
   getDocs,
+  getDoc,
   doc,
   setDoc,
   deleteDoc,
   serverTimestamp,
   query,
+  arrayUnion,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { BlogPost, BLOG_CATEGORIES, defaultBlogPosts, RelatedLink } from "@/types/blog";
@@ -67,13 +69,34 @@ export const BlogManager: React.FC = () => {
   const [authorAvatarProgress, setAuthorAvatarProgress] = useState<number | null>(null);
   const [galleryProgress, setGalleryProgress] = useState<number | null>(null);
 
+  // ── Trigger On-Demand ISR Revalidation ─────────────────────────────────────
+  const triggerRevalidate = async () => {
+    try {
+      await fetch("/api/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "blogs", path: "/blog" }),
+      });
+    } catch (e) {
+      console.warn("Revalidate error:", e);
+    }
+  };
+
   // ── Fetch Blogs ─────────────────────────────────────────────────────────────
   const fetchBlogs = async () => {
     try {
       setLoading(true);
       const blogsRef = collection(db, "blogs");
       const q = query(blogsRef);
-      const snapshot = await getDocs(q);
+      const [snapshot, configSnap] = await Promise.all([
+        getDocs(q),
+        getDoc(doc(db, "siteContent", "blogsConfig")),
+      ]);
+
+      const isInitialized = configSnap.exists();
+      const deletedIds: string[] = configSnap.exists()
+        ? (configSnap.data()?.deletedDefaultIds || [])
+        : [];
 
       if (!snapshot.empty) {
         const list: BlogPost[] = snapshot.docs.map((d) => ({
@@ -89,8 +112,13 @@ export const BlogManager: React.FC = () => {
         });
 
         setPosts(list);
+      } else if (!isInitialized) {
+        // First-time visit before any admin action: show default posts that haven't been deleted
+        const activeDefaults = defaultBlogPosts.filter((p) => !deletedIds.includes(p.id));
+        setPosts(activeDefaults);
       } else {
-        setPosts(defaultBlogPosts);
+        // Initialized, but collection is empty: admin intentionally deleted all posts
+        setPosts([]);
       }
     } catch (err) {
       console.error("Error fetching blogs:", err);
@@ -104,9 +132,9 @@ export const BlogManager: React.FC = () => {
     fetchBlogs();
   }, []);
 
-  // ── Seed Default Blogs ──────────────────────────────────────────────────────
+  // ── Seed / Overwrite All 8 Default Blogs ────────────────────────────────────
   const handleSeedDefaults = async () => {
-    if (!confirm("This will seed default engineering & news articles to Firestore. Continue?")) {
+    if (!confirm("This will seed/overwrite all 8 default engineering & news articles to Firestore. Continue?")) {
       return;
     }
 
@@ -117,13 +145,61 @@ export const BlogManager: React.FC = () => {
         await setDoc(docRef, {
           ...item,
           updatedAt: serverTimestamp(),
-        });
+        }, { merge: true });
       }
-      toast.success("Default articles seeded successfully!");
+      await setDoc(doc(db, "siteContent", "blogsConfig"), {
+        initialized: true,
+        deletedDefaultIds: [],
+        updatedAt: serverTimestamp(),
+      });
+      toast.success("All 8 default articles synced to Firestore!");
+      await triggerRevalidate();
       fetchBlogs();
     } catch (err) {
       console.error("Error seeding defaults:", err);
       toast.error("Failed to seed default articles.");
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  // ── Import Only Missing Default Blogs ───────────────────────────────────────
+  const handleImportMissingDefaults = async () => {
+    try {
+      setSeeding(true);
+      const blogsRef = collection(db, "blogs");
+      const snapshot = await getDocs(query(blogsRef));
+      const existingIds = new Set(snapshot.docs.map((d) => d.id));
+      const existingSlugs = new Set(snapshot.docs.map((d) => (d.data() as BlogPost).slug));
+
+      const missing = defaultBlogPosts.filter(
+        (p) => !existingIds.has(p.id) && !existingSlugs.has(p.slug)
+      );
+
+      if (missing.length === 0) {
+        toast.success("All default articles are already in Firestore!");
+        return;
+      }
+
+      for (const item of missing) {
+        await setDoc(doc(db, "blogs", item.id), {
+          ...item,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      await setDoc(
+        doc(db, "siteContent", "blogsConfig"),
+        { initialized: true, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+
+      toast.success(`Imported ${missing.length} missing default article(s)!`);
+      await triggerRevalidate();
+      fetchBlogs();
+    } catch (err) {
+      console.error("Error importing missing defaults:", err);
+      toast.error("Failed to import missing defaults.");
     } finally {
       setSeeding(false);
     }
@@ -176,8 +252,19 @@ export const BlogManager: React.FC = () => {
 
     try {
       await deleteDoc(doc(db, "blogs", id));
+      // Mark initialized and track deleted ID so fallback never revives it
+      await setDoc(
+        doc(db, "siteContent", "blogsConfig"),
+        {
+          initialized: true,
+          deletedDefaultIds: arrayUnion(id),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
       setPosts((prev) => prev.filter((p) => p.id !== id));
       toast.success("Article deleted.");
+      await triggerRevalidate();
     } catch (err) {
       console.error("Error deleting post:", err);
       toast.error("Failed to delete article.");
@@ -385,9 +472,15 @@ export const BlogManager: React.FC = () => {
     try {
       setSaving(true);
       await setDoc(doc(db, "blogs", postId), payload);
+      await setDoc(
+        doc(db, "siteContent", "blogsConfig"),
+        { initialized: true, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
 
       toast.success(editingPost ? "Article updated successfully!" : "New article published!");
       setIsModalOpen(false);
+      await triggerRevalidate();
       fetchBlogs();
     } catch (err) {
       console.error("Error saving blog post:", err);
@@ -404,6 +497,7 @@ export const BlogManager: React.FC = () => {
       await setDoc(doc(db, "blogs", post.id), { published: updated }, { merge: true });
       setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, published: updated } : p)));
       toast.success(updated ? "Article published!" : "Article converted to draft.");
+      await triggerRevalidate();
     } catch (err) {
       console.error(err);
       toast.error("Failed to update status.");
@@ -443,18 +537,28 @@ export const BlogManager: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={handleImportMissingDefaults}
+            disabled={seeding}
+            title="Add any missing default posts into Firestore without touching existing ones"
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+          >
+            <span>{seeding ? "Importing..." : "↓ Import New Defaults"}</span>
+          </button>
+
           <button
             onClick={handleSeedDefaults}
             disabled={seeding}
-            className="px-4 py-2.5 rounded-xl text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/10 transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+            title="Reset and seed all 8 default articles to Firestore"
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/10 transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
           >
-            <span>{seeding ? "Seeding..." : "✦ Seed Default Articles"}</span>
+            <span>{seeding ? "Syncing..." : "✦ Sync All 8 Defaults"}</span>
           </button>
 
           <button
             onClick={handleAddNew}
-            className="px-5 py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-bold hover:bg-blue-700 transition shadow-md shadow-primary/20 flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-primary text-white text-xs sm:text-sm font-bold hover:bg-blue-700 transition shadow-md shadow-primary/20 flex items-center gap-2 cursor-pointer"
           >
             <span>+ New Article</span>
           </button>

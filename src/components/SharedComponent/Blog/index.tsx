@@ -38,12 +38,13 @@ const Blog: React.FC<BlogProps> = ({ initialPosts }) => {
   }, []);
 
   useEffect(() => {
-    if (initialPosts && initialPosts.length > 0) return;
     let active = true;
 
     const useFallback = () => {
       if (!active) return;
-      setPosts(fallbackPosts());
+      if (!initialPosts || initialPosts.length === 0) {
+        setPosts(fallbackPosts());
+      }
       setLoading(false);
     };
 
@@ -52,12 +53,16 @@ const Blog: React.FC<BlogProps> = ({ initialPosts }) => {
         collection(db, "blogs"),
         (snapshot) => {
           if (!active) return;
-          const list: BlogPost[] = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...(doc.data() as Omit<BlogPost, "id">),
-          }));
-          const visible = sortPostsByDate(list.filter((post) => isPostVisible(post)));
-          setPosts(visible.length > 0 ? visible : fallbackPosts());
+          if (!snapshot.empty) {
+            const list: BlogPost[] = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...(doc.data() as Omit<BlogPost, "id">),
+            }));
+            const visible = sortPostsByDate(list.filter((post) => isPostVisible(post)));
+            setPosts(visible);
+          } else if (!initialPosts || initialPosts.length === 0) {
+            setPosts(fallbackPosts());
+          }
           setLoading(false);
         },
         (error) => {
@@ -73,7 +78,7 @@ const Blog: React.FC<BlogProps> = ({ initialPosts }) => {
       console.error("Error setting up blog listener:", error);
       useFallback();
     }
-  }, []);
+  }, [initialPosts]);
 
   const showPause = !loading && !reduced && posts.length >= MIN_FOR_TWO_ROWS;
 

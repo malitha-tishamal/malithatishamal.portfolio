@@ -14,7 +14,7 @@ import { RelativeTimePill } from "@/components/SharedComponent/RelativeTimePill"
  * cards line up whatever the title/excerpt length is.
  */
 
-export const BLOG_CARD_WIDTH = "w-[85vw] shrink-0 sm:w-[320px] xl:w-[400px]";
+export const BLOG_CARD_WIDTH = "w-[76vw] shrink-0 sm:w-[270px] md:w-[290px] xl:w-[320px]";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "technology & ai": "solar:cpu-bold-duotone",
@@ -93,14 +93,14 @@ const BlogCard: React.FC<BlogCardProps> = ({
           <CoverPlaceholder category={category} title={title} />
         )}
 
-        <span className="absolute top-3 left-3 z-10 max-w-[52%] truncate rounded-full bg-primary px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap text-white uppercase shadow-sm">
+        <span className="absolute top-2.5 left-2.5 z-10 max-w-[55%] truncate rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold tracking-wider whitespace-nowrap text-white uppercase shadow-sm">
           {category || "Technology"}
         </span>
 
         {readingTime ? (
-          <span className="absolute top-3 right-3 z-10 flex max-w-[40%] items-center gap-1 truncate rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-white backdrop-blur-xs">
+          <span className="absolute top-2.5 right-2.5 z-10 flex max-w-[42%] items-center gap-1 truncate rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-white backdrop-blur-xs">
             <svg
-              className="h-3 w-3 shrink-0"
+              className="h-2.5 w-2.5 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -120,15 +120,15 @@ const BlogCard: React.FC<BlogCardProps> = ({
           date={date}
           latest={latest}
           verb="published"
-          className="absolute bottom-3 left-3"
+          className="absolute bottom-2.5 left-2.5 scale-90 origin-bottom-left"
         />
       </div>
 
-      {/* Body — fixed line boxes keep every footer on one line */}
-      <div className="flex flex-1 flex-col p-5">
-        <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap text-gray-500 dark:text-gray-400">
+      {/* Body — compact line boxes keep cards aligned and well-proportioned */}
+      <div className="flex flex-1 flex-col p-4">
+        <span className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold whitespace-nowrap text-gray-500 dark:text-gray-400">
           <svg
-            className="h-3.5 w-3.5 shrink-0"
+            className="h-3 w-3 shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -145,19 +145,19 @@ const BlogCard: React.FC<BlogCardProps> = ({
 
         <h3
           title={title}
-          className="mb-2 line-clamp-2 min-h-[3.5rem] text-lg leading-snug font-bold break-words text-dark transition-colors group-hover:text-primary dark:text-white">
+          className="mb-1.5 line-clamp-2 min-h-[2.6rem] text-sm sm:text-[15px] leading-snug font-bold break-words text-dark transition-colors group-hover:text-primary dark:text-white">
           {title}
         </h3>
 
-        <p className="mb-4 line-clamp-3 min-h-[4.5rem] overflow-hidden text-sm leading-relaxed break-words text-gray-600 dark:text-gray-400">
+        <p className="mb-3 line-clamp-2 min-h-[2.25rem] overflow-hidden text-xs leading-relaxed break-words text-gray-600 dark:text-gray-400">
           {excerpt}
         </p>
 
-        <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark_border/60">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary transition-colors group-hover:text-blue-700 sm:text-sm dark:group-hover:text-blue-400">
+        <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-2.5 dark:border-dark_border/60">
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-primary transition-colors group-hover:text-blue-700 dark:group-hover:text-blue-400">
             <span>Read Article</span>
             <svg
-              className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1"
+              className="h-3 w-3 transition-transform group-hover:translate-x-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -184,15 +184,14 @@ export const BlogCardSkeleton: React.FC<{ widthClass?: string }> = ({
     data-content-card=""
     className={`flex shrink-0 animate-pulse flex-col overflow-hidden rounded-2xl border border-border/40 bg-gray-100 dark:border-dark_border/40 dark:bg-darklight ${widthClass}`}>
     <div className="aspect-[16/10] w-full shrink-0 bg-gray-200 dark:bg-darkmode" />
-    <div className="flex flex-1 flex-col p-5">
-      <div className="mb-3 h-3 w-24 rounded-md bg-gray-200 dark:bg-darkmode" />
-      <div className="mb-2 h-5 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
-      <div className="mb-2 h-5 w-2/3 rounded-md bg-gray-200 dark:bg-darkmode" />
-      <div className="mb-2 h-3.5 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
-      <div className="mb-2 h-3.5 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
-      <div className="h-3.5 w-1/2 rounded-md bg-gray-200 dark:bg-darkmode" />
-      <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-4 dark:border-dark_border/40">
-        <div className="h-3.5 w-24 rounded-md bg-gray-200 dark:bg-darkmode" />
+    <div className="flex flex-1 flex-col p-4">
+      <div className="mb-2 h-2.5 w-20 rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mb-1.5 h-4 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mb-2 h-4 w-2/3 rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mb-1.5 h-3 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="h-3 w-4/5 rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-2.5 dark:border-dark_border/40">
+        <div className="h-3 w-20 rounded-md bg-gray-200 dark:bg-darkmode" />
       </div>
     </div>
   </div>

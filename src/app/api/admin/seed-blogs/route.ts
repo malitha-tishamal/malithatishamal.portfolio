@@ -7,6 +7,7 @@
 // so the data is fully dynamic — not hard‑coded.
 
 import { NextResponse } from "next/server";
+import { revalidateTag, revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
 import { collection, doc, setDoc, getDocs, serverTimestamp } from "firebase/firestore";
 import { defaultBlogPosts } from "@/types/blog";
@@ -41,6 +42,16 @@ export async function POST(request: Request) {
 
       results.push({ id: post.id, action });
     }
+
+    await setDoc(
+      doc(db, "siteContent", "blogsConfig"),
+      { initialized: true, deletedDefaultIds: [], updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+
+    revalidateTag("blogs");
+    revalidatePath("/");
+    revalidatePath("/blog");
 
     return NextResponse.json({
       success: true,
