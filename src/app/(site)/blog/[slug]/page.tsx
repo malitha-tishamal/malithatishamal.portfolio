@@ -12,6 +12,7 @@ import {
   generateBreadcrumbSchema,
   DEFAULT_SITE_URL,
 } from "@/utils/seo";
+import { generatePageMetadata } from "@/app/meta";
 import { safeJsonLd } from "@/utils/sanitize";
 import Link from "next/link";
 

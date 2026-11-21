@@ -2,13 +2,13 @@
 // Helper utilities for SEO metadata, Open Graph images and JSON‑LD structured data.
 
 import type { Metadata } from "next";
-import { slugify } from "@/utils/slug";
+import { generateSlug } from "@/utils/seo";
 
 /**
  * Create a safe slug from a title.
  */
 export const toSlug = (title: string): string => {
-  return slugify(title);
+  return generateSlug(title);
 };
 
 /**
