@@ -1,6 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { collection, doc, onSnapshot } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import {
   PortfolioItem,
   defaultPortfolioItems,
@@ -25,11 +27,76 @@ interface PortfolioListProps {
 }
 
 const PortfolioList: React.FC<PortfolioListProps> = ({ initialItems, initialCategories }) => {
-  const items = initialItems ?? []
-  const customCategories = initialCategories ?? []
-  const loading = false
+  const [items, setItems] = useState<PortfolioItem[]>(initialItems ?? [])
+  const [customCategories, setCustomCategories] = useState<string[]>(initialCategories ?? [])
+  const [loading, setLoading] = useState<boolean>(!initialItems)
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('All Photos')
+
+  // Real-time Firestore sync for portfolio items
+  useEffect(() => {
+    let active = true
+    try {
+      const unsubscribe = onSnapshot(
+        collection(db, 'portfolio'),
+        (snapshot) => {
+          if (!active) return
+          if (!snapshot.empty) {
+            const fetched: PortfolioItem[] = []
+            snapshot.forEach((docSnap) => {
+              fetched.push({
+                ...(docSnap.data() as PortfolioItem),
+                id: docSnap.id,
+              })
+            })
+            fetched.sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0))
+            setItems(fetched)
+          } else {
+            setItems(initialItems && initialItems.length > 0 ? initialItems : defaultPortfolioItems)
+          }
+          setLoading(false)
+        },
+        (error) => {
+          console.warn('PortfolioList listener notice:', error.message)
+          if (!initialItems || initialItems.length === 0) {
+            setItems(defaultPortfolioItems)
+          }
+          setLoading(false)
+        }
+      )
+      return () => {
+        active = false
+        unsubscribe()
+      }
+    } catch (err) {
+      console.error('Error setting up PortfolioList listener:', err)
+      if (!initialItems || initialItems.length === 0) {
+        setItems(defaultPortfolioItems)
+      }
+      setLoading(false)
+    }
+  }, [initialItems])
+
+  // Real-time sync for custom categories
+  useEffect(() => {
+    try {
+      const unsubscribe = onSnapshot(
+        doc(db, 'siteContent', 'portfolioCategories'),
+        (snap) => {
+          if (!snap.exists()) return
+          const data = snap.data()
+          const categories = data?.categories
+          if (Array.isArray(categories)) {
+            setCustomCategories(categories.filter((v): v is string => typeof v === 'string' && !!v))
+          }
+        },
+        (err) => console.warn('PortfolioCategories listener notice:', err.message)
+      )
+      return () => unsubscribe()
+    } catch (err) {
+      console.warn('PortfolioCategories error:', err)
+    }
+  }, [])
 
   // Excluded obsolete categories
   const excludedCategories = new Set([

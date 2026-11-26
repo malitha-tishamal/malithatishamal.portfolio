@@ -32,11 +32,12 @@ const PortfolioCard: React.FC<PortfolioCardProps> = ({ initialItems }) => {
 
   // Real-time Firestore sync for portfolio items
   useEffect(() => {
-    if (initialItems && initialItems.length > 0) return;
+    let active = true
     try {
       const unsubscribe = onSnapshot(
         collection(db, 'portfolio'),
         (snapshot) => {
+          if (!active) return
           if (!snapshot.empty) {
             const fetched: PortfolioItem[] = []
             snapshot.forEach((docSnap) => {
@@ -48,23 +49,30 @@ const PortfolioCard: React.FC<PortfolioCardProps> = ({ initialItems }) => {
             fetched.sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0))
             setItems(fetched)
           } else {
-            setItems(defaultPortfolioItems)
+            setItems(initialItems && initialItems.length > 0 ? initialItems : defaultPortfolioItems)
           }
           setLoading(false)
         },
         (error) => {
           console.warn('Homepage portfolio listener notice:', error.message)
-          setItems(defaultPortfolioItems)
+          if (!initialItems || initialItems.length === 0) {
+            setItems(defaultPortfolioItems)
+          }
           setLoading(false)
         }
       )
-      return () => unsubscribe()
+      return () => {
+        active = false
+        unsubscribe()
+      }
     } catch (err) {
       console.error('Error setting up homepage portfolio listener:', err)
-      setItems(defaultPortfolioItems)
+      if (!initialItems || initialItems.length === 0) {
+        setItems(defaultPortfolioItems)
+      }
       setLoading(false)
     }
-  }, [])
+  }, [initialItems])
 
   // Admin-controlled continuous scroll speed (clamped to the 40–60 px/s band)
   useEffect(() => {

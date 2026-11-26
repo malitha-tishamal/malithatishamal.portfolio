@@ -88,6 +88,19 @@ export const PortfolioSectionManager: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
+  // Trigger on-demand ISR revalidation for portfolio & homepage
+  const triggerRevalidate = async () => {
+    try {
+      await fetch("/api/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "portfolio", path: "/portfolio" }),
+      });
+    } catch (e) {
+      console.warn("Portfolio revalidate error:", e);
+    }
+  };
+
   // Slider settings state
   const [sliderSettings, setSliderSettings] = useState<PortfolioSliderSettings>(defaultPortfolioSliderSettings);
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
@@ -226,6 +239,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setSavingSettings(true);
     try {
       await setDoc(doc(db, "siteContent", "portfolio"), { ...sliderSettings }, { merge: true });
+      await triggerRevalidate();
       toast.success("Marquee settings saved!");
     } catch (err: any) {
       console.error("Save marquee settings error:", err);
@@ -241,6 +255,7 @@ export const PortfolioSectionManager: React.FC = () => {
     const res = await saveCustomPortfolioCategory(newCategoryInput.trim());
     setSavingCategory(false);
     if (res.success) {
+      await triggerRevalidate();
       toast.success(res.message);
       setSubtitle(newCategoryInput.trim());
       setNewCategoryInput("");
@@ -254,6 +269,7 @@ export const PortfolioSectionManager: React.FC = () => {
     if (!confirm(`Delete custom category "${catToDelete}"?`)) return;
     const res = await deleteCustomPortfolioCategory(catToDelete);
     if (res.success) {
+      await triggerRevalidate();
       toast.success(res.message);
       if (subtitle === catToDelete) {
         setSubtitle("Events");
@@ -602,6 +618,7 @@ export const PortfolioSectionManager: React.FC = () => {
         if (videoPlaybackMode) payload.videoPlaybackMode = videoPlaybackMode;
       }
       await updateDoc(doc(db, "portfolio", editingId), deepCleanUndefined(payload));
+      await triggerRevalidate();
       toast.success("Crop / trim and images saved to the live card!");
     } catch (err: any) {
       console.error("Live save media error:", err);
@@ -678,6 +695,7 @@ export const PortfolioSectionManager: React.FC = () => {
 
     try {
       await setDoc(doc(db, "portfolio", id), stripUndefined(itemData) as PortfolioItem);
+      await triggerRevalidate();
       toast.success(editingId ? "Portfolio card updated successfully!" : "New portfolio card created!");
       setIsModalOpen(false);
     } catch (err: any) {
@@ -694,6 +712,7 @@ export const PortfolioSectionManager: React.FC = () => {
 
     try {
       await deleteDoc(doc(db, "portfolio", item.id));
+      await triggerRevalidate();
       toast.success(`"${item.title}" deleted.`);
     } catch (err: any) {
       console.error("Delete portfolio item error:", err);
@@ -714,6 +733,7 @@ export const PortfolioSectionManager: React.FC = () => {
     try {
       await setDoc(doc(db, "portfolio", item.id), deepCleanUndefined({ ...item, displayOrder: targetOrder }));
       await setDoc(doc(db, "portfolio", targetItem.id), deepCleanUndefined({ ...targetItem, displayOrder: currentOrder }));
+      await triggerRevalidate();
       toast.success("Display order updated!");
     } catch (err: any) {
       console.error("Reorder error:", err);
@@ -728,6 +748,7 @@ export const PortfolioSectionManager: React.FC = () => {
     setItems(updated);
     try {
       await setDoc(doc(db, "portfolio", id), { displayOrder: newOrder }, { merge: true });
+      await triggerRevalidate();
       toast.success("Display order updated!");
     } catch (err: any) {
       console.error("Direct order change error:", err);
@@ -742,6 +763,7 @@ export const PortfolioSectionManager: React.FC = () => {
       for (const def of defaultPortfolioItems) {
         await setDoc(doc(db, "portfolio", def.id), def);
       }
+      await triggerRevalidate();
       toast.success("Default portfolio cards saved to database!");
     } catch (err: any) {
       toast.error("Failed to seed defaults.");
