@@ -5,17 +5,35 @@ import { collection, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+export type StatMode = "auto" | "manual";
+
 interface CounterConfig {
   ratingMode: "site" | "google";
   googleRating: number;
   googleReviewCount: number;
   googleReviewUrl: string;
+
+  testimonialsMode?: StatMode;
+  testimonialsManualValue?: number;
   testimonialsLabel: string;
+
+  projectsThisYearMode?: StatMode;
+  projectsThisYearManualValue?: number;
   projectsThisYearLabel: string;
+
+  totalProjectsMode?: StatMode;
+  totalProjectsManualValue?: number;
   totalProjectsLabel: string;
+
+  visitorsMode?: StatMode;
+  visitorsManualValue?: number;
+  visitorsLabel?: string;
+
+  // Legacy fields
   testimonialsOverride: number;
   projectsThisYearOverride: number;
   totalProjectsOverride: number;
+  visitorsOverride?: number;
 }
 
 const defaultConfig: CounterConfig = {
@@ -23,12 +41,22 @@ const defaultConfig: CounterConfig = {
   googleRating: 4.9,
   googleReviewCount: 0,
   googleReviewUrl: "",
+  testimonialsMode: "auto",
+  testimonialsManualValue: 0,
   testimonialsLabel: "Total Client testimonials",
+  projectsThisYearMode: "auto",
+  projectsThisYearManualValue: 0,
   projectsThisYearLabel: "Projects completed in",
+  totalProjectsMode: "auto",
+  totalProjectsManualValue: 0,
   totalProjectsLabel: "Total projects completed",
+  visitorsMode: "auto",
+  visitorsManualValue: 0,
+  visitorsLabel: "Total website visitors",
   testimonialsOverride: 0,
   projectsThisYearOverride: 0,
   totalProjectsOverride: 0,
+  visitorsOverride: 0,
 };
 
 // ── Star renderer ─────────────────────────────────────────────────────────────
@@ -114,7 +142,7 @@ function AnimatedNumber({
 
   return (
     <span ref={ref}>
-      {decimals > 0 ? display.toFixed(decimals) : Math.round(display)}
+      {decimals > 0 ? display.toFixed(decimals) : Math.round(display).toLocaleString()}
       {suffix}
     </span>
   );
@@ -143,64 +171,135 @@ const Counter = ({ isColorMode, initialData }: CounterProps) => {
 
   const currentYear = new Date().getFullYear();
 
-  // Load counter config
+  // Load counter config real-time
   useEffect(() => {
-    if (initialData) return;
-    const unsub = onSnapshot(doc(db, "siteContent", "counter"), (snap) => {
-      if (snap.exists()) setConfig({ ...defaultConfig, ...(snap.data() as CounterConfig) });
-    });
-    return () => unsub();
-  }, [initialData]);
+    let active = true;
+    try {
+      const unsub = onSnapshot(doc(db, "siteContent", "counter"), (snap) => {
+        if (!active) return;
+        if (snap.exists()) {
+          const raw = snap.data();
+          setConfig((prev) => ({
+            ...prev,
+            ...raw,
+            testimonialsMode:
+              raw.testimonialsMode || (Number(raw.testimonialsOverride) > 0 ? "manual" : "auto"),
+            testimonialsManualValue:
+              typeof raw.testimonialsManualValue === "number"
+                ? raw.testimonialsManualValue
+                : Number(raw.testimonialsOverride) || 0,
+            projectsThisYearMode:
+              raw.projectsThisYearMode || (Number(raw.projectsThisYearOverride) > 0 ? "manual" : "auto"),
+            projectsThisYearManualValue:
+              typeof raw.projectsThisYearManualValue === "number"
+                ? raw.projectsThisYearManualValue
+                : Number(raw.projectsThisYearOverride) || 0,
+            totalProjectsMode:
+              raw.totalProjectsMode || (Number(raw.totalProjectsOverride) > 0 ? "manual" : "auto"),
+            totalProjectsManualValue:
+              typeof raw.totalProjectsManualValue === "number"
+                ? raw.totalProjectsManualValue
+                : Number(raw.totalProjectsOverride) || 0,
+            visitorsMode:
+              raw.visitorsMode || (Number(raw.visitorsOverride) > 0 ? "manual" : "auto"),
+            visitorsManualValue:
+              typeof raw.visitorsManualValue === "number"
+                ? raw.visitorsManualValue
+                : Number(raw.visitorsOverride) || 0,
+          }));
+        }
+      });
+      return () => {
+        active = false;
+        unsub();
+      };
+    } catch (e) {
+      console.warn("Counter config listener:", e);
+    }
+  }, []);
 
   // Load testimonials — count + avg rating
   useEffect(() => {
-    if (initialData) return;
-    const unsub = onSnapshot(collection(db, "testimonials"), (snap) => {
-      let count = 0;
-      let ratingSum = 0;
-      let ratingCount = 0;
-      snap.forEach((d) => {
-        const data = d.data();
-        if (data.status === "approved" || data.status === "published" || !data.status) {
-          count++;
-        }
-        if (typeof data.rating === "number" && data.rating > 0) {
-          ratingSum += data.rating;
-          ratingCount++;
-        }
+    let active = true;
+    try {
+      const unsub = onSnapshot(collection(db, "testimonials"), (snap) => {
+        if (!active) return;
+        let count = 0;
+        let ratingSum = 0;
+        let ratingCount = 0;
+        snap.forEach((d) => {
+          const data = d.data();
+          if (data.status === "approved" || data.status === "published" || !data.status) {
+            count++;
+          }
+          if (typeof data.rating === "number" && data.rating > 0) {
+            ratingSum += data.rating;
+            ratingCount++;
+          }
+        });
+        setTestimonialCount(count);
+        setAvgRating(ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0);
       });
-      setTestimonialCount(count);
-      setAvgRating(ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0);
-    });
-    return () => unsub();
-  }, [initialData]);
+      return () => {
+        active = false;
+        unsub();
+      };
+    } catch (e) {
+      console.warn("Testimonials listener:", e);
+    }
+  }, []);
 
   // Load projects — count all + this year
   useEffect(() => {
-    if (initialData) return;
-    const unsub = onSnapshot(collection(db, "projects"), (snap) => {
-      let thisYear = 0;
-      let total = 0;
-      snap.forEach((d) => {
-        total++;
-        const data = d.data();
-        // Check createdAt timestamp year
-        const ts = data.createdAt;
-        if (ts) {
-          const year = ts.toDate ? ts.toDate().getFullYear() : new Date(ts).getFullYear();
-          if (year === currentYear) thisYear++;
-        }
+    let active = true;
+    try {
+      const unsub = onSnapshot(collection(db, "projects"), (snap) => {
+        if (!active) return;
+        let thisYear = 0;
+        let total = 0;
+        snap.forEach((d) => {
+          total++;
+          const data = d.data();
+          const ts = data.createdAt;
+          if (ts) {
+            const year = ts.toDate ? ts.toDate().getFullYear() : new Date(ts).getFullYear();
+            if (year === currentYear) thisYear++;
+          }
+        });
+        setProjectsThisYear(thisYear);
+        setTotalProjects(total);
       });
-      setProjectsThisYear(thisYear);
-      setTotalProjects(total);
-    });
-    return () => unsub();
-  }, [currentYear, initialData]);
+      return () => {
+        active = false;
+        unsub();
+      };
+    } catch (e) {
+      console.warn("Projects listener:", e);
+    }
+  }, [currentYear]);
 
-  // Final values (override or auto)
-  const finalTestimonials = config.testimonialsOverride > 0 ? config.testimonialsOverride : testimonialCount;
-  const finalThisYear = config.projectsThisYearOverride > 0 ? config.projectsThisYearOverride : projectsThisYear;
-  const finalTotal = config.totalProjectsOverride > 0 ? config.totalProjectsOverride : totalProjects;
+  // Final values: explicit mode takes precedence ('manual' -> manualValue, even if 0!)
+  const finalTestimonials =
+    config.testimonialsMode === "manual"
+      ? (config.testimonialsManualValue ?? 0)
+      : config.testimonialsOverride && config.testimonialsOverride > 0
+        ? config.testimonialsOverride
+        : testimonialCount;
+
+  const finalThisYear =
+    config.projectsThisYearMode === "manual"
+      ? (config.projectsThisYearManualValue ?? 0)
+      : config.projectsThisYearOverride && config.projectsThisYearOverride > 0
+        ? config.projectsThisYearOverride
+        : projectsThisYear;
+
+  const finalTotal =
+    config.totalProjectsMode === "manual"
+      ? (config.totalProjectsManualValue ?? 0)
+      : config.totalProjectsOverride && config.totalProjectsOverride > 0
+        ? config.totalProjectsOverride
+        : totalProjects;
+
   const displayRating = config.ratingMode === "google" ? config.googleRating : avgRating;
 
   const stats = [

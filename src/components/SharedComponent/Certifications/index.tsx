@@ -29,11 +29,12 @@ const Certifications: React.FC<CertificationsProps> = ({ initialItems }) => {
 
   // Real-time Firestore sync
   useEffect(() => {
-    if (initialItems && initialItems.length > 0) return;
+    let active = true;
     try {
       const unsubscribe = onSnapshot(
         collection(db, "certifications"),
         (snapshot) => {
+          if (!active) return;
           if (!snapshot.empty) {
             const fetched: CertificationItem[] = [];
             snapshot.forEach((docSnap) => {
@@ -42,25 +43,38 @@ const Certifications: React.FC<CertificationsProps> = ({ initialItems }) => {
                 id: docSnap.id,
               });
             });
-            setItems(fetched.filter((c) => c.published !== false));
+            const valid = fetched.filter((c) => c.published !== false);
+            valid.sort((a, b) => {
+              const aTime = getCertificateIssueDate(a)?.getTime() ?? 0;
+              const bTime = getCertificateIssueDate(b)?.getTime() ?? 0;
+              return bTime - aTime || (a.displayOrder || 0) - (b.displayOrder || 0);
+            });
+            setItems(valid);
           } else {
-            setItems(defaultCertifications);
+            setItems(initialItems && initialItems.length > 0 ? initialItems : defaultCertifications);
           }
           setLoading(false);
         },
         (error) => {
           console.warn("Certifications listener notice:", error.message);
-          setItems(defaultCertifications);
+          if (!initialItems || initialItems.length === 0) {
+            setItems(defaultCertifications);
+          }
           setLoading(false);
         }
       );
-      return () => unsubscribe();
+      return () => {
+        active = false;
+        unsubscribe();
+      };
     } catch (err) {
       console.error("Error setting up certifications listener:", err);
-      setItems(defaultCertifications);
+      if (!initialItems || initialItems.length === 0) {
+        setItems(defaultCertifications);
+      }
       setLoading(false);
     }
-  }, []);
+  }, [initialItems]);
 
   return (
     <section

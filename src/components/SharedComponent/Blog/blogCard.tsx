@@ -7,6 +7,7 @@ import { Icon } from "@iconify/react";
 import { BlogPost } from "@/types/blog";
 import { formatBlogDate } from "@/utils/blogDate";
 import { RelativeTimePill } from "@/components/SharedComponent/RelativeTimePill";
+import { FitTitle } from "@/components/SharedComponent/FitTitle";
 
 /**
  * Fixed-size blog card shared by the homepage marquee and the /blog grid.
@@ -143,11 +144,14 @@ const BlogCard: React.FC<BlogCardProps> = ({
           {formatBlogDate(date)}
         </span>
 
-        <h3
-          title={title}
-          className="mb-1.5 line-clamp-2 min-h-[2.6rem] text-sm sm:text-[15px] leading-snug font-bold break-words text-dark transition-colors group-hover:text-primary dark:text-white">
-          {title}
-        </h3>
+        {/* Title — up to 3 lines, auto-fit, reserved 3-line height */}
+        <div className="mb-2 min-h-[calc(3*1.3em)] h-[calc(3*1.3em)] shrink-0 text-[17px] sm:text-[18px] lg:text-[20px] leading-[1.3] font-bold text-dark transition-colors group-hover:text-primary dark:text-white">
+          <FitTitle
+            title={title}
+            as="h3"
+            className="text-dark transition-colors group-hover:text-primary dark:text-white"
+          />
+        </div>
 
         <p className="mb-3 line-clamp-2 min-h-[2.25rem] overflow-hidden text-xs leading-relaxed break-words text-gray-600 dark:text-gray-400">
           {excerpt}
@@ -186,8 +190,7 @@ export const BlogCardSkeleton: React.FC<{ widthClass?: string }> = ({
     <div className="aspect-[16/10] w-full shrink-0 bg-gray-200 dark:bg-darkmode" />
     <div className="flex flex-1 flex-col p-4">
       <div className="mb-2 h-2.5 w-20 rounded-md bg-gray-200 dark:bg-darkmode" />
-      <div className="mb-1.5 h-4 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
-      <div className="mb-2 h-4 w-2/3 rounded-md bg-gray-200 dark:bg-darkmode" />
+      <div className="mb-2 h-[calc(3*1.3em)] w-full rounded-md bg-gray-200 dark:bg-darkmode text-[17px] sm:text-[18px] lg:text-[20px]" />
       <div className="mb-1.5 h-3 w-full rounded-md bg-gray-200 dark:bg-darkmode" />
       <div className="h-3 w-4/5 rounded-md bg-gray-200 dark:bg-darkmode" />
       <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-2.5 dark:border-dark_border/40">

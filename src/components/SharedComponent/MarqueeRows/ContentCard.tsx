@@ -6,6 +6,7 @@ import {
   type RelativeVerb,
 } from '@/components/SharedComponent/RelativeTimePill'
 import type { DateLike } from '@/utils/relativeTime'
+import { FitTitle } from '@/components/SharedComponent/FitTitle'
 
 /**
  * Shared fixed-size content card for marquee sections (projects, certifications,
@@ -159,12 +160,14 @@ export const ContentCard: React.FC<ContentCardProps> = memo(function ContentCard
         </div>
       )}
 
-      {/* Title — exactly two lines */}
-      <h3
-        title={title}
-        className='mb-1.5 line-clamp-2 min-h-[3.125rem] shrink-0 text-[1.125rem] leading-snug font-bold break-words text-midnight_text transition-colors group-hover:text-primary sm:min-h-[3.5rem] sm:text-[1.25rem] dark:text-white'>
-        {title}
-      </h3>
+      {/* Title — up to 3 lines, auto-fit, reserved 3-line height */}
+      <div className='mb-2 min-h-[calc(3*1.3em)] h-[calc(3*1.3em)] shrink-0 text-[17px] sm:text-[18px] lg:text-[20px] leading-[1.3] font-bold text-midnight_text transition-colors group-hover:text-primary dark:text-white'>
+        <FitTitle
+          title={title}
+          as='h3'
+          className='text-midnight_text transition-colors group-hover:text-primary dark:text-white'
+        />
+      </div>
 
       {/* Description — three lines reserved so footers stay aligned */}
       <p

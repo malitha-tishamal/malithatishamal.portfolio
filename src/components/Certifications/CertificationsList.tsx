@@ -34,11 +34,12 @@ export const CertificationsList: React.FC<CertificationsListProps> = ({ initialI
 
   useEffect(() => {
     trackCertificationSectionView();
-    if (initialItems && initialItems.length > 0) return;
+    let active = true;
     try {
       const unsubscribeCerts = onSnapshot(
         collection(db, "certifications"),
         (snapshot) => {
+          if (!active) return;
           if (!snapshot.empty) {
             const fetched: CertificationItem[] = [];
             snapshot.forEach((docSnap) => {
@@ -56,13 +57,15 @@ export const CertificationsList: React.FC<CertificationsListProps> = ({ initialI
             });
             setItems(fetched.filter((c) => c.published !== false));
           } else {
-            setItems([]);
+            setItems(initialItems && initialItems.length > 0 ? initialItems : []);
           }
           setLoading(false);
         },
         (error) => {
           console.warn("Certifications listener notice:", error.message);
-          setItems([]);
+          if (!initialItems || initialItems.length === 0) {
+            setItems([]);
+          }
           setLoading(false);
         }
       );

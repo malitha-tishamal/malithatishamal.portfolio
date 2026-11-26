@@ -15,10 +15,10 @@ import {
   getCertificateIssueDate,
 } from "@/utils/certificateDate";
 
-/** Fixed card width used by the marquee; the detail grid uses `w-full`. */
-export const CERT_CARD_WIDTH = "w-[85vw] sm:w-[340px] xl:w-[440px]";
+/** Fixed card width used by the marquee; tablet ~380px, desktop ~470px (~15% smaller) */
+export const CERT_CARD_WIDTH = "w-[85vw] sm:w-[380px] xl:w-[470px]";
 
-const CARD_SIZES = "(max-width: 640px) 85vw, (max-width: 1280px) 340px, 440px";
+const CARD_SIZES = "(max-width: 640px) 85vw, (max-width: 1280px) 380px, 470px";
 const TAG_BUDGET = 72;
 
 interface CertificationCardItemProps {
@@ -243,7 +243,14 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
     <article
       onMouseEnter={() => trackCertificationHover(item.id)}
       data-content-card=""
-      className={`group relative flex shrink-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white p-4 shadow-xs transition-shadow duration-300 hover:shadow-2xl sm:p-5 dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}
+      style={
+        {
+          "--card-width": "470px",
+          "--card-pad": "20px",
+          "--preview-height": "220px",
+        } as React.CSSProperties
+      }
+      className={`group relative flex shrink-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-white p-5 shadow-xs transition-shadow duration-300 hover:shadow-2xl dark:border-dark_border dark:bg-darklight ${widthClass} ${className}`}
     >
       {/* Stretched primary action. Real <button>, so the article keeps its
           landmark semantics and nested controls stay separate. */}
@@ -254,8 +261,8 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         className="absolute inset-0 z-10 cursor-pointer rounded-3xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden"
       />
 
-      {/* Header — logo, two-line title, one-line issuer */}
-      <div className="mb-3 flex h-[62px] shrink-0 items-start gap-3">
+      {/* Header — logo, two-line title (reserved 2 lines), one-line issuer */}
+      <div className="mb-3 flex h-[76px] shrink-0 items-start gap-3">
         <div
           className={logoContainerCls}
           style={customBg ? { backgroundColor: customBg } : undefined}
@@ -275,24 +282,26 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3
-            title={item.title}
-            className="line-clamp-2 text-sm leading-snug font-bold break-words text-midnight_text transition-colors group-hover:text-primary sm:text-base dark:text-white"
-          >
-            {item.title}
-          </h3>
+          <div className="min-h-[calc(2*1.3em)] h-[calc(2*1.3em)] overflow-hidden flex flex-col justify-start">
+            <h3
+              title={item.title}
+              className="line-clamp-2 text-[16px] sm:text-[17px] xl:text-[19px] leading-[1.3] font-bold break-words text-midnight_text transition-colors group-hover:text-primary dark:text-white"
+            >
+              {item.title}
+            </h3>
+          </div>
           <p
             title={item.issuer}
-            className="mt-0.5 truncate text-[11px] font-medium text-gray-500 sm:text-xs dark:text-gray-400"
+            className="mt-1 truncate h-5 flex items-center text-[13px] sm:text-[14px] font-medium text-gray-500 dark:text-gray-400"
           >
             {item.issuer}
           </p>
         </div>
       </div>
 
-      {/* Meta row — issued date + expiry, always one line */}
-      <div className="mb-2.5 flex h-6 shrink-0 items-center gap-1.5 overflow-hidden">
-        <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border/60 bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-700 dark:border-dark_border dark:bg-darkmode dark:text-gray-300">
+      {/* Meta row — issued date + expiry, exactly one line, 13px chips */}
+      <div className="mb-2.5 flex h-[28px] shrink-0 items-center gap-1.5 overflow-hidden text-[12px] sm:text-[13px]">
+        <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border/60 bg-gray-100 px-2.5 py-0.5 font-semibold text-gray-700 dark:border-dark_border dark:bg-darkmode dark:text-gray-300">
           <svg
             className="h-3 w-3 shrink-0 text-gray-500"
             fill="none"
@@ -309,20 +318,20 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
           </svg>
           <span className="truncate">Issued {issueLabel}</span>
         </span>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-600 dark:text-emerald-400">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 font-semibold whitespace-nowrap text-emerald-600 dark:text-emerald-400">
           <span className="text-xs font-bold">∞</span>
           <span>{expiryLabel}</span>
         </span>
       </div>
 
-      {/* Credential ID — the row is always reserved so cards stay equal height */}
-      <div className="mb-2.5 flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-gray-50 px-2.5 text-[11px] dark:border-dark_border dark:bg-darkmode">
+      {/* Credential ID — fixed 32px height, 13px font */}
+      <div className="mb-2.5 flex h-[32px] shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-gray-50 px-2.5 text-[12px] sm:text-[13px] dark:border-dark_border dark:bg-darkmode">
         <span className="shrink-0 font-semibold text-gray-500">ID:</span>
         {item.credentialId ? (
           <>
             <span
               title={item.credentialId}
-              className="min-w-0 flex-1 truncate font-mono text-[11px] text-gray-600 dark:text-gray-400"
+              className="min-w-0 flex-1 truncate font-mono text-[12px] sm:text-[13px] text-gray-600 dark:text-gray-400"
             >
               {item.credentialId}
             </span>
@@ -331,7 +340,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
               onClick={handleCopyId}
               onKeyDown={stop}
               aria-label={copied ? "Credential ID copied" : "Copy credential ID"}
-              className="relative z-20 -mx-1 -my-2 inline-flex min-h-[32px] shrink-0 items-center justify-center rounded px-1 py-2 text-[11px] font-bold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+              className="relative z-20 -mx-1 -my-2 inline-flex min-h-[32px] shrink-0 items-center justify-center rounded px-1.5 py-2 text-[12px] font-bold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden cursor-pointer"
             >
               {copied ? "Copied" : "Copy"}
             </button>
@@ -343,13 +352,13 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         )}
       </div>
 
-      {/* Skills — exactly two rows, the +N chip carries the rest */}
-      <div className="mb-3 flex h-[50px] shrink-0 flex-wrap content-start gap-1 overflow-hidden">
+      {/* Skills — exactly two rows (52px), 13px font, +N chip carries rest */}
+      <div className="mb-3 flex h-[52px] shrink-0 flex-wrap content-start gap-1 overflow-hidden text-[12px] sm:text-[13px]">
         {visibleTags.map((skill, index) => (
           <span
             key={`${skill}-${index}`}
             title={skill}
-            className="max-w-full truncate rounded-md border border-blue-200/50 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-600 sm:text-xs dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300"
+            className="max-w-full truncate rounded-md border border-blue-200/50 bg-blue-50 px-2 py-0.5 font-semibold text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300"
           >
             {skill}
           </span>
@@ -357,15 +366,15 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         {hiddenTags.length > 0 && (
           <span
             title={hiddenTags.join(" · ")}
-            className="rounded-md border border-border/50 bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 sm:text-xs dark:border-dark_border dark:bg-darkmode dark:text-gray-300"
+            className="rounded-md border border-border/50 bg-gray-100 px-2 py-0.5 font-semibold text-gray-600 dark:border-dark_border dark:bg-darkmode dark:text-gray-300"
           >
             +{hiddenTags.length}
           </span>
         )}
       </div>
 
-      {/* Preview — fixed 16:9 frame, contain, neutral background */}
-      <div className="relative mb-3.5 aspect-video w-full shrink-0 overflow-hidden rounded-xl border border-border/70 bg-slate-900/5 p-1.5 dark:border-dark_border dark:bg-slate-950/40">
+      {/* Preview — fixed 220px box, object-fit: contain, 16:10 box */}
+      <div className="relative mb-3.5 h-[220px] w-full shrink-0 overflow-hidden rounded-xl border border-border/70 bg-slate-900/5 p-1.5 dark:border-dark_border dark:bg-slate-950/40">
         <div className="relative h-full w-full">{renderCertificatePreview()}</div>
 
         <RelativeTimePill
@@ -402,7 +411,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
         </div>
       </div>
 
-      {/* CTA — pinned to the bottom, same height on every card */}
+      {/* CTA — pinned to the bottom, exactly 44px on EVERY card */}
       <div className="relative z-20 mt-auto shrink-0 pt-1">
         {item.credentialUrl ? (
           <a
@@ -414,7 +423,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
               trackCertificationClick(item.id);
             }}
             onKeyDown={stop}
-            className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/30 bg-primary/5 px-3 text-xs font-bold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-white focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden dark:text-blue-300 dark:hover:text-white"
+            className="flex h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/30 bg-primary/5 px-3 text-xs sm:text-[13px] font-bold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-white focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden dark:text-blue-300 dark:hover:text-white"
           >
             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -442,7 +451,7 @@ export const CertificationCardItem: React.FC<CertificationCardItemProps> = ({
               handlePreview();
             }}
             onKeyDown={stop}
-            className="flex h-9 w-full items-center justify-center rounded-xl border border-border bg-gray-50 text-xs font-bold text-dark transition-colors hover:border-primary hover:bg-primary hover:text-white focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden dark:border-dark_border dark:bg-darkmode dark:text-white"
+            className="flex h-[44px] w-full items-center justify-center rounded-xl border border-border bg-gray-50 text-xs sm:text-[13px] font-bold text-dark transition-colors hover:border-primary hover:bg-primary hover:text-white focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-hidden dark:border-dark_border dark:bg-darkmode dark:text-white cursor-pointer"
           >
             View Certificate Details
           </button>
@@ -458,26 +467,26 @@ export const CertificationCardSkeleton: React.FC<{ widthClass?: string }> = ({
 }) => (
   <div
     data-content-card=""
-    className={`flex shrink-0 animate-pulse flex-col rounded-3xl border border-border/40 bg-gray-100 p-4 sm:p-5 dark:border-dark_border/40 dark:bg-darklight ${widthClass}`}
+    className={`flex shrink-0 animate-pulse flex-col rounded-3xl border border-border/40 bg-gray-100 p-5 dark:border-dark_border/40 dark:bg-darklight ${widthClass}`}
   >
-    <div className="mb-3 flex h-[62px] items-start gap-3">
+    <div className="mb-3 flex h-[76px] items-start gap-3">
       <div className="h-12 w-12 shrink-0 rounded-xl bg-gray-200 dark:bg-darkmode" />
       <div className="flex-1 space-y-2 pt-1">
         <div className="h-4 w-3/4 rounded-md bg-gray-200 dark:bg-darkmode" />
         <div className="h-3 w-1/2 rounded-md bg-gray-200 dark:bg-darkmode" />
       </div>
     </div>
-    <div className="mb-2.5 flex h-6 items-center gap-1.5">
+    <div className="mb-2.5 flex h-[28px] items-center gap-1.5">
       <div className="h-5 w-32 rounded-full bg-gray-200 dark:bg-darkmode" />
       <div className="h-5 w-24 rounded-full bg-gray-200 dark:bg-darkmode" />
     </div>
-    <div className="mb-2.5 h-7 rounded-lg bg-gray-200 dark:bg-darkmode" />
-    <div className="mb-3 flex h-[50px] flex-wrap content-start gap-1">
+    <div className="mb-2.5 h-[32px] rounded-lg bg-gray-200 dark:bg-darkmode" />
+    <div className="mb-3 flex h-[52px] flex-wrap content-start gap-1">
       <div className="h-5 w-16 rounded-md bg-gray-200 dark:bg-darkmode" />
       <div className="h-5 w-20 rounded-md bg-gray-200 dark:bg-darkmode" />
       <div className="h-5 w-14 rounded-md bg-gray-200 dark:bg-darkmode" />
     </div>
-    <div className="mb-3.5 aspect-video w-full rounded-xl bg-gray-200 dark:bg-darkmode" />
-    <div className="h-9 w-full rounded-xl bg-gray-200 dark:bg-darkmode" />
+    <div className="mb-3.5 h-[220px] w-full rounded-xl bg-gray-200 dark:bg-darkmode" />
+    <div className="h-[44px] w-full rounded-xl bg-gray-200 dark:bg-darkmode" />
   </div>
 );

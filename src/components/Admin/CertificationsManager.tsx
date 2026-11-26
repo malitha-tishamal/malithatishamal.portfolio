@@ -65,6 +65,18 @@ export const CertificationsManager: React.FC = () => {
   const [saving, setSaving] = useState<boolean>(false);
   const [seeding, setSeeding] = useState<boolean>(false);
 
+  const triggerRevalidate = async () => {
+    try {
+      await fetch("/api/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "certifications", path: "/certifications" }),
+      });
+    } catch (e) {
+      console.warn("Certifications revalidate error:", e);
+    }
+  };
+
   // Slider timing & options state
   const [sliderSettings, setSliderSettings] = useState<CertificationSettings>(defaultCertificationSettings);
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
@@ -217,6 +229,7 @@ export const CertificationsManager: React.FC = () => {
     try {
       setSavingSettings(true);
       await setDoc(doc(db, "siteContent", "certifications"), sliderSettings, { merge: true });
+      await triggerRevalidate();
       toast.success("Slider settings saved successfully!");
     } catch (err) {
       console.error(err);
@@ -241,6 +254,7 @@ export const CertificationsManager: React.FC = () => {
           updatedAt: serverTimestamp(),
         });
       }
+      await triggerRevalidate();
       toast.success("Default certifications seeded!");
     } catch (err) {
       console.error("Error seeding certifications:", err);
@@ -306,6 +320,7 @@ export const CertificationsManager: React.FC = () => {
 
     try {
       await deleteDoc(doc(db, "certifications", id));
+      await triggerRevalidate();
       setItems((prev) => prev.filter((it) => it.id !== id));
       toast.success("Certification deleted.");
     } catch (err) {
@@ -335,6 +350,7 @@ export const CertificationsManager: React.FC = () => {
     try {
       await setDoc(doc(db, "certifications", current.id), { displayOrder: current.displayOrder }, { merge: true });
       await setDoc(doc(db, "certifications", target.id), { displayOrder: target.displayOrder }, { merge: true });
+      await triggerRevalidate();
       toast.success("Order updated!");
     } catch (err) {
       console.error(err);
@@ -349,6 +365,7 @@ export const CertificationsManager: React.FC = () => {
     setItems(updated);
     try {
       await setDoc(doc(db, "certifications", id), { displayOrder: newOrder }, { merge: true });
+      await triggerRevalidate();
       toast.success("Order updated!");
     } catch (err) {
       console.error(err);
@@ -536,6 +553,7 @@ export const CertificationsManager: React.FC = () => {
       setSaving(true);
       const addedSkills = await registerCustomSkills(payload.skills);
       await setDoc(doc(db, "certifications", certId), payload);
+      await triggerRevalidate();
       if (addedSkills.length > 0) {
         toast.success(`Saved! ${addedSkills.length} new skill(s) added to database.`);
       } else {
@@ -555,6 +573,7 @@ export const CertificationsManager: React.FC = () => {
     try {
       const updated = !item.published;
       await setDoc(doc(db, "certifications", item.id), { published: updated }, { merge: true });
+      await triggerRevalidate();
       setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, published: updated } : it)));
       toast.success(updated ? "Certification published!" : "Certification hidden.");
     } catch (err) {

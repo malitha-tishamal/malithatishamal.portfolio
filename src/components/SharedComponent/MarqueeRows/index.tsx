@@ -78,7 +78,7 @@ const SkeletonCard: React.FC<{ metaRow?: boolean }> = ({ metaRow = false }) => (
         <div className='h-3 w-1/4 rounded-md bg-gray-200 dark:bg-darkmode' />
       </div>
     )}
-    <div className='mb-1.5 flex h-[3.125rem] shrink-0 flex-col justify-center gap-2 sm:h-[3.5rem]'>
+    <div className='mb-2 flex min-h-[calc(3*1.3em)] h-[calc(3*1.3em)] shrink-0 flex-col justify-center gap-2 text-[17px] sm:text-[18px] lg:text-[20px]'>
       <div className='h-4 w-3/4 rounded-md bg-gray-200 dark:bg-darkmode' />
       <div className='h-4 w-1/2 rounded-md bg-gray-200 dark:bg-darkmode' />
     </div>
